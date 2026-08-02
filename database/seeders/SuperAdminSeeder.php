@@ -18,10 +18,10 @@ class SuperAdminSeeder extends Seeder
     public function run(): void
     {
         $user = User::firstOrCreate(
-            ['email' => (string) env('SUPER_ADMIN_EMAIL', 'super-admin@example.com')],
+            ['email' => config('super_admin.email')],
             [
                 'name' => 'Super Admin',
-                'password' => (string) env('SUPER_ADMIN_PASSWORD', 'change-me'),
+                'password' => config('super_admin.password'),
                 'email_verified_at' => now(),
                 'is_active' => true,
             ]
