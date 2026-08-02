@@ -11,12 +11,12 @@ use Tests\TestCase;
 |
 | The closure you provide to your test functions is always bound to a specific PHPUnit test
 | case class. By default, that class is "PHPUnit\Framework\TestCase". Of course, you may
-| need to change it using the "pest()" function to bind different classes or traits.
+| need to change it using the "pest()" function to bind a different classes or traits.
 |
 */
 
 pest()->extend(TestCase::class)
- // ->use(RefreshDatabase::class)
+    ->use(RefreshDatabase::class)
     ->in('Feature');
 
 /*
@@ -60,7 +60,8 @@ function something()
 | harness bootstraps before any request exists. Refreshing the app with
 | the target locale forced via env lets route-dependent feature tests
 | resolve /fr or /en correctly instead of 404ing. See vendor README
-| "Testing" section for the upstream-documented pattern.
+| "Testing" section for the upstream-documented pattern. Only the public
+| routes (currently just "/") are locale-prefixed — see routes/web.php.
 |
 */
 

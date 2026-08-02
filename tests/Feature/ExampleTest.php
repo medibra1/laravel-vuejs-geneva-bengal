@@ -1,6 +1,6 @@
 <?php
 
-test('the localized homepage returns a successful response', function () {
+it('returns a successful response', function () {
     refreshApplicationWithLocale('fr');
 
     $response = $this->get('/fr');
