@@ -1,0 +1,43 @@
+name: Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "resources/js/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.js"
+      - "vite.config.ts"
+      - ".github/workflows/frontend.yml"
+  pull_request:
+    paths:
+      - "resources/js/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.js"
+      - "vite.config.ts"
+      - ".github/workflows/frontend.yml"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (vue-tsc + vite)
+        run: npm run build
+
+      - name: Run tests (Vitest)
+        run: npm run test

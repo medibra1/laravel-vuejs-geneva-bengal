@@ -1,0 +1,62 @@
+name: Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "database/**"
+      - "routes/**"
+      - "tests/**"
+      - "composer.json"
+      - "composer.lock"
+      - "phpunit.xml"
+      - "phpstan.neon"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - "database/**"
+      - "routes/**"
+      - "tests/**"
+      - "composer.json"
+      - "composer.lock"
+      - "phpunit.xml"
+      - "phpstan.neon"
+      - ".github/workflows/backend.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, dom, fileinfo, pdo_sqlite, gd, zip
+          coverage: none
+
+      - name: Copy .env
+        run: cp .env.example .env
+
+      - name: Install composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Generate app key
+        run: php artisan key:generate
+
+      - name: Check code style (Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Static analysis (Larastan)
+        run: ./vendor/bin/phpstan analyse --memory-limit=512M
+
+      - name: Run tests (Pest)
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
+        run: ./vendor/bin/pest
