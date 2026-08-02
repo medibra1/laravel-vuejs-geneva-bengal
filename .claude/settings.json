@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:genevabengals.ch)",
+      "WebFetch(domain:admin.genevabengals.ch)"
+    ]
+  }
+}
