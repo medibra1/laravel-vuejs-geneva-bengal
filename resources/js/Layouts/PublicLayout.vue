@@ -5,6 +5,10 @@ import type { PageProps } from '@/types';
 
 const page = usePage<PageProps>();
 const currentLocale = computed(() => page.props.locale);
+const menuPages = computed(() => page.props.menuPages);
+
+const raceInfoPages = computed(() => menuPages.value.filter((p) => p.menu_group === 'race_info'));
+const adoptionPages = computed(() => menuPages.value.filter((p) => p.menu_group === 'adoption'));
 
 function switchLocaleHref(locale: string): string {
     const segments = window.location.pathname.split('/').filter(Boolean);
@@ -18,8 +22,7 @@ function switchLocaleHref(locale: string): string {
     return '/' + segments.join('/');
 }
 
-// TODO: these become real routes as their phases land (À propos/Contact/
-// Galerie: Phase 3-4; info & adoption sub-pages: Phase 3 CMS pages).
+// TODO: still no dedicated route for these (Phase 4/Galerie).
 const placeholderHref = '#';
 </script>
 
@@ -28,9 +31,9 @@ const placeholderHref = '#';
         <header class="bg-neutral-900 text-white">
             <div class="mx-auto flex max-w-7xl items-center justify-end gap-6 px-6 py-2 text-sm">
                 <ul class="flex gap-4">
-                    <li><a :href="placeholderHref">À propos</a></li>
+                    <li><Link :href="route('pages.a-propos')">À propos</Link></li>
                     <li><a :href="placeholderHref">Galerie photo</a></li>
-                    <li><a :href="placeholderHref">Contact</a></li>
+                    <li><Link :href="route('pages.contact')">Contact</Link></li>
                     <li>
                         <Link :href="switchLocaleHref('fr')" :class="{ underline: currentLocale === 'fr' }">FR</Link>
                         /
@@ -46,10 +49,28 @@ const placeholderHref = '#';
                     Geneva Bengal
                 </Link>
                 <ul class="hidden items-center gap-8 text-sm font-medium md:flex">
-                    <li><a :href="placeholderHref">Information sur le bengal</a></li>
+                    <li v-if="raceInfoPages.length" class="group relative">
+                        <span class="cursor-default">Information sur le bengal</span>
+                        <ul class="absolute left-0 hidden min-w-48 border bg-white py-2 shadow-lg group-hover:block">
+                            <li v-for="item in raceInfoPages" :key="item.id">
+                                <Link :href="route('pages.show', item.slug)" class="block px-4 py-2 hover:bg-gray-50">
+                                    {{ item.title }}
+                                </Link>
+                            </li>
+                        </ul>
+                    </li>
                     <li><a :href="placeholderHref">Nos chats reproducteurs</a></li>
                     <li><a :href="placeholderHref">Portées prévues</a></li>
-                    <li><a :href="placeholderHref">Adoption et prix</a></li>
+                    <li v-if="adoptionPages.length" class="group relative">
+                        <span class="cursor-default">Adoption et prix</span>
+                        <ul class="absolute left-0 hidden min-w-48 border bg-white py-2 shadow-lg group-hover:block">
+                            <li v-for="item in adoptionPages" :key="item.id">
+                                <Link :href="route('pages.show', item.slug)" class="block px-4 py-2 hover:bg-gray-50">
+                                    {{ item.title }}
+                                </Link>
+                            </li>
+                        </ul>
+                    </li>
                     <li>
                         <Link :href="route('cats.index')" class="text-emerald-700">
                             Chaton Bengal Disponible
@@ -72,24 +93,25 @@ const placeholderHref = '#';
                 <div>
                     <h5 class="font-semibold text-white">À propos de nous</h5>
                     <ul class="mt-2 space-y-1 text-sm">
-                        <li><a :href="placeholderHref">Notre histoire</a></li>
-                        <li><a :href="placeholderHref">Témoignages</a></li>
-                        <li><a :href="placeholderHref">Contactez-nous</a></li>
+                        <li><Link :href="route('pages.a-propos')">Notre histoire</Link></li>
+                        <li><Link :href="`${route('pages.a-propos')}#temoignages`">Témoignages</Link></li>
+                        <li><Link :href="route('pages.contact')">Contactez-nous</Link></li>
                     </ul>
                 </div>
                 <div>
                     <h5 class="font-semibold text-white">Information sur le chat Bengal</h5>
                     <ul class="mt-2 space-y-1 text-sm">
-                        <li><a :href="placeholderHref">Race</a></li>
-                        <li><a :href="placeholderHref">Motifs et Couleurs</a></li>
-                        <li><a :href="placeholderHref">Santé</a></li>
+                        <li v-for="item in raceInfoPages" :key="item.id">
+                            <Link :href="route('pages.show', item.slug)">{{ item.title }}</Link>
+                        </li>
                     </ul>
                 </div>
                 <div>
                     <h5 class="font-semibold text-white">Guide d'adoption</h5>
                     <ul class="mt-2 space-y-1 text-sm">
-                        <li><a :href="placeholderHref">Étapes pour adopter un chaton Bengal</a></li>
-                        <li><a :href="placeholderHref">FAQ</a></li>
+                        <li v-for="item in adoptionPages" :key="item.id">
+                            <Link :href="route('pages.show', item.slug)">{{ item.title }}</Link>
+                        </li>
                     </ul>
                 </div>
             </div>

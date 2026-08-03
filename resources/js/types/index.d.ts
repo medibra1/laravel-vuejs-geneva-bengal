@@ -13,4 +13,5 @@ export type PageProps<
         roles: string[];
     };
     locale: string;
+    menuPages: MenuPage[];
 };
