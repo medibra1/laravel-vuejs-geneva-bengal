@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Public\CatController;
+use App\Http\Controllers\Public\PageController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -25,6 +26,12 @@ Route::group([
 
     Route::get('/chatons-disponibles', [CatController::class, 'index'])->name('cats.index');
     Route::get('/chatons-disponibles/{cat:slug}', [CatController::class, 'show'])->name('cats.show');
+
+    // Explicit literal routes, not a wildcard — see the doc comment on
+    // Public\PageController::show() for why a `/{page:slug}` wildcard
+    // here would be unsafe.
+    Route::get('/a-propos', [PageController::class, 'show'])->defaults('slug', 'a-propos')->name('pages.a-propos');
+    Route::get('/contact', [PageController::class, 'show'])->defaults('slug', 'contact')->name('pages.contact');
 });
 
 // The back-office is internal-only: no public/SEO reason to localize its
