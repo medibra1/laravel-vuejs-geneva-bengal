@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CatController;
+use App\Http\Controllers\Admin\ContactRequestController;
 use App\Http\Controllers\Admin\FaqItemController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\LitterController;
@@ -21,6 +22,7 @@ Route::prefix('admin')
         Route::resource('pages', PageController::class)->except('show');
         Route::resource('faq-items', FaqItemController::class)->except('show');
         Route::resource('testimonials', TestimonialController::class)->except('show');
+        Route::resource('contact-requests', ContactRequestController::class)->only(['index', 'update', 'destroy']);
     });
 
 // site_settings is super_admin-only per CLAUDE.md's role split — deliberately
