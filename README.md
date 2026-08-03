@@ -25,13 +25,15 @@ docker compose exec app php artisan key:generate
 docker compose exec app php artisan migrate --seed
 ```
 
-L'application est servie sur **http://localhost:8080**. Autres services :
+L'application est servie sur **http://localhost:8280**. Autres services :
 
 | Service | URL |
 |---|---|
-| Adminer (DB) | http://localhost:8081 |
+| Adminer (DB) | http://localhost:8281 |
 | Mailhog (emails de dev) | http://localhost:8025 |
-| Vite dev server | http://localhost:5173 |
+| Vite dev server | http://localhost:5273 |
+
+(Ports volontairement hors des plages 8080/8081/5173 par défaut, pour ne pas entrer en conflit avec d'autres projets Docker qui tournent en local.)
 
 ## Démarrer sans Docker
 
