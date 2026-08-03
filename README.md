@@ -1,58 +1,81 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Geneva Bengal
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Site vitrine + back-office pour un élevage de chats Bengal basé à Genève, Suisse. Reconstruction complète de [genevabengals.ch](https://genevabengals.ch) avec une architecture propre, testée et livrée en tranches verticales (chaque module métier va du modèle de données jusqu'à l'interface, back et front ensemble).
 
-## About Laravel
+Monorepo Laravel + Inertia — un seul déploiement, pas de SPA découplée.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **Backend** — Laravel 13 (PHP 8.3+), MySQL 8
+- **Frontend** — Vue 3 (Composition API, `<script setup lang="ts">`), TypeScript, Inertia.js, PrimeVue 4 (thème Aura) + Tailwind CSS 4
+- **i18n** — routing `/fr` `/en` ([mcamara/laravel-localization](https://github.com/mcamara/laravel-localization)), contenu traduisible ([spatie/laravel-translatable](https://github.com/spatie/laravel-translatable)), interface via [vue-i18n](https://vue-i18n.intlify.dev/)
+- **Rôles** — `admin` / `super_admin` via [spatie/laravel-permission](https://github.com/spatie/laravel-permission)
+- **Médias** — [spatie/laravel-medialibrary](https://github.com/spatie/laravel-medialibrary)
+- **Tests** — [Pest](https://pestphp.com/) (backend), [Vitest](https://vitest.dev/) + Vue Test Utils (frontend)
+- **Qualité** — [Laravel Pint](https://laravel.com/docs/pint), [Larastan](https://github.com/larastan/larastan)
+- **CI** — GitHub Actions, deux workflows indépendants et path-filtrés (`backend.yml`, `frontend.yml`)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Démarrer avec Docker (recommandé)
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+cp .env.example .env
+docker compose up -d
+docker compose exec app composer install
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate --seed
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+L'application est servie sur **http://localhost:8080**. Autres services :
 
-## Contributing
+| Service | URL |
+|---|---|
+| Adminer (DB) | http://localhost:8081 |
+| Mailhog (emails de dev) | http://localhost:8025 |
+| Vite dev server | http://localhost:5173 |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Démarrer sans Docker
 
-## Code of Conduct
+Prérequis : PHP 8.3+, Composer, Node 22, MySQL 8 (ou SQLite pour un dev rapide).
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+composer install
+npm install
 
-## Security Vulnerabilities
+cp .env.example .env
+php artisan key:generate
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+php artisan migrate --seed
+npm run build   # ou `npm run dev` pour le hot-reload
+php artisan serve
+```
 
-## License
+Le seeder de rôles/super-admin lit `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` depuis `.env` — à définir avant de seed.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Tests
+
+```bash
+./vendor/bin/pest              # backend
+./vendor/bin/pint --test       # style de code
+./vendor/bin/phpstan analyse   # analyse statique (Larastan)
+
+npm run test                   # frontend (Vitest)
+npm run build                  # build + vérification TypeScript (vue-tsc)
+```
+
+Les deux workflows CI (`backend.yml`, `frontend.yml`) sont volontairement découplés : le premier ne dépend jamais de `node_modules`/build compilé, le second jamais de `vendor/`.
+
+## État du projet
+
+- [x] Fondations — Laravel, Inertia/Vue/TypeScript, PrimeVue, Tailwind, i18n, Docker, CI, rôles
+- [x] Module Chats — fiche chat (traductions, statut historisé, photos), CRUD admin, liste/fiche publiques
+- [ ] Adoptants, portées, galeries
+- [ ] CMS (pages de contenu, FAQ, témoignages, réglages du site)
+- [ ] Formulaire de contact public
+- [ ] Gestion des comptes admin (`super_admin`)
+- [ ] Paiement d'acompte (Stripe/TWINT)
+- [ ] Tableau de bord admin (statistiques, graphiques)
+- [ ] SEO (sitemap, hreflang, SSR)
+
+## Licence
+
+Propriétaire — projet client.
