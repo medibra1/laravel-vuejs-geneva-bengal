@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Public\CatController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -21,6 +22,9 @@ Route::group([
             'phpVersion' => PHP_VERSION,
         ]);
     });
+
+    Route::get('/chatons-disponibles', [CatController::class, 'index'])->name('cats.index');
+    Route::get('/chatons-disponibles/{cat:slug}', [CatController::class, 'show'])->name('cats.show');
 });
 
 // The back-office is internal-only: no public/SEO reason to localize its
@@ -37,3 +41,4 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+require __DIR__.'/admin.php';
