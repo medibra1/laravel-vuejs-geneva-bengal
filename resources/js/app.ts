@@ -7,7 +7,7 @@ import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
 import Aura from "@primeuix/themes/aura";
 import { createI18n } from "vue-i18n";
-import { ZiggyVue } from "../../vendor/tightenco/ziggy";
+import { ZiggyVue } from 'ziggy-js';
 import fr from "./locales/fr.json";
 import en from "./locales/en.json";
 import "primeicons/primeicons.css";
