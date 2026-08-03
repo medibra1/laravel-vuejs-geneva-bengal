@@ -12,7 +12,12 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
         "mcamara/laravel-localization": "^2.4",
+        "spatie/laravel-medialibrary": "^11.23",
+        "spatie/laravel-model-status": "^1.20",
         "spatie/laravel-permission": "^8.3",
+        "spatie/laravel-query-builder": "^7.3",
+        "spatie/laravel-sluggable": "^4.0",
+        "spatie/laravel-translatable": "^6.14",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {
