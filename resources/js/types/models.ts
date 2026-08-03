@@ -31,6 +31,38 @@ export interface Cat {
     photos: CatPhoto[];
 }
 
+export interface Owner {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string | null;
+    city: string | null;
+}
+
+export interface LitterCatOption {
+    id: number;
+    name: string;
+}
+
+export interface Litter {
+    id: number;
+    sire_cat_id: number | null;
+    dam_cat_id: number | null;
+    sire?: LitterCatOption | null;
+    dam?: LitterCatOption | null;
+    expected_date: string | null;
+    notes: string | null;
+    kittens_count?: number;
+}
+
+export interface Gallery {
+    id: number;
+    caption: string | null;
+    position: number;
+    image_url: string | null;
+}
+
 export interface Paginated<T> {
     data: T[];
     current_page: number;
