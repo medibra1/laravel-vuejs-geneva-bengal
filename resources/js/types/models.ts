@@ -134,6 +134,15 @@ export interface ContactRequest {
     created_at: string;
 }
 
+export interface AdminUser {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    is_active: boolean;
+    last_login_at: string | null;
+}
+
 export interface Paginated<T> {
     data: T[];
     current_page: number;
