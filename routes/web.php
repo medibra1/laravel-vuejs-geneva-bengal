@@ -2,11 +2,14 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Public\CatController;
+use App\Http\Controllers\Public\ContactController;
+use App\Http\Controllers\Public\NewsletterController;
 use App\Http\Controllers\Public\PageController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
+use Spatie\Honeypot\ProtectAgainstSpam;
 
 // Public, SEO-facing pages live under /fr and /en (see CLAUDE.md i18n
 // layer 1). The Welcome page here is a Breeze placeholder for the future
@@ -39,6 +42,14 @@ Route::group([
     // can never collide with a single-segment route like /login even if
     // the locale prefix collapses to empty — see the same doc comment.
     Route::get('/pages/{slug}', [PageController::class, 'show'])->name('pages.show');
+
+    Route::post('/contact', [ContactController::class, 'store'])
+        ->middleware(ProtectAgainstSpam::class)
+        ->name('contact.store');
+
+    Route::post('/newsletter', [NewsletterController::class, 'store'])
+        ->middleware(ProtectAgainstSpam::class)
+        ->name('newsletter.store');
 });
 
 // The back-office is internal-only: no public/SEO reason to localize its

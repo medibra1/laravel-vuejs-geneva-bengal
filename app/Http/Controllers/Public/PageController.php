@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cat;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\Testimonial;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -24,7 +26,7 @@ class PageController extends Controller
      * routes (see routes/web.php) can't have that problem: they only
      * ever match their own exact string.
      */
-    public function show(string $slug): Response
+    public function show(Request $request, string $slug): Response
     {
         $page = Page::query()->where('slug', $slug)->firstOrFail();
 
@@ -55,6 +57,12 @@ class PageController extends Controller
                 'social_youtube' => SiteSetting::get('social_youtube'),
                 'social_pinterest' => SiteSetting::get('social_pinterest'),
             ];
+
+            // "Adopte moi" on a cat's page links to /contact?chaton={slug}
+            // to preselect it in the form.
+            $props['prefilledCat'] = $request->filled('chaton')
+                ? Cat::query()->where('slug', $request->query('chaton'))->first(['id', 'name'])
+                : null;
         }
 
         return Inertia::render('Public/Page', $props);

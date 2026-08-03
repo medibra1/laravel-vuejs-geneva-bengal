@@ -112,6 +112,28 @@ export interface SiteSettings {
     default_seo_description: string | null;
 }
 
+export interface Honeypot {
+    enabled: boolean;
+    nameFieldName: string;
+    unrandomizedNameFieldName: string;
+    validFromFieldName: string;
+    encryptedValidFrom: string;
+    withCsp: boolean;
+}
+
+export interface ContactRequest {
+    id: number;
+    name: string;
+    email: string;
+    reason: 'adopt' | 'waiting_list' | 'question';
+    cat_id: number | null;
+    cat?: { id: number; name: string } | null;
+    city: string | null;
+    message: string;
+    status: 'new' | 'processed' | 'archived';
+    created_at: string;
+}
+
 export interface Paginated<T> {
     data: T[];
     current_page: number;

@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Page;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Spatie\Honeypot\Honeypot;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -46,6 +47,9 @@ class HandleInertiaRequests extends Middleware
                 ->orderBy('menu_group')
                 ->orderBy('order')
                 ->get(['id', 'slug', 'menu_group', 'order', 'title']),
+            // Shared globally (not per-controller) since more than one
+            // public form needs it (contact, newsletter signup).
+            'honeypot' => app(Honeypot::class),
         ];
     }
 }

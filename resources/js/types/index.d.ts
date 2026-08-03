@@ -1,3 +1,5 @@
+import type { Honeypot, MenuPage } from "./models";
+
 export interface User {
     id: number;
     name: string;
@@ -14,4 +16,5 @@ export type PageProps<
     };
     locale: string;
     menuPages: MenuPage[];
+    honeypot: Honeypot;
 };
