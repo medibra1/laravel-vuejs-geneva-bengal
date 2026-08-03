@@ -63,6 +63,55 @@ export interface Gallery {
     image_url: string | null;
 }
 
+export interface CmsPage {
+    id?: number;
+    slug?: string;
+    menu_group: string | null;
+    order: number;
+    title: { fr: string; en: string };
+    body: { fr: string; en: string } | null;
+    meta_title: { fr: string; en: string } | null;
+    meta_description: { fr: string; en: string } | null;
+    is_published: boolean;
+}
+
+export interface MenuPage {
+    id: number;
+    slug: string;
+    menu_group: string;
+    order: number;
+    title: string;
+}
+
+export interface FaqItem {
+    id: number;
+    question: { fr: string; en: string };
+    answer: { fr: string; en: string };
+    order: number;
+}
+
+export interface Testimonial {
+    id: number;
+    author_name: string;
+    quote: { fr: string; en: string };
+    rating: number | null;
+    is_published: boolean;
+    order: number;
+}
+
+export interface SiteSettings {
+    social_facebook: string | null;
+    social_instagram: string | null;
+    social_youtube: string | null;
+    social_pinterest: string | null;
+    address: string | null;
+    deposit_amount: number | null;
+    price_range_min: number | null;
+    price_range_max: number | null;
+    default_seo_title: string | null;
+    default_seo_description: string | null;
+}
+
 export interface Paginated<T> {
     data: T[];
     current_page: number;

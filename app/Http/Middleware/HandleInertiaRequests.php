@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Page;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -36,6 +37,15 @@ class HandleInertiaRequests extends Middleware
                 'roles' => $request->user()?->getRoleNames() ?? [],
             ],
             'locale' => app()->getLocale(),
+            // Only the info/adoption dropdown sub-menus are CMS-driven —
+            // top-level nav (Accueil/Chatons/À propos/Contact/Galerie)
+            // stays hardcoded in PublicLayout.vue, per CLAUDE.md.
+            'menuPages' => Page::query()
+                ->where('is_published', true)
+                ->whereNotNull('menu_group')
+                ->orderBy('menu_group')
+                ->orderBy('order')
+                ->get(['id', 'slug', 'menu_group', 'order', 'title']),
         ];
     }
 }
