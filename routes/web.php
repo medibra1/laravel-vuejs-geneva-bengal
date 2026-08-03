@@ -32,6 +32,13 @@ Route::group([
     // here would be unsafe.
     Route::get('/a-propos', [PageController::class, 'show'])->defaults('slug', 'a-propos')->name('pages.a-propos');
     Route::get('/contact', [PageController::class, 'show'])->defaults('slug', 'contact')->name('pages.contact');
+
+    // Other menu-driven CMS pages (race, motifs, personnalité, étapes
+    // d'adoption...) share this one generic route. Namespaced under
+    // /pages/ (not a bare wildcard) so it's a two-segment pattern that
+    // can never collide with a single-segment route like /login even if
+    // the locale prefix collapses to empty — see the same doc comment.
+    Route::get('/pages/{slug}', [PageController::class, 'show'])->name('pages.show');
 });
 
 // The back-office is internal-only: no public/SEO reason to localize its
