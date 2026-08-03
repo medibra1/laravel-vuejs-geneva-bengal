@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\OwnerController;
 use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\SiteSettingController;
 use App\Http\Controllers\Admin\TestimonialController;
+use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')
@@ -33,4 +34,8 @@ Route::prefix('admin')
     ->group(function (): void {
         Route::get('settings', [SiteSettingController::class, 'edit'])->name('settings.edit');
         Route::put('settings', [SiteSettingController::class, 'update'])->name('settings.update');
+
+        Route::resource('users', UserController::class)->except('show');
+        Route::post('users/{user}/resend-reset-link', [UserController::class, 'resendResetLink'])->name('users.resend-reset-link');
+        Route::patch('users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
     });
