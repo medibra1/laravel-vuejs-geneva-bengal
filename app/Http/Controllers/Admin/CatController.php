@@ -6,6 +6,7 @@ use App\Enums\CatStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreCatRequest;
 use App\Http\Requests\Admin\UpdateCatRequest;
+use App\Http\Resources\CatResource;
 use App\Models\Cat;
 use App\Models\Color;
 use Illuminate\Http\RedirectResponse;
@@ -20,10 +21,18 @@ class CatController extends Controller
     {
         $cats = QueryBuilder::for(Cat::class)
             ->allowedFilters('name', 'type', AllowedFilter::exact('color_id'))
-            ->with(['color', 'statuses'])
+            ->with(['color', 'statuses', 'media'])
             ->latest()
             ->paginate(20)
             ->withQueryString();
+
+        // CatResource::collection($cats) would silently drop pagination
+        // meta/links here: that wrapping only applies when a resource is
+        // returned as the outermost HTTP response, not when embedded in
+        // an Inertia props array. ->through() keeps the paginator itself
+        // (which always serializes its meta) and just resource-shapes
+        // each item.
+        $cats->through(fn (Cat $cat) => CatResource::make($cat)->resolve());
 
         return Inertia::render('Admin/Cats/Index', [
             'cats' => $cats,
@@ -55,7 +64,7 @@ class CatController extends Controller
         $cat->load(['color', 'secondColor', 'media', 'statuses']);
 
         return Inertia::render('Admin/Cats/Form', [
-            'cat' => $cat,
+            'cat' => CatResource::make($cat),
             'colors' => Color::orderBy('name')->get(['id', 'name', 'hex_code']),
         ]);
     }

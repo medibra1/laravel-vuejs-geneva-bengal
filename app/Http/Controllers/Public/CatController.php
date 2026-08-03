@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Public;
 use App\Enums\CatStatus;
 use App\Enums\CatType;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CatResource;
 use App\Models\Cat;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,7 +25,7 @@ class CatController extends Controller
             ->values();
 
         return Inertia::render('Public/ChatonsDisponibles', [
-            'cats' => $cats,
+            'cats' => CatResource::collection($cats),
         ]);
     }
 
@@ -33,7 +34,7 @@ class CatController extends Controller
         $cat->load(['color', 'secondColor', 'media', 'statuses']);
 
         return Inertia::render('Public/ChatonDetail', [
-            'cat' => $cat,
+            'cat' => CatResource::make($cat),
         ]);
     }
 }

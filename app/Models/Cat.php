@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\ModelStatus\HasStatuses;
@@ -18,6 +19,10 @@ use Spatie\Translatable\HasTranslations;
 
 /**
  * @property-read string $status Current status name, via HasStatuses' __get() magic (not a real relation/attribute).
+ * @property CatType $type Larastan doesn't infer enum casts declared via the casts(): array method syntax.
+ * @property CatSex $sex Larastan doesn't infer enum casts declared via the casts(): array method syntax.
+ * @property Carbon|null $birth_date
+ * @property Carbon|null $available_at
  */
 #[Fillable([
     'name', 'type', 'sex', 'color_id', 'second_color_id', 'description',
