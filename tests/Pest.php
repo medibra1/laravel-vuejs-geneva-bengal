@@ -17,6 +17,12 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
+    ->beforeEach(function () {
+        // backend.yml (Pest) and frontend.yml (npm run build) are
+        // deliberately decoupled CI jobs — backend tests must not depend
+        // on public/build/manifest.json existing.
+        $this->withoutVite();
+    })
     ->in('Feature');
 
 /*
