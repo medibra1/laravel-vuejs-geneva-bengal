@@ -83,4 +83,12 @@ class Cat extends Model implements HasMedia
     {
         return $this->belongsTo(Color::class, 'second_color_id');
     }
+
+    /**
+     * @return BelongsTo<Litter, $this>
+     */
+    public function litter(): BelongsTo
+    {
+        return $this->belongsTo(Litter::class);
+    }
 }
