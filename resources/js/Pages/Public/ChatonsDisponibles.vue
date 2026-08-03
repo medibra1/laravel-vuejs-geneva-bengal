@@ -9,7 +9,10 @@ defineProps<{
 </script>
 
 <template>
+
     <Head title="Chatons Bengal disponibles" />
+
+
 
     <PublicLayout>
         <section class="mx-auto max-w-7xl px-6 py-16">
@@ -23,19 +26,11 @@ defineProps<{
             </div>
 
             <div v-if="cats.length" class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-                <Link
-                    v-for="cat in cats"
-                    :key="cat.id"
-                    :href="route('cats.show', cat.slug)"
-                    class="group block overflow-hidden rounded-lg border border-gray-200 text-center transition hover:shadow-lg"
-                >
+                <Link v-for="cat in cats" :key="cat.id" :href="route('cats.show', cat.slug)"
+                    class="group block overflow-hidden rounded-lg border border-gray-200 text-center transition hover:shadow-lg">
                     <div class="aspect-square overflow-hidden bg-gray-100">
-                        <img
-                            v-if="cat.photos.length"
-                            :src="cat.photos[0].url"
-                            :alt="cat.name"
-                            class="h-full w-full object-cover transition group-hover:scale-105"
-                        />
+                        <img v-if="cat.photos.length" :src="cat.photos[0].url" :alt="cat.name"
+                            class="h-full w-full object-cover transition group-hover:scale-105" />
                         <div v-else class="flex h-full items-center justify-center text-gray-400">
                             Pas de photo
                         </div>
@@ -61,5 +56,18 @@ defineProps<{
                 </p>
             </div>
         </section>
+
+        <section class="border-t border-gray-200 bg-gray-50 py-16">
+            <div class="mx-auto max-w-3xl px-6 text-center">
+                <h2 class="text-2xl font-semibold text-neutral-900">Soyez les premiers au courant</h2>
+                <p class="mt-2 text-neutral-600">
+                    Abonnez-vous à notre infolettre pour être informé quand de nouveaux chatons sont disponibles.
+                </p>
+                <div class="mt-6 flex justify-center">
+                    <NewsletterForm class="w-full max-w-md" />
+                </div>
+            </div>
+        </section>
     </PublicLayout>
+
 </template>

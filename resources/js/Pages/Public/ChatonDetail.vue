@@ -23,6 +23,7 @@ function formatPrice(cents: number | null): string {
 </script>
 
 <template>
+
     <Head :title="`${cat.name} — Chaton Bengal disponible`" />
 
     <PublicLayout>
@@ -33,12 +34,8 @@ function formatPrice(cents: number | null): string {
 
             <div class="grid grid-cols-1 gap-16 md:grid-cols-2">
                 <div class="aspect-square overflow-hidden rounded-lg bg-gray-100">
-                    <img
-                        v-if="cat.photos.length"
-                        :src="cat.photos[0].url"
-                        :alt="cat.name"
-                        class="h-full w-full object-cover"
-                    />
+                    <img v-if="cat.photos.length" :src="cat.photos[0].url" :alt="cat.name"
+                        class="h-full w-full object-cover" />
                     <div v-else class="flex h-full items-center justify-center text-gray-400">
                         Pas de photo
                     </div>
@@ -62,10 +59,8 @@ function formatPrice(cents: number | null): string {
                     </ul>
 
                     <div class="mt-8">
-                        <Link
-                            :href="`/contact?chaton=${cat.name}`"
-                            class="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-6 py-3 font-medium text-white hover:bg-emerald-800"
-                        >
+                        <Link :href="route('pages.contact', { chaton: cat.slug })"
+                            class="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-6 py-3 font-medium text-white hover:bg-emerald-800">
                             Adopte moi
                         </Link>
                     </div>
@@ -80,10 +75,8 @@ function formatPrice(cents: number | null): string {
             <p class="mt-4">Voulez-vous adopter un chaton bengal ? <strong>Nous contacter !</strong></p>
             <p class="mt-1 text-lg">Prix : <span class="font-semibold">{{ formatPrice(cat.price) }}</span></p>
             <div class="mt-6">
-                <Link
-                    :href="`/contact?chaton=${cat.name}`"
-                    class="inline-flex items-center gap-2 rounded-md border border-emerald-700 px-6 py-3 font-medium text-emerald-700 hover:bg-emerald-50"
-                >
+                <Link :href="route('pages.contact', { chaton: cat.slug })"
+                    class="inline-flex items-center gap-2 rounded-md border border-emerald-700 px-6 py-3 font-medium text-emerald-700 hover:bg-emerald-50">
                     Faire une demande pour {{ cat.name }}
                 </Link>
             </div>
