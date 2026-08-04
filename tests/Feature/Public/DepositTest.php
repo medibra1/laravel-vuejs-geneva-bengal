@@ -5,6 +5,7 @@ use App\Models\Cat;
 use App\Models\Deposit;
 use App\Models\SiteSetting;
 use App\Services\Payments\PaymentGateway;
+use Spatie\Honeypot\Honeypot;
 use Tests\Doubles\FakePaymentGateway;
 
 // PaymentGateway is (re)bound inside each test, after
@@ -14,6 +15,7 @@ use Tests\Doubles\FakePaymentGateway;
 
 it('creates a pending deposit and redirects to the Stripe checkout URL', function () {
     refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
     $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
     SiteSetting::set('deposit_amount', 50000);
 
@@ -42,6 +44,7 @@ it('creates a pending deposit and redirects to the Stripe checkout URL', functio
 
 it('links a deposit to a specific cat when one is given', function () {
     refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
     $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
     $cat = Cat::factory()->create();
 
@@ -56,10 +59,26 @@ it('links a deposit to a specific cat when one is given', function () {
 
 it('validates required fields', function () {
     refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
 
     $response = $this->post('/fr/deposits', []);
 
     $response->assertSessionHasErrors(['name', 'email']);
+});
+
+it('silently discards spam submissions caught by the honeypot', function () {
+    refreshApplicationWithLocale('fr');
+    $honeypot = app(Honeypot::class);
+
+    $response = $this->post('/fr/deposits', [
+        'name' => 'Bot',
+        'email' => 'bot@example.com',
+        $honeypot->nameFieldName() => 'i-am-a-bot',
+        $honeypot->validFromFieldName() => $honeypot->encryptedValidFrom(),
+    ]);
+
+    $response->assertOk();
+    expect(Deposit::count())->toBe(0);
 });
 
 it('shows a waiting/status page without ever trusting the redirect alone', function () {
@@ -70,10 +89,7 @@ it('shows a waiting/status page without ever trusting the redirect alone', funct
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        // Frontend for this page hasn't been built yet (backend-first —
-        // see CLAUDE.md's frontend/Inertia collaboration mode), so the
-        // component file itself doesn't exist on disk yet.
-        ->component('Public/DepositReturn', shouldExist: false)
+        ->component('Public/DepositReturn')
         ->where('depositStatus', $deposit->status->value)
     );
 });

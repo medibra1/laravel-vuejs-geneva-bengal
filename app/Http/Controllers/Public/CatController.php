@@ -7,6 +7,7 @@ use App\Enums\CatType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CatResource;
 use App\Models\Cat;
+use App\Models\SiteSetting;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -35,6 +36,7 @@ class CatController extends Controller
 
         return Inertia::render('Public/ChatonDetail', [
             'cat' => CatResource::make($cat),
+            'depositAmount' => SiteSetting::get('deposit_amount', 50000),
         ]);
     }
 }
