@@ -9,7 +9,6 @@ use App\Http\Controllers\Public\NewsletterController;
 use App\Http\Controllers\Public\PageController;
 use App\Http\Controllers\Public\StripeWebhookController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
 use Spatie\Honeypot\ProtectAgainstSpam;
 
@@ -58,10 +57,11 @@ Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle'])->nam
 
 // The back-office is internal-only: no public/SEO reason to localize its
 // URLs. Interface text there is translated client-side via vue-i18n
-// instead (see CLAUDE.md i18n layer 3).
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// instead (see CLAUDE.md i18n layer 3). The dashboard itself now lives
+// under /admin (see routes/admin.php) — kept registered under the
+// unprefixed route name "dashboard" there so Breeze's own auth
+// controllers (email verification, login redirects...) don't need to
+// know it moved.
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

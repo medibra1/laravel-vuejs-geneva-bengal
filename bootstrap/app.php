@@ -47,7 +47,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // This app has no api/* routes — but it does have plain-web JSON
+        // endpoints like admin/dashboard/stats (see CLAUDE.md: fetched by
+        // the period filter, not a full Inertia visit). Restricting to
+        // api/* alone made Laravel fall back to its default HTML/redirect
+        // handling for those, even for a request sending
+        // Accept: application/json — expectsJson() also has to count.
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
     })->create();

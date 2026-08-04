@@ -150,6 +150,33 @@ export interface Deposit {
     created_at: string;
 }
 
+export interface ChartData {
+    labels: string[];
+    datasets: { label: string; data: number[] }[];
+}
+
+export interface DashboardKpis {
+    available_cats: number;
+    adoptions_in_period: number;
+    deposit_revenue_in_period: number;
+    pending_contact_requests: number;
+}
+
+export interface DashboardStats {
+    kpis: DashboardKpis;
+    charts: {
+        adoptionsByMonth: ChartData;
+        depositRevenueByMonth: ChartData;
+        catsByStatus: ChartData;
+        catsByColor: ChartData;
+    };
+}
+
+export interface DashboardPeriod {
+    from: string;
+    to: string;
+}
+
 export interface AdminUser {
     id: number;
     name: string;
