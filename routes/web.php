@@ -3,29 +3,21 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Public\CatController;
 use App\Http\Controllers\Public\ContactController;
+use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\NewsletterController;
 use App\Http\Controllers\Public\PageController;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
 use Spatie\Honeypot\ProtectAgainstSpam;
 
 // Public, SEO-facing pages live under /fr and /en (see CLAUDE.md i18n
-// layer 1). The Welcome page here is a Breeze placeholder for the future
-// public Home page (Phase 1).
+// layer 1).
 Route::group([
     'prefix' => LaravelLocalization::setLocale(),
     'middleware' => ['localeSessionRedirect', 'localizationRedirect', 'localeViewPath'],
 ], function (): void {
-    Route::get('/', function () {
-        return Inertia::render('Welcome', [
-            'canLogin' => Route::has('login'),
-            'canRegister' => Route::has('register'),
-            'laravelVersion' => Application::VERSION,
-            'phpVersion' => PHP_VERSION,
-        ]);
-    });
+    Route::get('/', [HomeController::class, 'index'])->name('home');
 
     Route::get('/chatons-disponibles', [CatController::class, 'index'])->name('cats.index');
     Route::get('/chatons-disponibles/{cat:slug}', [CatController::class, 'show'])->name('cats.show');
