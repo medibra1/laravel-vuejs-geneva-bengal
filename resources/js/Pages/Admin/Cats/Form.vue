@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
+import LocaleTabs from '@/Components/LocaleTabs.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
@@ -10,11 +11,6 @@ import InputNumber from 'primevue/inputnumber';
 import Select from 'primevue/select';
 import DatePicker from 'primevue/datepicker';
 import ToggleSwitch from 'primevue/toggleswitch';
-import Tabs from 'primevue/tabs';
-import TabList from 'primevue/tablist';
-import Tab from 'primevue/tab';
-import TabPanels from 'primevue/tabpanels';
-import TabPanel from 'primevue/tabpanel';
 import type { Cat, Color } from '@/types/models';
 
 const props = defineProps<{
@@ -73,6 +69,14 @@ function submit(): void {
         );
     } else {
         form.post(route('admin.cats.store'), { forceFormData: true });
+    }
+}
+
+function deletePhoto(photoId: number): void {
+    if (!props.cat) return;
+
+    if (confirm('Supprimer cette photo ?')) {
+        router.delete(route('admin.cats.photos.destroy', [props.cat.id, photoId]), { preserveScroll: true });
     }
 }
 </script>
@@ -180,24 +184,22 @@ function submit(): void {
 
                     <div>
                         <InputLabel value="Description" />
-                        <Tabs value="fr" class="mt-1">
-                            <TabList>
-                                <Tab value="fr">Français</Tab>
-                                <Tab value="en">English</Tab>
-                            </TabList>
-                            <TabPanels>
-                                <TabPanel value="fr">
-                                    <textarea v-model="form.description.fr" rows="5"
-                                        class="w-full rounded-md border-gray-300" />
-                                    <InputError :message="form.errors['description.fr']" />
-                                </TabPanel>
-                                <TabPanel value="en">
-                                    <textarea v-model="form.description.en" rows="5"
-                                        class="w-full rounded-md border-gray-300" />
-                                    <InputError :message="form.errors['description.en']" />
-                                </TabPanel>
-                            </TabPanels>
-                        </Tabs>
+                        <LocaleTabs
+                            class="mt-1"
+                            :fr-has-error="!!form.errors['description.fr']"
+                            :en-has-error="!!form.errors['description.en']"
+                        >
+                            <template #fr>
+                                <textarea v-model="form.description.fr" rows="5"
+                                    class="w-full rounded-md border-gray-300" />
+                                <InputError :message="form.errors['description.fr']" />
+                            </template>
+                            <template #en>
+                                <textarea v-model="form.description.en" rows="5"
+                                    class="w-full rounded-md border-gray-300" />
+                                <InputError :message="form.errors['description.en']" />
+                            </template>
+                        </LocaleTabs>
                     </div>
 
                     <div>
@@ -205,10 +207,23 @@ function submit(): void {
                         <input id="photos" type="file" multiple accept="image/*" class="mt-1 block w-full text-sm"
                             @change="onFilesSelected" />
                         <InputError :message="form.errors.photos" />
+                        <p class="mt-1 text-xs text-neutral-500">
+                            Plusieurs photos peuvent être sélectionnées à la fois ; elles s'ajoutent aux photos
+                            existantes ci-dessous.
+                        </p>
 
-                        <div v-if="cat?.photos.length" class="mt-3 flex gap-2">
-                            <img v-for="photo in cat.photos" :key="photo.id" :src="photo.url"
-                                class="h-16 w-16 rounded object-cover" />
+                        <div v-if="cat?.photos.length" class="mt-3 flex flex-wrap gap-3">
+                            <div v-for="photo in cat.photos" :key="photo.id" class="group relative">
+                                <img :src="photo.url" class="h-20 w-20 rounded object-cover" />
+                                <button
+                                    type="button"
+                                    title="Supprimer cette photo"
+                                    class="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-xs text-white opacity-0 shadow transition group-hover:opacity-100"
+                                    @click="deletePhoto(photo.id)"
+                                >
+                                    <i class="pi pi-times" />
+                                </button>
+                            </div>
                         </div>
                     </div>
 

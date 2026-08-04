@@ -6,10 +6,13 @@ import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
-import type { Owner } from '@/types/models';
+import Select from 'primevue/select';
+import type { Owner, OwnerCatOption, Color } from '@/types/models';
 
 const props = defineProps<{
     owner?: Owner;
+    cats: OwnerCatOption[];
+    colors: Color[];
 }>();
 
 const form = useForm({
@@ -18,6 +21,8 @@ const form = useForm({
     email: props.owner?.email ?? '',
     phone: props.owner?.phone ?? '',
     city: props.owner?.city ?? '',
+    desired_cat_id: props.owner?.desired_cat_id ?? null,
+    desired_color_id: props.owner?.desired_color_id ?? null,
 });
 
 function submit(): void {
@@ -71,6 +76,46 @@ function submit(): void {
                             <InputLabel for="city" value="Ville" />
                             <InputText id="city" v-model="form.city" class="mt-1 w-full" />
                             <InputError :message="form.errors.city" />
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-6">
+                        <h3 class="text-sm font-semibold text-neutral-900">Préférence d'adoption</h3>
+                        <p class="mt-1 text-xs text-neutral-500">
+                            Un chat précis s'il en a déjà choisi un, sinon une couleur souhaitée pour une inscription
+                            en liste d'attente. Les deux sont facultatifs et indépendants.
+                        </p>
+
+                        <div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div>
+                                <InputLabel for="desired_cat_id" value="Chat souhaité (optionnel)" />
+                                <Select
+                                    id="desired_cat_id"
+                                    v-model="form.desired_cat_id"
+                                    :options="cats"
+                                    option-label="name"
+                                    option-value="id"
+                                    show-clear
+                                    placeholder="Aucun en particulier"
+                                    class="mt-1 w-full"
+                                />
+                                <InputError :message="form.errors.desired_cat_id" />
+                            </div>
+
+                            <div>
+                                <InputLabel for="desired_color_id" value="Couleur souhaitée (liste d'attente)" />
+                                <Select
+                                    id="desired_color_id"
+                                    v-model="form.desired_color_id"
+                                    :options="colors"
+                                    option-label="name"
+                                    option-value="id"
+                                    show-clear
+                                    placeholder="Aucune préférence"
+                                    class="mt-1 w-full"
+                                />
+                                <InputError :message="form.errors.desired_color_id" />
+                            </div>
                         </div>
                     </div>
 

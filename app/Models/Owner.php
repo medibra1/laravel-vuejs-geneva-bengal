@@ -6,10 +6,27 @@ use Database\Factories\OwnerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['first_name', 'last_name', 'email', 'phone', 'city'])]
+#[Fillable(['first_name', 'last_name', 'email', 'phone', 'city', 'desired_cat_id', 'desired_color_id'])]
 class Owner extends Model
 {
     /** @use HasFactory<OwnerFactory> */
     use HasFactory;
+
+    /**
+     * @return BelongsTo<Cat, $this>
+     */
+    public function desiredCat(): BelongsTo
+    {
+        return $this->belongsTo(Cat::class, 'desired_cat_id');
+    }
+
+    /**
+     * @return BelongsTo<Color, $this>
+     */
+    public function desiredColor(): BelongsTo
+    {
+        return $this->belongsTo(Color::class, 'desired_color_id');
+    }
 }

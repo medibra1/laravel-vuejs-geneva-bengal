@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 import DepositForm from '@/Components/DepositForm.vue';
@@ -12,6 +12,9 @@ const props = defineProps<{
 }>();
 
 const page = usePage<PageProps>();
+
+const selectedPhotoIndex = ref(0);
+const selectedPhoto = computed(() => props.cat.photos[selectedPhotoIndex.value] ?? props.cat.photos[0]);
 
 const depositAmountLabel = computed(() =>
     new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(props.depositAmount / 100),
@@ -55,11 +58,26 @@ function formatPrice(cents: number | null): string {
             </h1>
 
             <div class="grid grid-cols-1 gap-16 md:grid-cols-2">
-                <div class="aspect-square overflow-hidden rounded-lg bg-gray-100">
-                    <img v-if="cat.photos.length" :src="cat.photos[0].url" :alt="cat.name"
-                        class="h-full w-full object-cover" />
-                    <div v-else class="flex h-full items-center justify-center text-gray-400">
-                        Pas de photo
+                <div>
+                    <div class="aspect-square overflow-hidden rounded-lg bg-gray-100">
+                        <img v-if="selectedPhoto" :src="selectedPhoto.url" :alt="cat.name"
+                            class="h-full w-full object-cover" />
+                        <div v-else class="flex h-full items-center justify-center text-gray-400">
+                            Pas de photo
+                        </div>
+                    </div>
+
+                    <div v-if="cat.photos.length > 1" class="mt-3 flex gap-2">
+                        <button
+                            v-for="(photo, index) in cat.photos"
+                            :key="photo.id"
+                            type="button"
+                            class="h-16 w-16 overflow-hidden rounded-md ring-2 transition"
+                            :class="index === selectedPhotoIndex ? 'ring-emerald-600' : 'ring-transparent hover:ring-gray-300'"
+                            @click="selectedPhotoIndex = index"
+                        >
+                            <img :src="photo.url" :alt="`${cat.name} — photo ${index + 1}`" class="h-full w-full object-cover" />
+                        </button>
                     </div>
                 </div>
 
