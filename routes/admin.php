@@ -31,6 +31,7 @@ Route::prefix('admin')
     ->middleware(['auth', 'verified', 'role:admin|super_admin'])
     ->group(function (): void {
         Route::resource('cats', CatController::class)->except('show');
+        Route::delete('cats/{cat}/photos/{media}', [CatController::class, 'destroyPhoto'])->name('cats.photos.destroy');
         Route::resource('owners', OwnerController::class)->except('show');
         Route::resource('litters', LitterController::class)->except('show');
         Route::resource('galleries', GalleryController::class)->except('show');

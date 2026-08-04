@@ -44,6 +44,13 @@ function destroy(owner: Owner): void {
                         <Column field="email" header="Email" />
                         <Column field="phone" header="Téléphone" />
                         <Column field="city" header="Ville" />
+                        <Column header="Préférence d'adoption">
+                            <template #body="{ data }">
+                                <span v-if="data.desired_cat">{{ data.desired_cat.name }}</span>
+                                <span v-else-if="data.desired_color">Couleur : {{ data.desired_color.name }}</span>
+                                <span v-else class="text-neutral-400">—</span>
+                            </template>
+                        </Column>
                         <Column header="Actions">
                             <template #body="{ data }">
                                 <div class="flex gap-2">

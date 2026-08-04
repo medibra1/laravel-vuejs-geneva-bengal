@@ -3,16 +3,12 @@ import { Head, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
+import LocaleTabs from '@/Components/LocaleTabs.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import ToggleSwitch from 'primevue/toggleswitch';
-import Tabs from 'primevue/tabs';
-import TabList from 'primevue/tablist';
-import Tab from 'primevue/tab';
-import TabPanels from 'primevue/tabpanels';
-import TabPanel from 'primevue/tabpanel';
 import type { Testimonial } from '@/types/models';
 
 const props = defineProps<{
@@ -60,22 +56,20 @@ function submit(): void {
 
                     <div>
                         <InputLabel value="Citation" />
-                        <Tabs value="fr" class="mt-1">
-                            <TabList>
-                                <Tab value="fr">Français</Tab>
-                                <Tab value="en">English</Tab>
-                            </TabList>
-                            <TabPanels>
-                                <TabPanel value="fr">
-                                    <textarea v-model="form.quote.fr" rows="4" class="w-full rounded-md border-gray-300" />
-                                    <InputError :message="form.errors['quote.fr']" />
-                                </TabPanel>
-                                <TabPanel value="en">
-                                    <textarea v-model="form.quote.en" rows="4" class="w-full rounded-md border-gray-300" />
-                                    <InputError :message="form.errors['quote.en']" />
-                                </TabPanel>
-                            </TabPanels>
-                        </Tabs>
+                        <LocaleTabs
+                            class="mt-1"
+                            :fr-has-error="!!form.errors['quote.fr']"
+                            :en-has-error="!!form.errors['quote.en']"
+                        >
+                            <template #fr>
+                                <textarea v-model="form.quote.fr" rows="4" class="w-full rounded-md border-gray-300" />
+                                <InputError :message="form.errors['quote.fr']" />
+                            </template>
+                            <template #en>
+                                <textarea v-model="form.quote.en" rows="4" class="w-full rounded-md border-gray-300" />
+                                <InputError :message="form.errors['quote.en']" />
+                            </template>
+                        </LocaleTabs>
                     </div>
 
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">

@@ -38,6 +38,15 @@ export interface Owner {
     email: string;
     phone: string | null;
     city: string | null;
+    desired_cat_id: number | null;
+    desired_color_id: number | null;
+    desired_cat?: { id: number; name: string } | null;
+    desired_color?: { id: number; name: string } | null;
+}
+
+export interface OwnerCatOption {
+    id: number;
+    name: string;
 }
 
 export interface LitterCatOption {

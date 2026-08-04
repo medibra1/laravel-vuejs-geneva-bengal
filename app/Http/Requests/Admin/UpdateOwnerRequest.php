@@ -31,6 +31,8 @@ class UpdateOwnerRequest extends FormRequest
             ],
             'phone' => ['nullable', 'string', 'max:50'],
             'city' => ['nullable', 'string', 'max:255'],
+            'desired_cat_id' => ['nullable', 'exists:cats,id'],
+            'desired_color_id' => ['nullable', 'exists:colors,id'],
         ];
     }
 }

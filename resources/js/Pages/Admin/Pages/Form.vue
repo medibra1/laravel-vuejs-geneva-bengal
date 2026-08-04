@@ -3,16 +3,12 @@ import { Head, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
+import LocaleTabs from '@/Components/LocaleTabs.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import ToggleSwitch from 'primevue/toggleswitch';
-import Tabs from 'primevue/tabs';
-import TabList from 'primevue/tablist';
-import Tab from 'primevue/tab';
-import TabPanels from 'primevue/tabpanels';
-import TabPanel from 'primevue/tabpanel';
 import type { CmsPage } from '@/types/models';
 
 const props = defineProps<{
@@ -79,66 +75,64 @@ function submit(): void {
 
                     <div>
                         <InputLabel value="Titre" />
-                        <Tabs value="fr" class="mt-1">
-                            <TabList>
-                                <Tab value="fr">Français</Tab>
-                                <Tab value="en">English</Tab>
-                            </TabList>
-                            <TabPanels>
-                                <TabPanel value="fr">
-                                    <InputText v-model="form.title.fr" class="w-full" />
-                                    <InputError :message="form.errors['title.fr']" />
-                                </TabPanel>
-                                <TabPanel value="en">
-                                    <InputText v-model="form.title.en" class="w-full" />
-                                    <InputError :message="form.errors['title.en']" />
-                                </TabPanel>
-                            </TabPanels>
-                        </Tabs>
+                        <LocaleTabs
+                            class="mt-1"
+                            :fr-has-error="!!form.errors['title.fr']"
+                            :en-has-error="!!form.errors['title.en']"
+                        >
+                            <template #fr>
+                                <InputText v-model="form.title.fr" class="w-full" />
+                                <InputError :message="form.errors['title.fr']" />
+                            </template>
+                            <template #en>
+                                <InputText v-model="form.title.en" class="w-full" />
+                                <InputError :message="form.errors['title.en']" />
+                            </template>
+                        </LocaleTabs>
                     </div>
 
                     <div>
                         <InputLabel value="Contenu" />
-                        <Tabs value="fr" class="mt-1">
-                            <TabList>
-                                <Tab value="fr">Français</Tab>
-                                <Tab value="en">English</Tab>
-                            </TabList>
-                            <TabPanels>
-                                <TabPanel value="fr">
-                                    <textarea v-model="form.body.fr" rows="8" class="w-full rounded-md border-gray-300" />
-                                    <InputError :message="form.errors['body.fr']" />
-                                </TabPanel>
-                                <TabPanel value="en">
-                                    <textarea v-model="form.body.en" rows="8" class="w-full rounded-md border-gray-300" />
-                                    <InputError :message="form.errors['body.en']" />
-                                </TabPanel>
-                            </TabPanels>
-                        </Tabs>
+                        <LocaleTabs
+                            class="mt-1"
+                            :fr-has-error="!!form.errors['body.fr']"
+                            :en-has-error="!!form.errors['body.en']"
+                        >
+                            <template #fr>
+                                <textarea v-model="form.body.fr" rows="8" class="w-full rounded-md border-gray-300" />
+                                <InputError :message="form.errors['body.fr']" />
+                            </template>
+                            <template #en>
+                                <textarea v-model="form.body.en" rows="8" class="w-full rounded-md border-gray-300" />
+                                <InputError :message="form.errors['body.en']" />
+                            </template>
+                        </LocaleTabs>
                     </div>
 
                     <div>
                         <InputLabel value="Méta SEO" />
-                        <Tabs value="fr" class="mt-1">
-                            <TabList>
-                                <Tab value="fr">Français</Tab>
-                                <Tab value="en">English</Tab>
-                            </TabList>
-                            <TabPanels>
-                                <TabPanel value="fr">
-                                    <InputLabel for="meta_title_fr" value="Titre SEO" class="text-xs" />
-                                    <InputText id="meta_title_fr" v-model="form.meta_title.fr" class="w-full" />
-                                    <InputLabel for="meta_description_fr" value="Description SEO" class="mt-3 text-xs" />
-                                    <textarea id="meta_description_fr" v-model="form.meta_description.fr" rows="3" class="w-full rounded-md border-gray-300" />
-                                </TabPanel>
-                                <TabPanel value="en">
-                                    <InputLabel for="meta_title_en" value="SEO title" class="text-xs" />
-                                    <InputText id="meta_title_en" v-model="form.meta_title.en" class="w-full" />
-                                    <InputLabel for="meta_description_en" value="SEO description" class="mt-3 text-xs" />
-                                    <textarea id="meta_description_en" v-model="form.meta_description.en" rows="3" class="w-full rounded-md border-gray-300" />
-                                </TabPanel>
-                            </TabPanels>
-                        </Tabs>
+                        <LocaleTabs
+                            class="mt-1"
+                            :fr-has-error="!!form.errors['meta_title.fr'] || !!form.errors['meta_description.fr']"
+                            :en-has-error="!!form.errors['meta_title.en'] || !!form.errors['meta_description.en']"
+                        >
+                            <template #fr>
+                                <InputLabel for="meta_title_fr" value="Titre SEO" class="text-xs" />
+                                <InputText id="meta_title_fr" v-model="form.meta_title.fr" class="w-full" />
+                                <InputError :message="form.errors['meta_title.fr']" />
+                                <InputLabel for="meta_description_fr" value="Description SEO" class="mt-3 text-xs" />
+                                <textarea id="meta_description_fr" v-model="form.meta_description.fr" rows="3" class="w-full rounded-md border-gray-300" />
+                                <InputError :message="form.errors['meta_description.fr']" />
+                            </template>
+                            <template #en>
+                                <InputLabel for="meta_title_en" value="SEO title" class="text-xs" />
+                                <InputText id="meta_title_en" v-model="form.meta_title.en" class="w-full" />
+                                <InputError :message="form.errors['meta_title.en']" />
+                                <InputLabel for="meta_description_en" value="SEO description" class="mt-3 text-xs" />
+                                <textarea id="meta_description_en" v-model="form.meta_description.en" rows="3" class="w-full rounded-md border-gray-300" />
+                                <InputError :message="form.errors['meta_description.en']" />
+                            </template>
+                        </LocaleTabs>
                     </div>
 
                     <label class="flex items-center gap-2">

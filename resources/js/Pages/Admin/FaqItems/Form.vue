@@ -3,15 +3,11 @@ import { Head, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
+import LocaleTabs from '@/Components/LocaleTabs.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
-import Tabs from 'primevue/tabs';
-import TabList from 'primevue/tablist';
-import Tab from 'primevue/tab';
-import TabPanels from 'primevue/tabpanels';
-import TabPanel from 'primevue/tabpanel';
 import type { FaqItem } from '@/types/models';
 
 const props = defineProps<{
@@ -55,44 +51,38 @@ function submit(): void {
                 <form class="space-y-6 bg-white p-6 shadow-sm sm:rounded-lg" @submit.prevent="submit">
                     <div>
                         <InputLabel value="Question" />
-                        <Tabs value="fr" class="mt-1">
-                            <TabList>
-                                <Tab value="fr">Français</Tab>
-                                <Tab value="en">English</Tab>
-                            </TabList>
-                            <TabPanels>
-                                <TabPanel value="fr">
-                                    <InputText v-model="form.question.fr" class="w-full" />
-                                    <InputError :message="form.errors['question.fr']" />
-                                </TabPanel>
-                                <TabPanel value="en">
-                                    <InputText v-model="form.question.en" class="w-full" />
-                                    <InputError :message="form.errors['question.en']" />
-                                </TabPanel>
-                            </TabPanels>
-                        </Tabs>
+                        <LocaleTabs
+                            class="mt-1"
+                            :fr-has-error="!!form.errors['question.fr']"
+                            :en-has-error="!!form.errors['question.en']"
+                        >
+                            <template #fr>
+                                <InputText v-model="form.question.fr" class="w-full" />
+                                <InputError :message="form.errors['question.fr']" />
+                            </template>
+                            <template #en>
+                                <InputText v-model="form.question.en" class="w-full" />
+                                <InputError :message="form.errors['question.en']" />
+                            </template>
+                        </LocaleTabs>
                     </div>
 
                     <div>
                         <InputLabel value="Réponse" />
-                        <Tabs value="fr" class="mt-1">
-                            <TabList>
-                                <Tab value="fr">Français</Tab>
-                                <Tab value="en">English</Tab>
-                            </TabList>
-                            <TabPanels>
-                                <TabPanel value="fr">
-                                    <textarea v-model="form.answer.fr" rows="5"
-                                        class="w-full rounded-md border-gray-300" />
-                                    <InputError :message="form.errors['answer.fr']" />
-                                </TabPanel>
-                                <TabPanel value="en">
-                                    <textarea v-model="form.answer.en" rows="5"
-                                        class="w-full rounded-md border-gray-300" />
-                                    <InputError :message="form.errors['answer.en']" />
-                                </TabPanel>
-                            </TabPanels>
-                        </Tabs>
+                        <LocaleTabs
+                            class="mt-1"
+                            :fr-has-error="!!form.errors['answer.fr']"
+                            :en-has-error="!!form.errors['answer.en']"
+                        >
+                            <template #fr>
+                                <textarea v-model="form.answer.fr" rows="5" class="w-full rounded-md border-gray-300" />
+                                <InputError :message="form.errors['answer.fr']" />
+                            </template>
+                            <template #en>
+                                <textarea v-model="form.answer.en" rows="5" class="w-full rounded-md border-gray-300" />
+                                <InputError :message="form.errors['answer.en']" />
+                            </template>
+                        </LocaleTabs>
                     </div>
 
                     <div>

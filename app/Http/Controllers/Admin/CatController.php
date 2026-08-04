@@ -12,6 +12,7 @@ use App\Models\Color;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -91,5 +92,18 @@ class CatController extends Controller
         $cat->delete();
 
         return redirect()->route('admin.cats.index')->with('success', __('Cat deleted.'));
+    }
+
+    /**
+     * Only the store()/update() actions could add photos — there was no
+     * way to remove a single bad one short of deleting the whole cat.
+     */
+    public function destroyPhoto(Cat $cat, Media $media): RedirectResponse
+    {
+        abort_unless($media->model_type === Cat::class && $media->model_id === $cat->id, 404);
+
+        $media->delete();
+
+        return back()->with('success', __('Photo deleted.'));
     }
 }
