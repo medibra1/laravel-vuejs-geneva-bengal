@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CatController;
 use App\Http\Controllers\Admin\ContactRequestController;
+use App\Http\Controllers\Admin\DepositController;
 use App\Http\Controllers\Admin\FaqItemController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\LitterController;
@@ -24,6 +25,10 @@ Route::prefix('admin')
         Route::resource('faq-items', FaqItemController::class)->except('show');
         Route::resource('testimonials', TestimonialController::class)->except('show');
         Route::resource('contact-requests', ContactRequestController::class)->only(['index', 'update', 'destroy']);
+        // Refunding (below) is super_admin-only per CLAUDE.md, but viewing
+        // the list isn't — deposits are business content like the rest of
+        // this group.
+        Route::get('deposits', [DepositController::class, 'index'])->name('deposits.index');
     });
 
 // site_settings is super_admin-only per CLAUDE.md's role split — deliberately
@@ -38,4 +43,6 @@ Route::prefix('admin')
         Route::resource('users', UserController::class)->except('show');
         Route::post('users/{user}/resend-reset-link', [UserController::class, 'resendResetLink'])->name('users.resend-reset-link');
         Route::patch('users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
+
+        Route::post('deposits/{deposit}/refund', [DepositController::class, 'refund'])->name('deposits.refund');
     });
