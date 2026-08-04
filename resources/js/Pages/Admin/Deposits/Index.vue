@@ -50,12 +50,12 @@ function refund(deposit: Deposit): void {
 
     <AdminLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">Acomptes</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">Acomptes</h2>
         </template>
 
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <div class="overflow-hidden bg-white p-6 shadow-sm sm:rounded-lg">
+                <div class="overflow-hidden bg-white dark:bg-neutral-800 p-6 shadow-sm sm:rounded-lg">
                     <DataTable :value="deposits.data" data-key="id">
                         <Column field="name" header="Nom" />
                         <Column field="email" header="E-mail" />

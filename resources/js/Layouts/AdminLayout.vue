@@ -19,21 +19,24 @@ const userInitials = computed(() =>
 );
 
 const sidebarOpen = ref(false); // mobile drawer
-const sidebarDark = ref(false); // "aside" theme — light by default, see CLAUDE.md/feedback
+const themeDark = ref(false); // whole admin panel, not just the sidebar
 const sidebarCollapsed = ref(false); // desktop icon-only rail
 
-// localStorage doesn't exist during SSR (see resources/js/ssr.ts) — these
-// three refs start at safe defaults above and only read/persist the
-// user's actual preference once mounted in a real browser.
+// localStorage/document don't exist during SSR (see resources/js/ssr.ts)
+// — these start at safe defaults above and only read/apply the user's
+// actual preference once mounted in a real browser. app.blade.php also
+// applies the .dark class synchronously pre-hydration to avoid a flash
+// of the wrong theme; this just keeps the ref itself in sync with that.
 onMounted(() => {
-    sidebarDark.value = localStorage.getItem('admin.sidebarDark') === '1';
+    themeDark.value = document.documentElement.classList.contains('dark');
     sidebarCollapsed.value = localStorage.getItem('admin.sidebarCollapsed') === '1';
 });
 
-watch(sidebarDark, (value) => localStorage.setItem('admin.sidebarDark', value ? '1' : '0'));
+watch(themeDark, (value) => {
+    document.documentElement.classList.toggle('dark', value);
+    localStorage.setItem('admin.themeDark', value ? '1' : '0');
+});
 watch(sidebarCollapsed, (value) => localStorage.setItem('admin.sidebarCollapsed', value ? '1' : '0'));
-
-const logo = computed(() => (sidebarDark.value ? logoLight : logoDark));
 
 interface NavItem {
     name: string;
@@ -64,193 +67,199 @@ const adminLinks: NavItem[] = [
 function isActive(name: string): boolean {
     return route().current(name) || route().current(`${name}.*`);
 }
-
-function linkClasses(active: boolean): string {
-    if (active) {
-        return 'bg-emerald-700 text-white';
-    }
-
-    return sidebarDark.value
-        ? 'text-neutral-300 hover:bg-white/5 hover:text-white'
-        : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900';
-}
 </script>
 
 <template>
-    <div class="flex min-h-screen bg-gray-100">
-        <!-- Mobile overlay -->
-        <div
-            v-if="sidebarOpen"
-            class="fixed inset-0 z-30 bg-black/50 lg:hidden"
-            @click="sidebarOpen = false"
-        />
+    <div class="flex min-h-screen flex-col bg-gray-100 dark:bg-neutral-900">
+        <div class="flex flex-1">
+            <!-- Mobile overlay -->
+            <div
+                v-if="sidebarOpen"
+                class="fixed inset-0 z-30 bg-black/50 lg:hidden"
+                @click="sidebarOpen = false"
+            />
 
-        <!-- Sidebar -->
-        <aside
-            class="fixed inset-y-0 left-0 z-40 flex shrink-0 flex-col border-r transition-all lg:static"
-            :class="[
-                sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-                sidebarCollapsed ? 'w-16' : 'w-64',
-                sidebarDark ? 'border-white/10 bg-neutral-900' : 'border-gray-200 bg-white',
-            ]"
-        >
-            <div class="flex h-16 items-center gap-2 border-b px-3" :class="sidebarDark ? 'border-white/10' : 'border-gray-200'">
-                <Link :href="route('dashboard')" class="flex min-w-0 flex-1 items-center justify-center">
-                    <img :src="logo" alt="Geneva Bengal" class="h-9 w-auto" :class="{ 'max-w-none': !sidebarCollapsed }" />
-                </Link>
-                <button
-                    type="button"
-                    title="Réduire / agrandir le menu"
-                    class="hidden shrink-0 rounded-md p-1.5 lg:block"
-                    :class="sidebarDark ? 'text-neutral-400 hover:bg-white/5 hover:text-white' : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700'"
-                    @click="sidebarCollapsed = !sidebarCollapsed"
-                >
-                    <i class="pi" :class="sidebarCollapsed ? 'pi-angle-double-right' : 'pi-angle-double-left'" />
-                </button>
-            </div>
+            <!-- Sidebar — navigation only, nothing global lives in here -->
+            <aside
+                class="fixed inset-y-0 left-0 z-40 flex shrink-0 flex-col border-r border-gray-200 bg-white transition-all dark:border-neutral-800 dark:bg-neutral-900 lg:static"
+                :class="[
+                    sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+                    sidebarCollapsed ? 'w-16' : 'w-64',
+                ]"
+            >
+                <div class="flex h-16 items-center gap-2 border-b border-gray-200 px-3 dark:border-neutral-800">
+                    <Link :href="route('dashboard')" class="flex min-w-0 flex-1 items-center justify-center">
+                        <img :src="logoDark" alt="Geneva Bengal" class="h-9 w-auto dark:hidden" />
+                        <img :src="logoLight" alt="Geneva Bengal" class="hidden h-9 w-auto dark:block" />
+                    </Link>
+                    <button
+                        type="button"
+                        title="Réduire / agrandir le menu"
+                        class="hidden shrink-0 rounded-md p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-white/5 dark:hover:text-white lg:block"
+                        @click="sidebarCollapsed = !sidebarCollapsed"
+                    >
+                        <i class="pi" :class="sidebarCollapsed ? 'pi-angle-double-right' : 'pi-angle-double-left'" />
+                    </button>
+                </div>
 
-            <!-- Profile — top of the sidebar, not buried at the bottom -->
-            <div class="border-b p-3" :class="sidebarDark ? 'border-white/10' : 'border-gray-200'">
-                <Dropdown align="left" width="48">
-                    <template #trigger>
+                <nav class="flex-1 space-y-6 overflow-y-auto px-3 py-6">
+                    <div class="space-y-1">
+                        <Link
+                            v-for="link in mainLinks"
+                            :key="link.name"
+                            :href="route(link.name)"
+                            :title="link.label"
+                            class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition"
+                            :class="
+                                isActive(link.name)
+                                    ? 'bg-emerald-700 text-white'
+                                    : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/5 dark:hover:text-white'
+                            "
+                        >
+                            <i class="pi shrink-0" :class="link.icon" />
+                            <span v-if="!sidebarCollapsed">{{ link.label }}</span>
+                        </Link>
+                    </div>
+
+                    <div>
+                        <p v-if="!sidebarCollapsed" class="px-3 text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                            Contenu
+                        </p>
+                        <div class="mt-2 space-y-1">
+                            <Link
+                                v-for="link in contentLinks"
+                                :key="link.name"
+                                :href="route(link.name)"
+                                :title="link.label"
+                                class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition"
+                                :class="
+                                    isActive(link.name)
+                                        ? 'bg-emerald-700 text-white'
+                                        : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/5 dark:hover:text-white'
+                                "
+                            >
+                                <i class="pi shrink-0" :class="link.icon" />
+                                <span v-if="!sidebarCollapsed">{{ link.label }}</span>
+                            </Link>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p v-if="!sidebarCollapsed" class="px-3 text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                            Paiements
+                        </p>
+                        <div class="mt-2 space-y-1">
+                            <Link
+                                v-for="link in paymentLinks"
+                                :key="link.name"
+                                :href="route(link.name)"
+                                :title="link.label"
+                                class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition"
+                                :class="
+                                    isActive(link.name)
+                                        ? 'bg-emerald-700 text-white'
+                                        : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/5 dark:hover:text-white'
+                                "
+                            >
+                                <i class="pi shrink-0" :class="link.icon" />
+                                <span v-if="!sidebarCollapsed">{{ link.label }}</span>
+                            </Link>
+                        </div>
+                    </div>
+
+                    <div v-if="isSuperAdmin">
+                        <p v-if="!sidebarCollapsed" class="px-3 text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                            Administration
+                        </p>
+                        <div class="mt-2 space-y-1">
+                            <Link
+                                v-for="link in adminLinks"
+                                :key="link.name"
+                                :href="route(link.name)"
+                                :title="link.label"
+                                class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition"
+                                :class="
+                                    isActive(link.name)
+                                        ? 'bg-emerald-700 text-white'
+                                        : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/5 dark:hover:text-white'
+                                "
+                            >
+                                <i class="pi shrink-0" :class="link.icon" />
+                                <span v-if="!sidebarCollapsed">{{ link.label }}</span>
+                            </Link>
+                        </div>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- Main column -->
+            <div class="flex min-w-0 flex-1 flex-col">
+                <!-- Topbar — global controls only: mobile nav toggle on the
+                     left, theme switcher + profile on the right. Page
+                     title/actions stay in the #header slot below, which
+                     every Admin/*.vue page already owns the full width of. -->
+                <div class="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-neutral-800 dark:bg-neutral-900 sm:px-6">
+                    <button type="button" class="text-gray-500 dark:text-neutral-400 lg:hidden" @click="sidebarOpen = true">
+                        <i class="pi pi-bars text-xl" />
+                    </button>
+                    <div class="hidden lg:block" />
+
+                    <div class="flex items-center gap-2">
                         <button
                             type="button"
-                            class="flex w-full items-center gap-2 rounded-md p-1.5 text-left transition"
-                            :class="sidebarDark ? 'hover:bg-white/5' : 'hover:bg-neutral-100'"
+                            title="Changer l'apparence"
+                            class="flex h-9 w-9 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-400 dark:hover:bg-white/5 dark:hover:text-white"
+                            @click="themeDark = !themeDark"
                         >
-                            <span
-                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-xs font-semibold text-white"
-                            >
-                                {{ userInitials }}
-                            </span>
-                            <span v-if="!sidebarCollapsed" class="min-w-0 flex-1">
-                                <span class="block truncate text-sm font-medium" :class="sidebarDark ? 'text-white' : 'text-neutral-900'">
-                                    {{ page.props.auth.user.name }}
-                                </span>
-                                <span class="block truncate text-xs" :class="sidebarDark ? 'text-neutral-400' : 'text-neutral-500'">
-                                    {{ isSuperAdmin ? 'Super admin' : 'Admin' }}
-                                </span>
-                            </span>
-                            <i v-if="!sidebarCollapsed" class="pi pi-angle-down text-xs" :class="sidebarDark ? 'text-neutral-400' : 'text-neutral-400'" />
+                            <i class="pi" :class="themeDark ? 'pi-sun' : 'pi-moon'" />
                         </button>
-                    </template>
-                    <template #content>
-                        <DropdownLink :href="route('profile.edit')">Profil</DropdownLink>
-                        <DropdownLink :href="route('logout')" method="post" as="button">
-                            Se déconnecter
-                        </DropdownLink>
-                    </template>
-                </Dropdown>
-            </div>
 
-            <nav class="flex-1 space-y-6 overflow-y-auto px-3 py-6">
-                <div class="space-y-1">
-                    <Link
-                        v-for="link in mainLinks"
-                        :key="link.name"
-                        :href="route(link.name)"
-                        :title="link.label"
-                        class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition"
-                        :class="linkClasses(isActive(link.name))"
-                    >
-                        <i class="pi shrink-0" :class="link.icon" />
-                        <span v-if="!sidebarCollapsed">{{ link.label }}</span>
-                    </Link>
-                </div>
-
-                <div>
-                    <p v-if="!sidebarCollapsed" class="px-3 text-xs font-semibold uppercase tracking-wider" :class="sidebarDark ? 'text-neutral-500' : 'text-neutral-400'">
-                        Contenu
-                    </p>
-                    <div class="mt-2 space-y-1">
-                        <Link
-                            v-for="link in contentLinks"
-                            :key="link.name"
-                            :href="route(link.name)"
-                            :title="link.label"
-                            class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition"
-                            :class="linkClasses(isActive(link.name))"
-                        >
-                            <i class="pi shrink-0" :class="link.icon" />
-                            <span v-if="!sidebarCollapsed">{{ link.label }}</span>
-                        </Link>
+                        <Dropdown align="right" width="48">
+                            <template #trigger>
+                                <button
+                                    type="button"
+                                    class="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition hover:bg-neutral-100 dark:hover:bg-white/5"
+                                >
+                                    <span
+                                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-xs font-semibold text-white"
+                                    >
+                                        {{ userInitials }}
+                                    </span>
+                                    <span class="hidden text-left sm:block">
+                                        <span class="block text-sm font-medium leading-tight text-neutral-900 dark:text-white">
+                                            {{ page.props.auth.user.name }}
+                                        </span>
+                                        <span class="block text-xs leading-tight text-neutral-500 dark:text-neutral-400">
+                                            {{ isSuperAdmin ? 'Super admin' : 'Admin' }}
+                                        </span>
+                                    </span>
+                                    <i class="pi pi-angle-down hidden text-xs text-neutral-400 sm:block" />
+                                </button>
+                            </template>
+                            <template #content>
+                                <DropdownLink :href="route('profile.edit')">Profil</DropdownLink>
+                                <DropdownLink :href="route('logout')" method="post" as="button">
+                                    Se déconnecter
+                                </DropdownLink>
+                            </template>
+                        </Dropdown>
                     </div>
                 </div>
 
-                <div>
-                    <p v-if="!sidebarCollapsed" class="px-3 text-xs font-semibold uppercase tracking-wider" :class="sidebarDark ? 'text-neutral-500' : 'text-neutral-400'">
-                        Paiements
-                    </p>
-                    <div class="mt-2 space-y-1">
-                        <Link
-                            v-for="link in paymentLinks"
-                            :key="link.name"
-                            :href="route(link.name)"
-                            :title="link.label"
-                            class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition"
-                            :class="linkClasses(isActive(link.name))"
-                        >
-                            <i class="pi shrink-0" :class="link.icon" />
-                            <span v-if="!sidebarCollapsed">{{ link.label }}</span>
-                        </Link>
+                <header class="border-b border-gray-200 bg-white dark:border-neutral-800 dark:bg-neutral-900" v-if="$slots.header">
+                    <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+                        <slot name="header" />
                     </div>
-                </div>
+                </header>
 
-                <div v-if="isSuperAdmin">
-                    <p v-if="!sidebarCollapsed" class="px-3 text-xs font-semibold uppercase tracking-wider" :class="sidebarDark ? 'text-neutral-500' : 'text-neutral-400'">
-                        Administration
-                    </p>
-                    <div class="mt-2 space-y-1">
-                        <Link
-                            v-for="link in adminLinks"
-                            :key="link.name"
-                            :href="route(link.name)"
-                            :title="link.label"
-                            class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition"
-                            :class="linkClasses(isActive(link.name))"
-                        >
-                            <i class="pi shrink-0" :class="link.icon" />
-                            <span v-if="!sidebarCollapsed">{{ link.label }}</span>
-                        </Link>
-                    </div>
-                </div>
-            </nav>
+                <main class="flex-1">
+                    <slot />
+                </main>
 
-            <!-- Footer -->
-            <div class="flex items-center gap-2 border-t p-3" :class="sidebarDark ? 'border-white/10' : 'border-gray-200'">
-                <button
-                    type="button"
-                    title="Changer l'apparence du menu"
-                    class="flex shrink-0 items-center justify-center rounded-md p-2"
-                    :class="sidebarDark ? 'text-neutral-400 hover:bg-white/5 hover:text-white' : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700'"
-                    @click="sidebarDark = !sidebarDark"
-                >
-                    <i class="pi" :class="sidebarDark ? 'pi-sun' : 'pi-moon'" />
-                </button>
-                <p v-if="!sidebarCollapsed" class="truncate text-xs" :class="sidebarDark ? 'text-neutral-500' : 'text-neutral-400'">
-                    © {{ new Date().getFullYear() }} Geneva Bengal
-                </p>
+                <footer class="border-t border-gray-200 bg-white px-4 py-4 text-center text-xs text-neutral-400 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-500 sm:px-6">
+                    © {{ new Date().getFullYear() }} Geneva Bengal — Back-office
+                </footer>
             </div>
-        </aside>
-
-        <!-- Main column -->
-        <div class="flex min-w-0 flex-1 flex-col">
-            <div class="flex h-16 items-center gap-4 border-b border-gray-200 bg-white px-4 lg:hidden">
-                <button type="button" class="text-gray-500" @click="sidebarOpen = true">
-                    <i class="pi pi-bars text-xl" />
-                </button>
-                <img :src="logoDark" alt="Geneva Bengal" class="h-8 w-auto" />
-            </div>
-
-            <header class="border-b border-gray-200 bg-white" v-if="$slots.header">
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                    <slot name="header" />
-                </div>
-            </header>
-
-            <main class="flex-1">
-                <slot />
-            </main>
         </div>
     </div>
 </template>

@@ -34,7 +34,7 @@ class Page extends Model
     public function getSlugOptions(): SlugOptions
     {
         return SlugOptions::create()
-            ->generateSlugsFrom('title')
+            ->generateSlugsFrom(fn (self $page) => $page->getTranslation('title', 'fr'))
             ->saveSlugsTo('slug');
     }
 }

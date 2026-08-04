@@ -32,7 +32,7 @@ createInertiaApp({
         createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(createPinia())
-            .use(PrimeVue, { theme: { preset: Aura } })
+            .use(PrimeVue, { theme: { preset: Aura, options: { darkModeSelector: ".dark" } } })
             .use(ZiggyVue)
             .use(i18n)
             .mount(el);

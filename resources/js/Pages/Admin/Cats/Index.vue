@@ -35,7 +35,7 @@ function destroy(cat: Cat): void {
     <AdminLayout>
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800">Chats</h2>
+                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">Chats</h2>
                 <Link :href="route('admin.cats.create')">
                     <Button label="Nouveau chat" icon="pi pi-plus" />
                 </Link>
@@ -44,7 +44,7 @@ function destroy(cat: Cat): void {
 
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <div class="overflow-hidden bg-white p-6 shadow-sm sm:rounded-lg">
+                <div class="overflow-hidden bg-white dark:bg-neutral-800 p-6 shadow-sm sm:rounded-lg">
                     <DataTable :value="cats.data" data-key="id">
                         <Column header="Photo">
                             <template #body="{ data }">

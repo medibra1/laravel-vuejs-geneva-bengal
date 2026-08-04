@@ -6,6 +6,16 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
+        {{-- Applied synchronously, before any CSS paints, so the admin
+             panel doesn't flash light before hydration can read the
+             stored preference — see AdminLayout.vue. Harmless on public
+             pages: nothing there uses a dark: variant. --}}
+        <script>
+            if (localStorage.getItem('admin.themeDark') === '1') {
+                document.documentElement.classList.add('dark');
+            }
+        </script>
+
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />

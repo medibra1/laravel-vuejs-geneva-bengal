@@ -27,7 +27,7 @@ function destroy(gallery: Gallery): void {
     <AdminLayout>
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800">Galerie</h2>
+                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">Galerie</h2>
                 <Link :href="route('admin.galleries.create')">
                     <Button label="Ajouter une photo" icon="pi pi-plus" />
                 </Link>
@@ -36,7 +36,7 @@ function destroy(gallery: Gallery): void {
 
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <div class="overflow-hidden bg-white p-6 shadow-sm sm:rounded-lg">
+                <div class="overflow-hidden bg-white dark:bg-neutral-800 p-6 shadow-sm sm:rounded-lg">
                     <DataTable :value="galleries.data" data-key="id">
                         <Column header="Photo">
                             <template #body="{ data }">
