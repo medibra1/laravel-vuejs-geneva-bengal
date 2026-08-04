@@ -3,12 +3,18 @@ import { Head, Link } from '@inertiajs/vue3';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 import NewsletterForm from '@/Components/NewsletterForm.vue';
 import heroImage from '../../../images/home/hero.jpg';
+import heroImageMobile from '../../../images/home/hero-mobile.jpg';
 import kittensMontage from '../../../images/home/kittens-montage.png';
 import newsletterKitten from '../../../images/home/newsletter-kitten.png';
 import internationalKitten from '../../../images/home/international-kitten.png';
-import instagramTile from '../../../images/home/instagram-tile.jpeg';
+import instagram1 from '../../../images/home/instagram-1.jpg';
+import instagram2 from '../../../images/home/instagram-2.jpg';
+import instagram3 from '../../../images/home/instagram-3.jpg';
+import instagram4 from '../../../images/home/instagram-4.jpg';
+import instagram5 from '../../../images/home/instagram-5.jpg';
+import instagram6 from '../../../images/home/instagram-6.jpg';
 
-const instagramTiles = Array.from({ length: 6 });
+const instagramTiles = [instagram1, instagram2, instagram3, instagram4, instagram5, instagram6];
 
 // No dedicated pages/routes yet for these (international shipping info,
 // the real Instagram feed) — placeholders, same convention as
@@ -21,7 +27,10 @@ const placeholderHref = '#';
 
     <PublicLayout>
         <section class="relative flex h-[60vh] min-h-[420px] items-center justify-center overflow-hidden bg-neutral-900 text-white sm:h-[70vh]">
-            <img :src="heroImage" alt="" class="absolute inset-0 h-full w-full object-cover opacity-70" />
+            <picture>
+                <source :srcset="heroImageMobile" media="(max-width: 767px)" />
+                <img :src="heroImage" alt="" class="absolute inset-0 h-full w-full object-cover opacity-70" />
+            </picture>
             <div class="absolute inset-0 bg-gradient-to-t from-neutral-900/90 via-neutral-900/30 to-transparent" />
             <div class="relative px-6 text-center">
                 <p class="font-serif text-4xl italic text-emerald-300 sm:text-5xl">Éleveur de chats</p>
@@ -173,12 +182,12 @@ const placeholderHref = '#';
             <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
                 <div class="grid grid-cols-3 gap-2">
                     <a
-                        v-for="(_, index) in instagramTiles"
+                        v-for="(tile, index) in instagramTiles"
                         :key="index"
                         :href="placeholderHref"
                         class="aspect-square overflow-hidden rounded"
                     >
-                        <img :src="instagramTile" alt="" class="h-full w-full object-cover transition hover:scale-105" />
+                        <img :src="tile" alt="" class="h-full w-full object-cover transition hover:scale-105" />
                     </a>
                 </div>
                 <div>

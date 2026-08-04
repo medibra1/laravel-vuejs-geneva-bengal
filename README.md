@@ -9,8 +9,9 @@ Monorepo Laravel + Inertia — un seul déploiement, pas de SPA découplée.
 - **Backend** — Laravel 13 (PHP 8.3+), MySQL 8
 - **Frontend** — Vue 3 (Composition API, `<script setup lang="ts">`), TypeScript, Inertia.js, PrimeVue 4 (thème Aura) + Tailwind CSS 4
 - **i18n** — routing `/fr` `/en` ([mcamara/laravel-localization](https://github.com/mcamara/laravel-localization)), contenu traduisible ([spatie/laravel-translatable](https://github.com/spatie/laravel-translatable)), interface via [vue-i18n](https://vue-i18n.intlify.dev/)
-- **Rôles** — `admin` / `super_admin` via [spatie/laravel-permission](https://github.com/spatie/laravel-permission)
+- **Rôles** — `admin` / `super_admin` via [spatie/laravel-permission](https://github.com/spatie/laravel-permission), audit trail via [spatie/laravel-activitylog](https://github.com/spatie/laravel-activitylog)
 - **Médias** — [spatie/laravel-medialibrary](https://github.com/spatie/laravel-medialibrary)
+- **Anti-spam** — [spatie/laravel-honeypot](https://github.com/spatie/laravel-honeypot) sur le formulaire de contact et l'infolettre
 - **Tests** — [Pest](https://pestphp.com/) (backend), [Vitest](https://vitest.dev/) + Vue Test Utils (frontend)
 - **Qualité** — [Laravel Pint](https://laravel.com/docs/pint), [Larastan](https://github.com/larastan/larastan)
 - **CI** — GitHub Actions, deux workflows indépendants et path-filtrés (`backend.yml`, `frontend.yml`)
@@ -70,11 +71,12 @@ Les deux workflows CI (`backend.yml`, `frontend.yml`) sont volontairement décou
 
 - [x] Fondations — Laravel, Inertia/Vue/TypeScript, PrimeVue, Tailwind, i18n, Docker, CI, rôles
 - [x] Module Chats — fiche chat (traductions, statut historisé, photos), CRUD admin, liste/fiche publiques
-- [ ] Adoptants, portées, galeries
-- [ ] CMS (pages de contenu, FAQ, témoignages, réglages du site)
-- [ ] Formulaire de contact public
-- [ ] Gestion des comptes admin (`super_admin`)
-- [ ] Paiement d'acompte (Stripe/TWINT)
+- [x] Adoptants, portées, galeries — CRUD admin
+- [x] CMS (pages de contenu, FAQ, témoignages, réglages du site) — CRUD admin, menu public généré dynamiquement
+- [x] Formulaire de contact public + inscription infolettre (anti-spam honeypot)
+- [x] Gestion des comptes admin (`super_admin`) — création via lien de réinitialisation, désactivation, audit trail (`activitylog`)
+- [x] Page d'accueil publique
+- [ ] Paiement d'acompte (Stripe/TWINT) — en cours
 - [ ] Tableau de bord admin (statistiques, graphiques)
 - [ ] SEO (sitemap, hreflang, SSR)
 
