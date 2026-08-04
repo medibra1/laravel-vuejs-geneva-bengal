@@ -10,7 +10,13 @@ defineProps<{
 
 <template>
 
-    <Head title="Chatons Bengal disponibles" />
+    <Head title="Chatons Bengal disponibles">
+        <meta
+            head-key="description"
+            name="description"
+            content="Découvrez nos chatons Bengal actuellement disponibles à l'adoption à Genève — mise à jour dès qu'un chaton est réservé."
+        />
+    </Head>
 
 
 

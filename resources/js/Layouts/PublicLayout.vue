@@ -1,16 +1,21 @@
 <script setup lang="ts">
-import { Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import type { PageProps } from '@/types';
 
 const page = usePage<PageProps>();
 const currentLocale = computed(() => page.props.locale);
 const menuPages = computed(() => page.props.menuPages);
+const alternateUrls = computed(() => page.props.alternateUrls);
 
 const raceInfoPages = computed(() => menuPages.value.filter((p) => p.menu_group === 'race_info'));
 const adoptionPages = computed(() => menuPages.value.filter((p) => p.menu_group === 'adoption'));
 
 function switchLocaleHref(locale: string): string {
+    if (alternateUrls.value[locale]) {
+        return new URL(alternateUrls.value[locale]).pathname;
+    }
+
     const segments = window.location.pathname.split('/').filter(Boolean);
 
     if (segments[0] === 'fr' || segments[0] === 'en') {
@@ -27,6 +32,17 @@ const placeholderHref = '#';
 </script>
 
 <template>
+    <Head>
+        <link
+            v-for="(url, locale) in alternateUrls"
+            :key="locale"
+            rel="alternate"
+            :hreflang="locale"
+            :href="url"
+        />
+        <link v-if="alternateUrls.fr" rel="alternate" hreflang="x-default" :href="alternateUrls.fr" />
+    </Head>
+
     <div class="flex min-h-screen flex-col">
         <header class="bg-neutral-900 text-white">
             <div class="mx-auto flex max-w-7xl items-center justify-end gap-6 px-6 py-2 text-sm">

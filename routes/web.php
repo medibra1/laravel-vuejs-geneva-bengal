@@ -7,6 +7,7 @@ use App\Http\Controllers\Public\DepositController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\NewsletterController;
 use App\Http\Controllers\Public\PageController;
+use App\Http\Controllers\Public\SitemapController;
 use App\Http\Controllers\Public\StripeWebhookController;
 use Illuminate\Support\Facades\Route;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
@@ -54,6 +55,10 @@ Route::group([
 // isn't a page a browser ever visits — see bootstrap/app.php for the
 // matching CSRF exemption.
 Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle'])->name('webhooks.stripe');
+
+// One canonical sitemap listing every locale variant of every page (via
+// hreflang alternates) rather than a separate /fr/sitemap.xml, /en/sitemap.xml.
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 
 // The back-office is internal-only: no public/SEO reason to localize its
 // URLs. Interface text there is translated client-side via vue-i18n

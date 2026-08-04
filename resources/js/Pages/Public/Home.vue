@@ -14,6 +14,10 @@ import instagram4 from '../../../images/home/instagram-4.jpg';
 import instagram5 from '../../../images/home/instagram-5.jpg';
 import instagram6 from '../../../images/home/instagram-6.jpg';
 
+defineProps<{
+    seo: { title: string; description: string };
+}>();
+
 const instagramTiles = [instagram1, instagram2, instagram3, instagram4, instagram5, instagram6];
 
 // No dedicated pages/routes yet for these (international shipping info,
@@ -23,7 +27,9 @@ const placeholderHref = '#';
 </script>
 
 <template>
-    <Head title="Geneva Bengal | Éleveur de chats Bengal à Genève" />
+    <Head :title="seo.title">
+        <meta head-key="description" name="description" :content="seo.description" />
+    </Head>
 
     <PublicLayout>
         <section class="relative flex h-[60vh] min-h-[420px] items-center justify-center overflow-hidden bg-neutral-900 text-white sm:h-[70vh]">

@@ -17,4 +17,5 @@ export type PageProps<
     locale: string;
     menuPages: MenuPage[];
     honeypot: Honeypot;
+    alternateUrls: Record<string, string>;
 };

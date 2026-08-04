@@ -40,6 +40,11 @@ services:
       STRIPE_KEY: ""
       STRIPE_SECRET: ""
       STRIPE_WEBHOOK_SECRET: ""
+      # No depends_on for the ssr service on purpose: Inertia's SSR gateway
+      # already falls back to client-only rendering when it can't reach
+      # this URL, so app startup shouldn't be coupled to it being ready.
+      INERTIA_SSR_ENABLED: "true"
+      INERTIA_SSR_URL: http://ssr:13714
     depends_on:
       - mysql
 
@@ -124,6 +129,24 @@ services:
       - .:/var/www/html
       - node_modules:/var/www/html/node_modules
 
+  # Node process serving Inertia's server-side rendering — this is what
+  # fixes the "same meta tags on every page" problem noted in CLAUDE.md
+  # for the production site: crawlers now get real per-page <title>/
+  # <meta> in the initial HTML instead of an empty SPA shell. `php artisan
+  # inertia:start-ssr` just spawns `node <bundle>` under the hood, so
+  # running that directly here avoids needing a second PHP image. Separate
+  # node_modules volume from `frontend` — two concurrent `npm ci` runs
+  # against the very same volume at startup would race each other.
+  ssr:
+    image: node:22-alpine
+    working_dir: /var/www/html
+    command: sh -c "npm ci && npm run build:ssr && node bootstrap/ssr/ssr.js"
+    ports:
+      - "13714:13714"
+    volumes:
+      - .:/var/www/html
+      - node_modules_ssr:/var/www/html/node_modules
+
   mailhog:
     image: mailhog/mailhog:latest
     ports:
@@ -140,4 +163,5 @@ services:
 volumes:
   vendor:
   node_modules:
+  node_modules_ssr:
   mysql_data:

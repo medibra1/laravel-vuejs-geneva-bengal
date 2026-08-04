@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 import DepositForm from '@/Components/DepositForm.vue';
+import type { PageProps } from '@/types';
 import type { Cat } from '@/types/models';
 
 const props = defineProps<{
@@ -10,9 +11,21 @@ const props = defineProps<{
     depositAmount: number;
 }>();
 
+const page = usePage<PageProps>();
+
 const depositAmountLabel = computed(() =>
     new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(props.depositAmount / 100),
 );
+
+// Per-cat description, not a generic site-wide one — precisely the gap
+// CLAUDE.md flags on the production site (same meta on every page, bad
+// for indexing individual kitten listings).
+const metaDescription = computed(() => {
+    const description = props.cat.description[page.props.locale as 'fr' | 'en'] ?? '';
+    const plainText = description.replace(/\s+/g, ' ').trim();
+
+    return plainText.length > 155 ? `${plainText.slice(0, 155)}…` : plainText;
+});
 
 function formatDate(date: string | null): string {
     if (!date) return '—';
@@ -31,7 +44,9 @@ function formatPrice(cents: number | null): string {
 
 <template>
 
-    <Head :title="`${cat.name} — Chaton Bengal disponible`" />
+    <Head :title="`${cat.name} — Chaton Bengal disponible`">
+        <meta v-if="metaDescription" head-key="description" name="description" :content="metaDescription" />
+    </Head>
 
     <PublicLayout>
         <section class="mx-auto max-w-7xl px-6 py-16">
