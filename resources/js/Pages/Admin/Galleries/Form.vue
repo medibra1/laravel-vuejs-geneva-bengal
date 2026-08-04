@@ -41,14 +41,14 @@ function submit(): void {
 
     <AdminLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">
+            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">
                 {{ gallery ? 'Modifier la photo' : 'Ajouter une photo' }}
             </h2>
         </template>
 
         <div class="py-12">
             <div class="mx-auto max-w-2xl sm:px-6 lg:px-8">
-                <form class="space-y-6 bg-white p-6 shadow-sm sm:rounded-lg" @submit.prevent="submit">
+                <form class="space-y-6 bg-white dark:bg-neutral-800 p-6 shadow-sm sm:rounded-lg" @submit.prevent="submit">
                     <div>
                         <InputLabel for="caption" value="Légende" />
                         <InputText id="caption" v-model="form.caption" class="mt-1 w-full" />

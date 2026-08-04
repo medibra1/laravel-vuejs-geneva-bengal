@@ -7,3 +7,34 @@
     --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif;
 }
 
+/*
+ * Class-based dark mode (Tailwind v4 defaults to `prefers-color-scheme`,
+ * which can't be toggled by a button). Only ever applied within the admin
+ * back-office — see resources/js/Layouts/AdminLayout.vue, which toggles
+ * `.dark` on <html>. The public site has no dark mode.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+    /* Base page canvas behind the admin layout's main/footer — without this,
+       <body> stays white under `.dark` since Tailwind never sets a default
+       background, leaving a white gap wherever page content doesn't fill
+       the viewport. */
+    .dark body {
+        @apply bg-neutral-950;
+    }
+}
+
+@layer base {
+    /* Admin forms use plain <textarea>/<input> elements (not everything
+       goes through PrimeVue) — PrimeVue's own components already handle
+       dark mode via the `darkModeSelector` option set in app.ts/ssr.ts. */
+    .dark textarea,
+    .dark input[type='text'],
+    .dark input[type='email'],
+    .dark input[type='tel'],
+    .dark input[type='number'] {
+        @apply border-neutral-700 bg-neutral-900 text-neutral-100;
+    }
+}
+

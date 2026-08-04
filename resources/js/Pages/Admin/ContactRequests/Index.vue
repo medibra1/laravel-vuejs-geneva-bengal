@@ -52,12 +52,12 @@ function destroy(contactRequest: ContactRequest): void {
 
     <AdminLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">Demandes de contact</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">Demandes de contact</h2>
         </template>
 
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <div class="overflow-hidden bg-white p-6 shadow-sm sm:rounded-lg">
+                <div class="overflow-hidden bg-white dark:bg-neutral-800 p-6 shadow-sm sm:rounded-lg">
                     <DataTable :value="contactRequests.data" data-key="id">
                         <Column field="name" header="Nom" />
                         <Column field="email" header="E-mail" />

@@ -38,7 +38,7 @@ createServer((page) =>
             return createSSRApp({ render: () => h(App, props) })
                 .use(plugin)
                 .use(createPinia())
-                .use(PrimeVue, { theme: { preset: Aura } })
+                .use(PrimeVue, { theme: { preset: Aura, options: { darkModeSelector: ".dark" } } })
                 .use(ZiggyVue, props.initialPage.props.ziggy as Parameters<typeof ZiggyVue.install>[1])
                 .use(i18n);
         },

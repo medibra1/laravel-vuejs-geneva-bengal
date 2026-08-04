@@ -36,12 +36,12 @@ function submit(): void {
 
     <AdminLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">Réglages du site</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">Réglages du site</h2>
         </template>
 
         <div class="py-12">
             <div class="mx-auto max-w-3xl sm:px-6 lg:px-8">
-                <form class="space-y-8 bg-white p-6 shadow-sm sm:rounded-lg" @submit.prevent="submit">
+                <form class="space-y-8 bg-white dark:bg-neutral-800 p-6 shadow-sm sm:rounded-lg" @submit.prevent="submit">
                     <section>
                         <h3 class="font-semibold text-gray-800">Réseaux sociaux</h3>
                         <div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">

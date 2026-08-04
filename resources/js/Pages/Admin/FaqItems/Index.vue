@@ -27,7 +27,7 @@ function destroy(faqItem: FaqItem): void {
     <AdminLayout>
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800">FAQ</h2>
+                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">FAQ</h2>
                 <Link :href="route('admin.faq-items.create')">
                     <Button label="Nouvelle question" icon="pi pi-plus" />
                 </Link>
@@ -36,7 +36,7 @@ function destroy(faqItem: FaqItem): void {
 
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <div class="overflow-hidden bg-white p-6 shadow-sm sm:rounded-lg">
+                <div class="overflow-hidden bg-white dark:bg-neutral-800 p-6 shadow-sm sm:rounded-lg">
                     <DataTable :value="faqItems.data" data-key="id">
                         <Column header="Question">
                             <template #body="{ data }">{{ data.question.fr }}</template>

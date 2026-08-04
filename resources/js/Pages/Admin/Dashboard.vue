@@ -86,7 +86,7 @@ async function onPeriodChange(from: string, to: string): Promise<void> {
     <AdminLayout>
         <template #header>
             <div class="flex flex-wrap items-center justify-between gap-4">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800">Tableau de bord</h2>
+                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">Tableau de bord</h2>
                 <PeriodFilter @change="onPeriodChange" />
             </div>
         </template>
@@ -94,31 +94,31 @@ async function onPeriodChange(from: string, to: string): Promise<void> {
         <div class="py-12" :class="{ 'opacity-60': loading }">
             <div class="mx-auto max-w-7xl space-y-8 sm:px-6 lg:px-8">
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                    <div class="rounded-lg bg-white p-6 shadow-sm">
-                        <p class="text-sm text-neutral-500">Chats disponibles</p>
-                        <p class="mt-2 text-3xl font-semibold text-neutral-900">{{ stats.kpis.available_cats }}</p>
+                    <div class="bg-white dark:bg-neutral-800 rounded-lg p-6 shadow-sm">
+                        <p class="text-sm text-neutral-500 dark:text-neutral-400">Chats disponibles</p>
+                        <p class="mt-2 text-3xl font-semibold text-neutral-900 dark:text-white">{{ stats.kpis.available_cats }}</p>
                     </div>
-                    <div class="rounded-lg bg-white p-6 shadow-sm">
-                        <p class="text-sm text-neutral-500">Adoptions sur la période</p>
-                        <p class="mt-2 text-3xl font-semibold text-neutral-900">{{ stats.kpis.adoptions_in_period }}</p>
+                    <div class="bg-white dark:bg-neutral-800 rounded-lg p-6 shadow-sm">
+                        <p class="text-sm text-neutral-500 dark:text-neutral-400">Adoptions sur la période</p>
+                        <p class="mt-2 text-3xl font-semibold text-neutral-900 dark:text-white">{{ stats.kpis.adoptions_in_period }}</p>
                     </div>
-                    <div class="rounded-lg bg-white p-6 shadow-sm">
-                        <p class="text-sm text-neutral-500">Acomptes encaissés</p>
-                        <p class="mt-2 text-3xl font-semibold text-neutral-900">
+                    <div class="bg-white dark:bg-neutral-800 rounded-lg p-6 shadow-sm">
+                        <p class="text-sm text-neutral-500 dark:text-neutral-400">Acomptes encaissés</p>
+                        <p class="mt-2 text-3xl font-semibold text-neutral-900 dark:text-white">
                             {{ formatAmount(stats.kpis.deposit_revenue_in_period) }}
                         </p>
                     </div>
-                    <div class="rounded-lg bg-white p-6 shadow-sm">
-                        <p class="text-sm text-neutral-500">Demandes de contact en attente</p>
-                        <p class="mt-2 text-3xl font-semibold text-neutral-900">
+                    <div class="bg-white dark:bg-neutral-800 rounded-lg p-6 shadow-sm">
+                        <p class="text-sm text-neutral-500 dark:text-neutral-400">Demandes de contact en attente</p>
+                        <p class="mt-2 text-3xl font-semibold text-neutral-900 dark:text-white">
                             {{ stats.kpis.pending_contact_requests }}
                         </p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    <div class="rounded-lg bg-white p-6 shadow-sm">
-                        <h3 class="font-semibold text-neutral-900">Adoptions par mois</h3>
+                    <div class="bg-white dark:bg-neutral-800 rounded-lg p-6 shadow-sm">
+                        <h3 class="font-semibold text-neutral-900 dark:text-white">Adoptions par mois</h3>
                         <Chart
                             key="adoptions-by-month"
                             type="line"
@@ -127,8 +127,8 @@ async function onPeriodChange(from: string, to: string): Promise<void> {
                             class="mt-4 h-64"
                         />
                     </div>
-                    <div class="rounded-lg bg-white p-6 shadow-sm">
-                        <h3 class="font-semibold text-neutral-900">Revenus des acomptes par mois</h3>
+                    <div class="bg-white dark:bg-neutral-800 rounded-lg p-6 shadow-sm">
+                        <h3 class="font-semibold text-neutral-900 dark:text-white">Revenus des acomptes par mois</h3>
                         <Chart
                             key="deposit-revenue-by-month"
                             type="line"
@@ -137,8 +137,8 @@ async function onPeriodChange(from: string, to: string): Promise<void> {
                             class="mt-4 h-64"
                         />
                     </div>
-                    <div class="rounded-lg bg-white p-6 shadow-sm">
-                        <h3 class="font-semibold text-neutral-900">Répartition des chats par statut</h3>
+                    <div class="bg-white dark:bg-neutral-800 rounded-lg p-6 shadow-sm">
+                        <h3 class="font-semibold text-neutral-900 dark:text-white">Répartition des chats par statut</h3>
                         <Chart
                             key="cats-by-status"
                             type="doughnut"
@@ -147,8 +147,8 @@ async function onPeriodChange(from: string, to: string): Promise<void> {
                             class="mt-4 h-64"
                         />
                     </div>
-                    <div class="rounded-lg bg-white p-6 shadow-sm">
-                        <h3 class="font-semibold text-neutral-900">Répartition des chats par couleur</h3>
+                    <div class="bg-white dark:bg-neutral-800 rounded-lg p-6 shadow-sm">
+                        <h3 class="font-semibold text-neutral-900 dark:text-white">Répartition des chats par couleur</h3>
                         <Chart
                             key="cats-by-color"
                             type="bar"

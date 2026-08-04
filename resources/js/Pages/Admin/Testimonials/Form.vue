@@ -40,14 +40,14 @@ function submit(): void {
 
     <AdminLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">
+            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">
                 {{ testimonial ? 'Modifier le témoignage' : 'Nouveau témoignage' }}
             </h2>
         </template>
 
         <div class="py-12">
             <div class="mx-auto max-w-3xl sm:px-6 lg:px-8">
-                <form class="space-y-6 bg-white p-6 shadow-sm sm:rounded-lg" @submit.prevent="submit">
+                <form class="space-y-6 bg-white dark:bg-neutral-800 p-6 shadow-sm sm:rounded-lg" @submit.prevent="submit">
                     <div>
                         <InputLabel for="author_name" value="Auteur" />
                         <InputText id="author_name" v-model="form.author_name" class="mt-1 w-full" />
