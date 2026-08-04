@@ -27,6 +27,13 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        // Stripe posts here without a Laravel session/CSRF token. The
+        // request is authenticated instead by verifying its signature
+        // inside StripeGateway::handleWebhook() — see CLAUDE.md.
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/stripe',
+        ]);
+
         $middleware->alias([
             'localize' => LaravelLocalizationRoutes::class,
             'localizationRedirect' => LocaleSessionRedirect::class,

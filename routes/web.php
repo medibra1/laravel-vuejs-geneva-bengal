@@ -3,9 +3,11 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Public\CatController;
 use App\Http\Controllers\Public\ContactController;
+use App\Http\Controllers\Public\DepositController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\NewsletterController;
 use App\Http\Controllers\Public\PageController;
+use App\Http\Controllers\Public\StripeWebhookController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
@@ -42,7 +44,15 @@ Route::group([
     Route::post('/newsletter', [NewsletterController::class, 'store'])
         ->middleware(ProtectAgainstSpam::class)
         ->name('newsletter.store');
+
+    Route::post('/deposits', [DepositController::class, 'store'])->name('deposits.store');
+    Route::get('/deposits/{deposit}', [DepositController::class, 'show'])->name('deposits.return');
 });
+
+// Not locale-prefixed: Stripe doesn't know about /fr or /en, and this
+// isn't a page a browser ever visits — see bootstrap/app.php for the
+// matching CSRF exemption.
+Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle'])->name('webhooks.stripe');
 
 // The back-office is internal-only: no public/SEO reason to localize its
 // URLs. Interface text there is translated client-side via vue-i18n

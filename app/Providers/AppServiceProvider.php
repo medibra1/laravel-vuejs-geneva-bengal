@@ -3,10 +3,13 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Services\Payments\PaymentGateway;
+use App\Services\Payments\StripeGateway;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use Stripe\StripeClient;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,7 +18,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // PaymentGateway is an interface (see CLAUDE.md) precisely so the
+        // rest of the app never depends on Stripe directly — swapping
+        // providers later only means rebinding this one line.
+        $this->app->bind(PaymentGateway::class, fn () => new StripeGateway(
+            new StripeClient(config('services.stripe.secret')),
+            (string) config('services.stripe.webhook_secret'),
+        ));
     }
 
     /**
