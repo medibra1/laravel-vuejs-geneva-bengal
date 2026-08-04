@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CatController;
 use App\Http\Controllers\Admin\ContactRequestController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DepositController;
 use App\Http\Controllers\Admin\FaqItemController;
 use App\Http\Controllers\Admin\GalleryController;
@@ -12,6 +13,18 @@ use App\Http\Controllers\Admin\SiteSettingController;
 use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
+
+// Kept outside the ->name('admin.') group below on purpose: Breeze's own
+// auth controllers (email verification, login redirects...) all target
+// route('dashboard') by that exact unprefixed name. Only the URL moves
+// under /admin — the route name stays "dashboard" so none of that
+// generated code needs to know it moved.
+Route::prefix('admin')
+    ->middleware(['auth', 'verified', 'role:admin|super_admin'])
+    ->group(function (): void {
+        Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
+    });
 
 Route::prefix('admin')
     ->name('admin.')
