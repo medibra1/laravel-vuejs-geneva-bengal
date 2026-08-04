@@ -8,7 +8,7 @@ export default defineConfig({
         // Vitest boots its own internal Vite server to run tests, and the
         // laravel plugin's dev-server-in-CI guard fires there too — it has
         // nothing to do with the actual asset build, so skip it under Vitest.
-        ...(process.env.VITEST ? [] : [laravel({ input: "resources/js/app.ts", refresh: true })]),
+        ...(process.env.VITEST ? [] : [laravel({ input: "resources/js/app.ts", ssr: "resources/js/ssr.ts", refresh: true })]),
         vue({
             template: {
                 transformAssetUrls: { base: null, includeAbsolute: false },

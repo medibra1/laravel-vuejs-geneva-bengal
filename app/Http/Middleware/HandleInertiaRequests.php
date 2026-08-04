@@ -5,7 +5,9 @@ namespace App\Http\Middleware;
 use App\Models\Page;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
 use Spatie\Honeypot\Honeypot;
+use Tighten\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -50,6 +52,38 @@ class HandleInertiaRequests extends Middleware
             // Shared globally (not per-controller) since more than one
             // public form needs it (contact, newsletter signup).
             'honeypot' => app(Honeypot::class),
+            // hreflang alternates for the current page — empty on
+            // non-localized routes (admin, auth), see alternateUrls().
+            'alternateUrls' => $this->alternateUrls($request),
+            // The client normally reads routes off `window.Ziggy`, injected
+            // by the `@routes` Blade directive — that global doesn't exist
+            // in the Node SSR process, so ssr.ts needs this prop instead to
+            // resolve route() during server rendering. See CLAUDE.md Phase 8.
+            'ziggy' => fn () => [
+                ...(new Ziggy)->toArray(),
+                'location' => $request->url(),
+            ],
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function alternateUrls(Request $request): array
+    {
+        $segments = explode('/', trim($request->path(), '/'));
+        $locales = array_keys(LaravelLocalization::getSupportedLocales());
+
+        if (! in_array($segments[0], $locales, true)) {
+            return [];
+        }
+
+        $rest = implode('/', array_slice($segments, 1));
+
+        return collect($locales)
+            ->mapWithKeys(fn (string $locale) => [
+                $locale => url('/'.$locale.($rest !== '' ? '/'.$rest : '')),
+            ])
+            ->all();
     }
 }
