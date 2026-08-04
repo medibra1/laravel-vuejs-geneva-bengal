@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import AdminLayout from '@/Layouts/AdminLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -34,7 +34,7 @@ function submit(): void {
 
     <Head title="Réglages du site" />
 
-    <AuthenticatedLayout>
+    <AdminLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">Réglages du site</h2>
         </template>
@@ -122,5 +122,5 @@ function submit(): void {
                 </form>
             </div>
         </div>
-    </AuthenticatedLayout>
+    </AdminLayout>
 </template>
