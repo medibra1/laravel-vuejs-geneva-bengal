@@ -29,6 +29,13 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!-- Fake, not a real Stripe secret: StripeClient's constructor
+             rejects an empty string outright, and it's built eagerly by
+             AppServiceProvider's PaymentGateway binding on every request
+             that type-hints the interface — including tests that never
+             actually call the Stripe API (e.g. handleWebhook(), pure
+             local signature verification). -->
+        <env name="STRIPE_SECRET" value="sk_test_fake_key_for_test_suite"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
