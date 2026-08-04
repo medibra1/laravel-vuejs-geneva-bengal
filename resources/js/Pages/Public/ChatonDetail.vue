@@ -1,11 +1,18 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
+import DepositForm from '@/Components/DepositForm.vue';
 import type { Cat } from '@/types/models';
 
 const props = defineProps<{
     cat: Cat;
+    depositAmount: number;
 }>();
+
+const depositAmountLabel = computed(() =>
+    new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(props.depositAmount / 100),
+);
 
 function formatDate(date: string | null): string {
     if (!date) return '—';
@@ -58,11 +65,12 @@ function formatPrice(cents: number | null): string {
                         <li><strong>Castré/Stérilisé :</strong> {{ cat.neutered ? 'Oui' : 'Non' }}</li>
                     </ul>
 
-                    <div class="mt-8">
+                    <div class="mt-8 flex flex-wrap items-start gap-4">
                         <Link :href="route('pages.contact', { chaton: cat.slug })"
                             class="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-6 py-3 font-medium text-white hover:bg-emerald-800">
                             Adopte moi
                         </Link>
+                        <DepositForm v-if="cat.status === 'disponible'" :cat-id="cat.id" :amount-label="depositAmountLabel" />
                     </div>
                 </div>
             </div>

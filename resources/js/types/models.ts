@@ -134,6 +134,22 @@ export interface ContactRequest {
     created_at: string;
 }
 
+export interface Deposit {
+    id: number;
+    cat_id: number | null;
+    cat?: { id: number; name: string } | null;
+    name: string;
+    email: string;
+    phone: string | null;
+    amount: number;
+    currency: string;
+    status: 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled';
+    provider: string;
+    provider_reference: string | null;
+    paid_at: string | null;
+    created_at: string;
+}
+
 export interface AdminUser {
     id: number;
     name: string;

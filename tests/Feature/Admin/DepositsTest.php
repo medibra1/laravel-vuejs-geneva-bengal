@@ -27,10 +27,7 @@ it('lets a plain admin view the deposits list', function () {
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        // Frontend for this page hasn't been built yet (backend-first —
-        // see CLAUDE.md's frontend/Inertia collaboration mode), so the
-        // component file itself doesn't exist on disk yet.
-        ->component('Admin/Deposits/Index', shouldExist: false)
+        ->component('Admin/Deposits/Index')
         ->has('deposits.data', 2)
     );
 });

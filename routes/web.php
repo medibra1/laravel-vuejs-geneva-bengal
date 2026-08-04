@@ -45,7 +45,9 @@ Route::group([
         ->middleware(ProtectAgainstSpam::class)
         ->name('newsletter.store');
 
-    Route::post('/deposits', [DepositController::class, 'store'])->name('deposits.store');
+    Route::post('/deposits', [DepositController::class, 'store'])
+        ->middleware(ProtectAgainstSpam::class)
+        ->name('deposits.store');
     Route::get('/deposits/{deposit}', [DepositController::class, 'show'])->name('deposits.return');
 });
 
