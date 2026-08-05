@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { PageProps } from '@/types';
+import SocialLinks from '@/Components/SocialLinks.vue';
+import ScrollToTop from '@/Components/ScrollToTop.vue';
+import logo from '../../images/shared/logo-gb.png';
+import logoFooter from '../../images/shared/logo-footer.png';
 
 const page = usePage<PageProps>();
 const currentLocale = computed(() => page.props.locale);
 const menuPages = computed(() => page.props.menuPages);
+const colors = computed(() => page.props.colors);
 const alternateUrls = computed(() => page.props.alternateUrls);
+const socialLinks = computed(() => page.props.socialLinks);
 
 const raceInfoPages = computed(() => menuPages.value.filter((p) => p.menu_group === 'race_info'));
 const adoptionPages = computed(() => menuPages.value.filter((p) => p.menu_group === 'adoption'));
@@ -29,6 +35,24 @@ function switchLocaleHref(locale: string): string {
 
 // TODO: still no dedicated route for these (Phase 4/Galerie).
 const placeholderHref = '#';
+
+// Mobile off-canvas menu: closed on every navigation (Inertia doesn't
+// unmount this layout between page visits), with its own nested
+// accordions for the two CMS-driven submenus.
+const mobileMenuOpen = ref(false);
+const mobileOpenSection = ref<'race_info' | 'adoption' | 'colors' | null>(null);
+
+function toggleMobileSection(section: 'race_info' | 'adoption' | 'colors'): void {
+    mobileOpenSection.value = mobileOpenSection.value === section ? null : section;
+}
+
+watch(
+    () => page.url,
+    () => {
+        mobileMenuOpen.value = false;
+        mobileOpenSection.value = null;
+    },
+);
 </script>
 
 <template>
@@ -43,13 +67,19 @@ const placeholderHref = '#';
         <link v-if="alternateUrls.fr" rel="alternate" hreflang="x-default" :href="alternateUrls.fr" />
     </Head>
 
-    <div class="flex min-h-screen flex-col">
-        <header class="bg-neutral-900 text-white">
-            <div class="mx-auto flex max-w-7xl items-center justify-end gap-6 px-6 py-2 text-sm">
-                <ul class="flex gap-4">
-                    <li><Link :href="route('pages.a-propos')">À propos</Link></li>
-                    <li><a :href="placeholderHref">Galerie photo</a></li>
-                    <li><Link :href="route('pages.contact')">Contact</Link></li>
+    <div class="bg-brand-canvas flex min-h-screen flex-col">
+        <header class="bg-brand-ink font-heading text-white">
+            <div class="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-2 text-xs tracking-wide uppercase sm:justify-end">
+                <SocialLinks
+                    class="[&_a]:hover:text-brand-green"
+                    v-bind="socialLinks"
+                />
+                <ul class="flex items-center gap-4">
+                    <!-- Duplicated in the mobile drawer already — hidden
+                         below `sm` to stop this bar from wrapping. -->
+                    <li class="hidden sm:block"><Link :href="route('pages.a-propos')" class="hover:text-brand-green">À propos</Link></li>
+                    <li class="hidden sm:block"><a :href="placeholderHref" class="hover:text-brand-green">Galerie photo</a></li>
+                    <li class="hidden sm:block"><Link :href="route('pages.contact')" class="hover:text-brand-green">Contact</Link></li>
                     <li>
                         <Link :href="switchLocaleHref('fr')" :class="{ underline: currentLocale === 'fr' }">FR</Link>
                         /
@@ -59,81 +89,272 @@ const placeholderHref = '#';
             </div>
         </header>
 
-        <nav class="border-b border-gray-200 bg-white">
-            <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-                <Link href="/" class="text-2xl font-semibold text-emerald-700">
-                    Geneva Bengal
+        <nav class="sticky top-0 z-50 border-b border-gray-200 bg-white">
+            <div class="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-3 md:justify-start md:gap-10">
+                <Link href="/" class="shrink-0">
+                    <img :src="logo" alt="Geneva Bengal" class="h-14 w-auto sm:h-16" />
                 </Link>
-                <ul class="hidden items-center gap-8 text-sm font-medium md:flex">
-                    <li v-if="raceInfoPages.length" class="group relative">
-                        <span class="cursor-default">Information sur le bengal</span>
-                        <ul class="absolute left-0 hidden min-w-48 border bg-white py-2 shadow-lg group-hover:block">
+                <ul class="font-heading hidden items-center gap-8 text-sm font-semibold tracking-wide uppercase md:flex md:flex-1 md:justify-end">
+                    <li v-if="raceInfoPages.length" class="group relative py-3">
+                        <span class="hover:text-brand-tan flex cursor-default items-center gap-1">
+                            Information sur le bengal
+                            <svg viewBox="0 0 24 24" class="h-3 w-3 transition group-hover:rotate-180" fill="none" stroke="currentColor" stroke-width="3">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </span>
+                        <ul
+                            class="invisible absolute left-0 z-50 min-w-56 -translate-y-1 rounded-xl bg-white py-2 text-brand-gray! opacity-0 shadow-xl ring-1 ring-black/5 transition duration-200 normal-case group-hover:visible group-hover:translate-y-0 group-hover:opacity-100"
+                        >
                             <li v-for="item in raceInfoPages" :key="item.id">
-                                <Link :href="route('pages.show', item.slug)" class="block px-4 py-2 hover:bg-gray-50">
+                                <Link :href="route('pages.show', item.slug)" class="hover:bg-brand-tan block px-5 py-2.5 transition hover:text-white">
                                     {{ item.title }}
                                 </Link>
                             </li>
                         </ul>
                     </li>
-                    <li><a :href="placeholderHref">Nos chats reproducteurs</a></li>
-                    <li><a :href="placeholderHref">Portées prévues</a></li>
-                    <li v-if="adoptionPages.length" class="group relative">
-                        <span class="cursor-default">Adoption et prix</span>
-                        <ul class="absolute left-0 hidden min-w-48 border bg-white py-2 shadow-lg group-hover:block">
+                    <li><a :href="placeholderHref" class="hover:text-brand-tan">Nos chats reproducteurs</a></li>
+                    <li><a :href="placeholderHref" class="hover:text-brand-tan">Portées prévues</a></li>
+                    <li v-if="adoptionPages.length" class="group relative py-3">
+                        <span class="hover:text-brand-tan flex cursor-default items-center gap-1">
+                            Adoption et prix
+                            <svg viewBox="0 0 24 24" class="h-3 w-3 transition group-hover:rotate-180" fill="none" stroke="currentColor" stroke-width="3">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </span>
+                        <ul
+                            class="invisible absolute left-0 z-50 min-w-56 -translate-y-1 rounded-xl bg-white py-2 text-brand-gray! opacity-0 shadow-xl ring-1 ring-black/5 transition duration-200 normal-case group-hover:visible group-hover:translate-y-0 group-hover:opacity-100"
+                        >
                             <li v-for="item in adoptionPages" :key="item.id">
-                                <Link :href="route('pages.show', item.slug)" class="block px-4 py-2 hover:bg-gray-50">
+                                <Link :href="route('pages.show', item.slug)" class="hover:bg-brand-tan block px-5 py-2.5 transition hover:text-white">
                                     {{ item.title }}
                                 </Link>
                             </li>
                         </ul>
                     </li>
-                    <li>
-                        <Link :href="route('cats.index')" class="text-emerald-700">
+                    <li v-if="colors.length" class="group relative py-3">
+                        <Link :href="route('cats.index')" class="btn-outline-brand !px-5 !py-2 !text-xs">
+                            Chaton Bengal Disponible
+                            <svg viewBox="0 0 24 24" class="h-3 w-3 transition group-hover:rotate-180" fill="none" stroke="currentColor" stroke-width="3">
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </Link>
+                        <ul
+                            class="invisible absolute right-0 z-50 min-w-56 -translate-y-1 rounded-xl bg-white py-2 text-brand-gray! opacity-0 shadow-xl ring-1 ring-black/5 transition duration-200 normal-case group-hover:visible group-hover:translate-y-0 group-hover:opacity-100"
+                        >
+                            <li v-for="color in colors" :key="color.id">
+                                <Link
+                                    :href="route('cats.index', { color_id: color.id })"
+                                    class="hover:bg-brand-tan flex items-center gap-2 px-5 py-2.5 transition hover:text-white"
+                                >
+                                    <span class="h-3 w-3 shrink-0 rounded-full ring-1 ring-black/10" :style="{ backgroundColor: color.hex_code }" />
+                                    {{ color.name }}
+                                </Link>
+                            </li>
+                        </ul>
+                    </li>
+                    <li v-else>
+                        <Link :href="route('cats.index')" class="btn-outline-brand !px-5 !py-2 !text-xs">
                             Chaton Bengal Disponible
                         </Link>
                     </li>
                 </ul>
+
+                <button
+                    type="button"
+                    class="text-brand-ink flex h-10 w-10 items-center justify-center md:hidden"
+                    aria-label="Ouvrir le menu"
+                    @click="mobileMenuOpen = true"
+                >
+                    <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="4" y1="7" x2="20" y2="7" />
+                        <line x1="4" y1="12" x2="20" y2="12" />
+                        <line x1="4" y1="17" x2="20" y2="17" />
+                    </svg>
+                </button>
             </div>
         </nav>
+
+        <!-- Mobile off-canvas menu -->
+        <Transition name="backdrop-fade">
+            <div v-if="mobileMenuOpen" class="fixed inset-0 z-50 bg-black/50 md:hidden" @click="mobileMenuOpen = false" />
+        </Transition>
+        <Transition name="panel-slide">
+            <div v-if="mobileMenuOpen" class="bg-brand-ink fixed inset-y-0 left-0 z-50 w-[85vw] max-w-sm overflow-y-auto text-white md:hidden">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <img :src="logo" alt="Geneva Bengal" class="h-12 w-auto" />
+                    <button type="button" class="flex h-10 w-10 items-center justify-center" aria-label="Fermer le menu" @click="mobileMenuOpen = false">
+                        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+                <ul class="font-heading px-6 pb-10 text-sm font-semibold tracking-wide uppercase">
+                    <li class="border-b border-white/10">
+                        <Link href="/" class="block py-4">Accueil</Link>
+                    </li>
+                    <li class="border-b border-white/10">
+                        <div class="flex items-center justify-between">
+                            <Link :href="route('cats.index')" class="text-brand-green block py-4">Chaton Bengal Disponible</Link>
+                            <button
+                                v-if="colors.length"
+                                type="button"
+                                class="flex h-10 w-10 items-center justify-center"
+                                aria-label="Filtrer par couleur"
+                                @click="toggleMobileSection('colors')"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    class="h-3 w-3 transition"
+                                    :class="{ 'rotate-180': mobileOpenSection === 'colors' }"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="3"
+                                >
+                                    <polyline points="6 9 12 15 18 9" />
+                                </svg>
+                            </button>
+                        </div>
+                        <ul v-if="colors.length" v-show="mobileOpenSection === 'colors'" class="text-brand-tan space-y-3 pb-4 pl-4 text-xs normal-case">
+                            <li v-for="color in colors" :key="color.id">
+                                <Link :href="route('cats.index', { color_id: color.id })" class="flex items-center gap-2">
+                                    <span class="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-white/30" :style="{ backgroundColor: color.hex_code }" />
+                                    {{ color.name }}
+                                </Link>
+                            </li>
+                        </ul>
+                    </li>
+                    <li v-if="raceInfoPages.length" class="border-b border-white/10">
+                        <button type="button" class="flex w-full items-center justify-between py-4" @click="toggleMobileSection('race_info')">
+                            Information sur le bengal
+                            <svg
+                                viewBox="0 0 24 24"
+                                class="h-3 w-3 transition"
+                                :class="{ 'rotate-180': mobileOpenSection === 'race_info' }"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="3"
+                            >
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </button>
+                        <ul v-show="mobileOpenSection === 'race_info'" class="text-brand-tan space-y-3 pb-4 pl-4 text-xs normal-case">
+                            <li v-for="item in raceInfoPages" :key="item.id">
+                                <Link :href="route('pages.show', item.slug)" class="block">{{ item.title }}</Link>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="border-b border-white/10">
+                        <a :href="placeholderHref" class="block py-4">Nos chats reproducteurs</a>
+                    </li>
+                    <li class="border-b border-white/10">
+                        <a :href="placeholderHref" class="block py-4">Portées prévues</a>
+                    </li>
+                    <li v-if="adoptionPages.length" class="border-b border-white/10">
+                        <button type="button" class="flex w-full items-center justify-between py-4" @click="toggleMobileSection('adoption')">
+                            Adoption et prix
+                            <svg
+                                viewBox="0 0 24 24"
+                                class="h-3 w-3 transition"
+                                :class="{ 'rotate-180': mobileOpenSection === 'adoption' }"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="3"
+                            >
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </button>
+                        <ul v-show="mobileOpenSection === 'adoption'" class="text-brand-tan space-y-3 pb-4 pl-4 text-xs normal-case">
+                            <li v-for="item in adoptionPages" :key="item.id">
+                                <Link :href="route('pages.show', item.slug)" class="block">{{ item.title }}</Link>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="border-b border-white/10">
+                        <a :href="placeholderHref" class="block py-4">Galerie photo</a>
+                    </li>
+                    <li class="border-b border-white/10">
+                        <Link :href="route('pages.a-propos')" class="block py-4">À propos</Link>
+                    </li>
+                    <li>
+                        <Link :href="route('pages.contact')" class="block py-4">Contactez-nous</Link>
+                    </li>
+                </ul>
+                <div class="px-6 pb-10">
+                    <SocialLinks v-bind="socialLinks" class="[&_a]:hover:text-brand-green" />
+                </div>
+            </div>
+        </Transition>
 
         <main class="flex-1">
             <slot />
         </main>
 
-        <footer class="bg-neutral-900 py-12 text-neutral-300">
-            <div class="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-6 sm:grid-cols-2 lg:grid-cols-4">
-                <div>
-                    <p class="text-lg font-semibold text-white">Geneva Bengal</p>
-                    <p class="mt-2 text-sm">1209 Genève, Suisse</p>
+        <footer class="bg-brand-ink text-neutral-300">
+            <div class="mx-auto max-w-7xl px-6 pt-16 pb-10">
+                <div class="grid grid-cols-1 gap-x-12 gap-y-12 text-center sm:grid-cols-2 sm:text-left lg:grid-cols-4">
+                    <div>
+                        <img :src="logoFooter" alt="Geneva Bengal" class="mx-auto h-24 w-auto rounded-full sm:mx-0" />
+                        <p class="my-8 text-sm text-neutral-200">1209 Genève, Suisse</p>
+                        <SocialLinks v-bind="socialLinks" class="[&_a]:hover:text-brand-green justify-center sm:justify-start" />
+                    </div>
+                    <div>
+                        <h5 class="font-heading flex min-h-14 items-end justify-center text-sm font-bold tracking-wide text-white uppercase sm:justify-start">
+                            À propos de nous
+                        </h5>
+                        <ul class="mt-3 space-y-2 text-sm">
+                            <li><Link :href="route('pages.a-propos')" class="hover:text-brand-green">Notre histoire</Link></li>
+                            <li><Link :href="`${route('pages.a-propos')}#temoignages`" class="hover:text-brand-green">Témoignages</Link></li>
+                            <li><Link :href="route('pages.contact')" class="hover:text-brand-green">Contactez-nous</Link></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-heading flex min-h-14 items-end justify-center text-sm font-bold tracking-wide text-white uppercase sm:justify-start">
+                            Information sur le chat Bengal
+                        </h5>
+                        <ul class="mt-3 space-y-2 text-sm">
+                            <li v-for="item in raceInfoPages" :key="item.id">
+                                <Link :href="route('pages.show', item.slug)" class="hover:text-brand-green">{{ item.title }}</Link>
+                            </li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-heading flex min-h-14 items-end justify-center text-sm font-bold tracking-wide text-white uppercase sm:justify-start">
+                            Guide d'adoption
+                        </h5>
+                        <ul class="mt-3 space-y-2 text-sm">
+                            <li v-for="item in adoptionPages" :key="item.id">
+                                <Link :href="route('pages.show', item.slug)" class="hover:text-brand-green">{{ item.title }}</Link>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-                <div>
-                    <h5 class="font-semibold text-white">À propos de nous</h5>
-                    <ul class="mt-2 space-y-1 text-sm">
-                        <li><Link :href="route('pages.a-propos')">Notre histoire</Link></li>
-                        <li><Link :href="`${route('pages.a-propos')}#temoignages`">Témoignages</Link></li>
-                        <li><Link :href="route('pages.contact')">Contactez-nous</Link></li>
-                    </ul>
-                </div>
-                <div>
-                    <h5 class="font-semibold text-white">Information sur le chat Bengal</h5>
-                    <ul class="mt-2 space-y-1 text-sm">
-                        <li v-for="item in raceInfoPages" :key="item.id">
-                            <Link :href="route('pages.show', item.slug)">{{ item.title }}</Link>
-                        </li>
-                    </ul>
-                </div>
-                <div>
-                    <h5 class="font-semibold text-white">Guide d'adoption</h5>
-                    <ul class="mt-2 space-y-1 text-sm">
-                        <li v-for="item in adoptionPages" :key="item.id">
-                            <Link :href="route('pages.show', item.slug)">{{ item.title }}</Link>
-                        </li>
-                    </ul>
-                </div>
+
+                <p class="mt-12 border-t border-white/90 pt-6 text-center text-sm">
+                    © {{ new Date().getFullYear() }} Geneva Bengal — Tous droits réservés.
+                </p>
             </div>
-            <p class="mt-10 text-center text-xs text-neutral-500">
-                © {{ new Date().getFullYear() }} Geneva Bengal — Tous droits réservés.
-            </p>
         </footer>
+
+        <ScrollToTop />
     </div>
 </template>
+
+<style scoped>
+.backdrop-fade-enter-active,
+.backdrop-fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.backdrop-fade-enter-from,
+.backdrop-fade-leave-to {
+    opacity: 0;
+}
+.panel-slide-enter-active,
+.panel-slide-leave-active {
+    transition: transform 0.3s ease-in-out;
+}
+.panel-slide-enter-from,
+.panel-slide-leave-to {
+    transform: translateX(-100%);
+}
+</style>

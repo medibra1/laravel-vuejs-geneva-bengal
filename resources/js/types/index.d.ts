@@ -1,4 +1,4 @@
-import type { Honeypot, MenuPage } from "./models";
+import type { Color, Honeypot, MenuPage } from "./models";
 
 export interface User {
     id: number;
@@ -16,6 +16,13 @@ export type PageProps<
     };
     locale: string;
     menuPages: MenuPage[];
+    colors: Color[];
+    socialLinks: {
+        facebook: string | null;
+        instagram: string | null;
+        youtube: string | null;
+        pinterest: string | null;
+    };
     honeypot: Honeypot;
     alternateUrls: Record<string, string>;
 };

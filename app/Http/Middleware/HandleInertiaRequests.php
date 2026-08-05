@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Color;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use Illuminate\Http\Request;
@@ -63,6 +64,10 @@ class HandleInertiaRequests extends Middleware
                     'order' => $page->order,
                     'title' => $page->title,
                 ]),
+            // Shared globally: the nav's "Chaton Bengal Disponible" dropdown
+            // needs the color list on every public page, not just the
+            // listing page itself.
+            'colors' => Color::query()->orderBy('name')->get(['id', 'name', 'hex_code']),
             // Shared globally rather than per-controller (PageController's
             // `settings` prop still carries the address for the contact
             // box): the header, footer and homepage "follow us" sections
