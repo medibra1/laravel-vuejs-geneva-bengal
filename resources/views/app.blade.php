@@ -19,6 +19,11 @@
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        {{-- Public-site brand fonts, matching the original Angular app
+             (bengal-client): Sacramento for the script section titles,
+             Montserrat for the bold uppercase subtitles/buttons. Harmless
+             on admin pages, which never reference font-script/font-heading. --}}
+        <link href="https://fonts.bunny.net/css?family=sacramento:400|montserrat:400,500,600,700|varela-round:400&display=swap" rel="stylesheet" />
 
         <!-- Scripts -->
         @routes

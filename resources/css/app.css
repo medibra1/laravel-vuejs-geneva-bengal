@@ -5,6 +5,20 @@
 
 @theme {
     --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif;
+
+    /* Public-site brand type, matching the original Angular app
+       (bengal-client): a script font for section titles ("Sacremento"
+       h2s) and a bold uppercase sans for subtitles/buttons/nav. */
+    --font-script: 'Sacramento', cursive;
+    --font-heading: 'Montserrat', ui-sans-serif, sans-serif;
+    --font-round: 'Varela Round', ui-sans-serif, sans-serif;
+
+    /* Brand palette lifted from bengal-client/src/assets/css/{color,styles}.css */
+    --color-brand-green: #43b853;
+    --color-brand-tan: #b9a484;
+    --color-brand-gray: #525253;
+    --color-brand-ink: #1d1d1d;
+    --color-brand-canvas: #f2f3f4;
 }
 
 /*
@@ -14,6 +28,16 @@
  * `.dark` on <html>. The public site has no dark mode.
  */
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* Public site's single CTA style, matching bengal-client's
+   `.call-to-action-buton`: an outlined pill that fills solid green on
+   hover. Used for every call-to-action link across the public pages —
+   the original never mixes button styles. */
+@layer components {
+    .btn-outline-brand {
+        @apply inline-flex items-center gap-2 rounded-[14px] border-2 border-brand-green px-8 py-3.5 font-heading text-sm font-semibold tracking-wide text-brand-gray uppercase transition hover:bg-brand-green hover:text-white;
+    }
+}
 
 @layer base {
     /* Base page canvas behind the admin layout's main/footer — without this,

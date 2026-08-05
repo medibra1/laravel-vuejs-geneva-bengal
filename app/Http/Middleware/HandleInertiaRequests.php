@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Page;
+use App\Models\SiteSetting;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
@@ -62,6 +63,16 @@ class HandleInertiaRequests extends Middleware
                     'order' => $page->order,
                     'title' => $page->title,
                 ]),
+            // Shared globally rather than per-controller (PageController's
+            // `settings` prop still carries the address for the contact
+            // box): the header, footer and homepage "follow us" sections
+            // all need these links too.
+            'socialLinks' => [
+                'facebook' => SiteSetting::get('social_facebook'),
+                'instagram' => SiteSetting::get('social_instagram'),
+                'youtube' => SiteSetting::get('social_youtube'),
+                'pinterest' => SiteSetting::get('social_pinterest'),
+            ],
             // Shared globally (not per-controller) since more than one
             // public form needs it (contact, newsletter signup).
             'honeypot' => app(Honeypot::class),
