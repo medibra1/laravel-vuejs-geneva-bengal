@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
-         bootstrap="vendor/autoload.php"
+         bootstrap="tests/bootstrap.php"
          colors="true"
 >
     <testsuites>
@@ -17,27 +17,9 @@
             <directory>app</directory>
         </include>
     </source>
-    <php>
-        <env name="APP_ENV" value="testing"/>
-        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
-        <env name="BCRYPT_ROUNDS" value="4"/>
-        <env name="BROADCAST_CONNECTION" value="null"/>
-        <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
-        <env name="DB_URL" value=""/>
-        <env name="MAIL_MAILER" value="array"/>
-        <env name="QUEUE_CONNECTION" value="sync"/>
-        <env name="SESSION_DRIVER" value="array"/>
-        <!-- Fake, not a real Stripe secret: StripeClient's constructor
-             rejects an empty string outright, and it's built eagerly by
-             AppServiceProvider's PaymentGateway binding on every request
-             that type-hints the interface — including tests that never
-             actually call the Stripe API (e.g. handleWebhook(), pure
-             local signature verification). -->
-        <env name="STRIPE_SECRET" value="sk_test_fake_key_for_test_suite"/>
-        <env name="PULSE_ENABLED" value="false"/>
-        <env name="TELESCOPE_ENABLED" value="false"/>
-        <env name="NIGHTWATCH_ENABLED" value="false"/>
-    </php>
+    <!-- Test environment variables deliberately live in tests/bootstrap.php
+         rather than in a <php><env> block here: an <env> (even with
+         force="true") only writes putenv()/$_ENV, which Laravel's Env
+         repository ranks *below* the $_SERVER entries docker-compose
+         injects into the container. See tests/bootstrap.php. -->
 </phpunit>
