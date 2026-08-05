@@ -37,9 +37,17 @@ services:
       QUEUE_CONNECTION: database
       SUPER_ADMIN_EMAIL: super-admin@example.com
       SUPER_ADMIN_PASSWORD: change-me
-      STRIPE_KEY: ""
-      STRIPE_SECRET: ""
-      STRIPE_WEBHOOK_SECRET: ""
+      # Pulled from the project-root .env (gitignored) via Compose's own
+      # variable substitution — NOT hardcoded here, unlike the values
+      # above, because these are real secrets. A hardcoded "" previously
+      # sat here; since Docker-injected env vars are already "set" by the
+      # time Laravel's dotenv loads .env, dotenv's default non-override
+      # behavior meant that blank silently won over whatever real key was
+      # in .env, breaking Stripe with "api_key cannot be the empty string"
+      # even when .env was correctly filled in.
+      STRIPE_KEY: "${STRIPE_KEY:-}"
+      STRIPE_SECRET: "${STRIPE_SECRET:-}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
       # No depends_on for the ssr service on purpose: Inertia's SSR gateway
       # already falls back to client-only rendering when it can't reach
       # this URL, so app startup shouldn't be coupled to it being ready.
@@ -68,9 +76,11 @@ services:
       MAIL_HOST: mailhog
       MAIL_PORT: 1025
       QUEUE_CONNECTION: database
-      STRIPE_KEY: ""
-      STRIPE_SECRET: ""
-      STRIPE_WEBHOOK_SECRET: ""
+      # See `app` service above for why these come from .env via Compose
+      # substitution rather than being hardcoded like the values above.
+      STRIPE_KEY: "${STRIPE_KEY:-}"
+      STRIPE_SECRET: "${STRIPE_SECRET:-}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
     depends_on:
       - mysql
 
@@ -94,9 +104,11 @@ services:
       DB_USERNAME: geneva_bengal
       DB_PASSWORD: geneva_bengal
       QUEUE_CONNECTION: database
-      STRIPE_KEY: ""
-      STRIPE_SECRET: ""
-      STRIPE_WEBHOOK_SECRET: ""
+      # See `app` service above for why these come from .env via Compose
+      # substitution rather than being hardcoded like the values above.
+      STRIPE_KEY: "${STRIPE_KEY:-}"
+      STRIPE_SECRET: "${STRIPE_SECRET:-}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
     depends_on:
       - mysql
 
