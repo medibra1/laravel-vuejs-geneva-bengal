@@ -90,11 +90,11 @@ watch(
         </header>
 
         <nav class="sticky top-0 z-50 border-b border-gray-200 bg-white">
-            <div class="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-3 md:justify-start md:gap-10">
-                <Link href="/" class="shrink-0">
+            <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-3 md:gap-10">
+                <Link href="/">
                     <img :src="logo" alt="Geneva Bengal" class="h-14 w-auto sm:h-16" />
                 </Link>
-                <ul class="font-heading hidden items-center gap-8 text-sm font-semibold tracking-wide uppercase md:flex md:flex-1 md:justify-end">
+                <ul class="font-heading hidden items-center gap-8 text-sm font-semibold tracking-wide uppercase md:flex">
                     <li v-if="raceInfoPages.length" class="group relative py-3">
                         <span class="hover:text-brand-tan flex cursor-default items-center gap-1">
                             Information sur le bengal
