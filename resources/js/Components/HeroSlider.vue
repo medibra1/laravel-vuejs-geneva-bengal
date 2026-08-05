@@ -37,14 +37,20 @@ onUnmounted(() => clearInterval(timer));
         <Transition name="fade">
             <div :key="currentSlide" class="kenburns absolute inset-0 bg-cover bg-top" :style="{ backgroundImage: `url(${slides[currentSlide]})` }" />
         </Transition>
-        <div class="absolute inset-0 bg-gradient-to-t from-neutral-900/70 via-transparent to-transparent" />
+        <!-- Matches bengal-client's .slider-image:before exactly: a dark
+             vignette behind the text card, fading bottom-to-top on mobile
+             (card sits below the image) and right-to-left on larger
+             screens (card floats on the right). -->
+        <div
+            class="absolute inset-0 bg-gradient-to-t from-black/60 from-48% to-transparent to-55% sm:bg-gradient-to-l sm:from-black/70 sm:from-20% sm:via-black/30 sm:via-30% sm:to-transparent sm:to-50%"
+        />
 
         <!-- Text card, paired with the decorative kitten-vignette mark
              behind it — mirrors bengal-client's slider-description-content,
              modernized into a floating right-aligned card. -->
         <div class="relative mx-auto flex w-full max-w-7xl justify-center px-6 sm:justify-end sm:pr-16">
             <div
-                class="relative flex min-h-[28rem] max-w-lg min-w-[22rem] flex-col items-center justify-center bg-contain bg-center bg-no-repeat px-12 py-20 text-center sm:min-h-[32rem] sm:min-w-[26rem] sm:px-16"
+                class="hero-cat-head relative flex min-h-[28rem] max-w-lg min-w-[22rem] flex-col items-center justify-center bg-contain bg-center bg-no-repeat px-12 py-20 text-center sm:min-h-[32rem] sm:min-w-[26rem] sm:px-16"
                 :style="{ backgroundImage: `url(${catHead})` }"
             >
                 <p class="font-script text-4xl sm:text-5xl">Éleveur de chats</p>
@@ -123,6 +129,17 @@ onUnmounted(() => clearInterval(timer));
 @media (prefers-reduced-motion: reduce) {
     .kenburns {
         animation: none;
+    }
+}
+
+/* Cat-head vignette is a desktop/tablet flourish only — matches
+   bengal-client, which drops it below its "normal" breakpoint entirely
+   rather than shrinking it. Needs !important: the image itself is set via
+   an inline :style binding (dynamic Vite asset URL, can't be a Tailwind
+   class), which otherwise outranks a plain scoped-CSS override. */
+@media (max-width: 639px) {
+    .hero-cat-head {
+        background-image: none !important;
     }
 }
 </style>
