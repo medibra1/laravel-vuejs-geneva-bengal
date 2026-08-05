@@ -2,6 +2,9 @@
 import { computed, ref } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
+import PageBanner from '@/Components/PageBanner.vue';
+import SectionHeading from '@/Components/SectionHeading.vue';
+import NewsletterForm from '@/Components/NewsletterForm.vue';
 import DepositForm from '@/Components/DepositForm.vue';
 import type { PageProps } from '@/types';
 import type { Cat } from '@/types/models';
@@ -20,12 +23,13 @@ const depositAmountLabel = computed(() =>
     new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(props.depositAmount / 100),
 );
 
+const description = computed(() => props.cat.description[page.props.locale as 'fr' | 'en'] ?? '');
+
 // Per-cat description, not a generic site-wide one — precisely the gap
 // CLAUDE.md flags on the production site (same meta on every page, bad
 // for indexing individual kitten listings).
 const metaDescription = computed(() => {
-    const description = props.cat.description[page.props.locale as 'fr' | 'en'] ?? '';
-    const plainText = description.replace(/\s+/g, ' ').trim();
+    const plainText = description.value.replace(/\s+/g, ' ').trim();
 
     return plainText.length > 155 ? `${plainText.slice(0, 155)}…` : plainText;
 });
@@ -46,20 +50,19 @@ function formatPrice(cents: number | null): string {
 </script>
 
 <template>
-
     <Head :title="`${cat.name} — Chaton Bengal disponible`">
         <meta v-if="metaDescription" head-key="description" name="description" :content="metaDescription" />
     </Head>
 
     <PublicLayout>
-        <section class="mx-auto max-w-7xl px-6 py-16">
-            <h1 class="mb-10 text-3xl font-semibold text-neutral-900">
-                À propos de ce chaton bengal à vendre
-            </h1>
+        <PageBanner script="Chaton Bengal" :subtitle="cat.name" />
 
-            <div class="grid grid-cols-1 gap-16 md:grid-cols-2">
+        <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
+            <SectionHeading script="À propos de ce chaton bengal à vendre" />
+
+            <div class="mt-12 grid grid-cols-1 gap-16 md:grid-cols-2">
                 <div>
-                    <div class="aspect-square overflow-hidden rounded-lg bg-gray-100">
+                    <div class="aspect-square overflow-hidden rounded-2xl bg-gray-100">
                         <img v-if="selectedPhoto" :src="selectedPhoto.url" :alt="cat.name"
                             class="h-full w-full object-cover" />
                         <div v-else class="flex h-full items-center justify-center text-gray-400">
@@ -73,7 +76,7 @@ function formatPrice(cents: number | null): string {
                             :key="photo.id"
                             type="button"
                             class="h-16 w-16 overflow-hidden rounded-md ring-2 transition"
-                            :class="index === selectedPhotoIndex ? 'ring-emerald-600' : 'ring-transparent hover:ring-gray-300'"
+                            :class="index === selectedPhotoIndex ? 'ring-brand-green' : 'ring-transparent hover:ring-gray-300'"
                             @click="selectedPhotoIndex = index"
                         >
                             <img :src="photo.url" :alt="`${cat.name} — photo ${index + 1}`" class="h-full w-full object-cover" />
@@ -82,13 +85,15 @@ function formatPrice(cents: number | null): string {
                 </div>
 
                 <div>
-                    <h2 class="text-xl font-bold text-neutral-900">Nom du chaton : {{ cat.name }}</h2>
-                    <p class="mt-1 font-medium text-emerald-700">
+                    <h3 class="font-heading text-brand-gray text-xl font-bold">Nom du chaton : {{ cat.name }}</h3>
+                    <p class="text-brand-green mt-1 font-semibold uppercase tracking-wide">
                         {{ cat.status === 'disponible' ? 'Disponible' : 'En attente' }}
                     </p>
-                    <h3 class="mt-1 text-neutral-600">{{ cat.color?.name }} Bengal cat</h3>
+                    <p class="text-brand-tan mt-1">{{ cat.color?.name }} Bengal cat</p>
 
-                    <ul class="mt-6 space-y-2 text-sm">
+                    <p v-if="description" class="mt-4 text-neutral-600">{{ description }}</p>
+
+                    <ul class="mt-6 space-y-2 text-sm text-neutral-700">
                         <li><strong>Sexe :</strong> {{ cat.sex === 'male' ? 'Mâle' : 'Femelle' }}</li>
                         <li><strong>Date de naissance :</strong> {{ formatDate(cat.birth_date) }}</li>
                         <li><strong>Couleur des yeux :</strong> {{ cat.eye_color ?? '—' }}</li>
@@ -99,8 +104,7 @@ function formatPrice(cents: number | null): string {
                     </ul>
 
                     <div class="mt-8 flex flex-wrap items-start gap-4">
-                        <Link :href="route('pages.contact', { chaton: cat.slug })"
-                            class="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-6 py-3 font-medium text-white hover:bg-emerald-800">
+                        <Link :href="route('pages.contact', { chaton: cat.slug })" class="btn-outline-brand">
                             Adopte moi
                         </Link>
                         <DepositForm v-if="cat.status === 'disponible'" :cat-id="cat.id" :amount-label="depositAmountLabel" />
@@ -109,17 +113,22 @@ function formatPrice(cents: number | null): string {
             </div>
         </section>
 
-        <hr class="mx-auto max-w-7xl border-gray-200" />
-
-        <section class="mx-auto max-w-7xl px-6 py-16">
-            <h2 class="text-2xl font-semibold text-neutral-900">Chaton bengal à vendre</h2>
-            <p class="mt-4">Voulez-vous adopter un chaton bengal ? <strong>Nous contacter !</strong></p>
-            <p class="mt-1 text-lg">Prix : <span class="font-semibold">{{ formatPrice(cat.price) }}</span></p>
-            <div class="mt-6">
-                <Link :href="route('pages.contact', { chaton: cat.slug })"
-                    class="inline-flex items-center gap-2 rounded-md border border-emerald-700 px-6 py-3 font-medium text-emerald-700 hover:bg-emerald-50">
+        <section class="bg-brand-canvas border-t border-gray-200 py-16 sm:py-24">
+            <div class="mx-auto max-w-3xl px-6 text-center">
+                <SectionHeading script="Chaton bengal à vendre" title="Voulez-vous adopter un chaton bengal ?" center />
+                <p class="mt-4 text-lg text-neutral-700">Prix : <span class="font-semibold">{{ formatPrice(cat.price) }}</span></p>
+                <Link :href="route('pages.contact', { chaton: cat.slug })" class="btn-outline-brand mt-6">
                     Faire une demande pour {{ cat.name }}
                 </Link>
+            </div>
+        </section>
+
+        <section class="py-16 sm:py-24">
+            <div class="mx-auto max-w-3xl px-6 text-center">
+                <SectionHeading script="Soyez les premiers au courant" title="Abonnez-vous à notre infolettre !" center />
+                <div class="mt-6 flex justify-center">
+                    <NewsletterForm class="w-full max-w-md" />
+                </div>
             </div>
         </section>
     </PublicLayout>
