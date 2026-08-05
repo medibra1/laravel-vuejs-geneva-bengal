@@ -77,7 +77,7 @@ it('never deletes the shared homepage images it reuses as demo photos', function
     $this->seed(ColorSeeder::class);
     $this->seed(DemoDataSeeder::class);
 
-    foreach (['instagram-1.jpg', 'instagram-2.jpg', 'instagram-3.jpg', 'instagram-4.jpg', 'instagram-5.jpg', 'instagram-6.jpg'] as $photo) {
-        expect(file_exists(resource_path("images/home/{$photo}")))->toBeTrue();
+    foreach (['social-1.jpg', 'social-2.jpg', 'social-3.jpg', 'social-4.jpg', 'social-5.jpg', 'social-6.jpg'] as $photo) {
+        expect(file_exists(resource_path("images/home/social/{$photo}")))->toBeTrue();
     }
 });

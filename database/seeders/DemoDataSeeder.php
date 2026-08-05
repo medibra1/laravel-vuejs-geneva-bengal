@@ -36,8 +36,8 @@ class DemoDataSeeder extends Seeder
      * @var list<string>
      */
     private const PHOTO_POOL = [
-        'instagram-1.jpg', 'instagram-2.jpg', 'instagram-3.jpg',
-        'instagram-4.jpg', 'instagram-5.jpg', 'instagram-6.jpg',
+        'social/social-1.jpg', 'social/social-2.jpg', 'social/social-3.jpg',
+        'social/social-4.jpg', 'social/social-5.jpg', 'social/social-6.jpg',
     ];
 
     public function run(): void
