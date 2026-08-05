@@ -43,10 +43,20 @@ class PageController extends Controller
         ];
 
         if ($page->slug === 'a-propos') {
+            // Mapped to a plain array rather than passed as a raw Eloquent
+            // collection: spatie/laravel-translatable serializes `quote`
+            // (translatable) as the full {fr: ..., en: ...} object on
+            // toArray()/JSON serialization, not the current-locale string.
             $props['testimonials'] = Testimonial::query()
                 ->where('is_published', true)
                 ->orderBy('order')
-                ->get(['id', 'author_name', 'quote', 'rating']);
+                ->get(['id', 'author_name', 'quote', 'rating'])
+                ->map(fn (Testimonial $testimonial) => [
+                    'id' => $testimonial->id,
+                    'author_name' => $testimonial->author_name,
+                    'quote' => $testimonial->quote,
+                    'rating' => $testimonial->rating,
+                ]);
         }
 
         if ($page->slug === 'contact') {

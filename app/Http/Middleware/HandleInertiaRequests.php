@@ -43,12 +43,25 @@ class HandleInertiaRequests extends Middleware
             // Only the info/adoption dropdown sub-menus are CMS-driven —
             // top-level nav (Accueil/Chatons/À propos/Contact/Galerie)
             // stays hardcoded in PublicLayout.vue, per CLAUDE.md.
+            // Mapped to a plain array rather than passed as a raw Eloquent
+            // collection: spatie/laravel-translatable serializes a
+            // translatable attribute as the full {fr: ..., en: ...} object
+            // on toArray()/JSON serialization (only direct property access
+            // resolves it to the current-locale string), which would leak
+            // the untranslated object straight into the nav links.
             'menuPages' => Page::query()
                 ->where('is_published', true)
                 ->whereNotNull('menu_group')
                 ->orderBy('menu_group')
                 ->orderBy('order')
-                ->get(['id', 'slug', 'menu_group', 'order', 'title']),
+                ->get(['id', 'slug', 'menu_group', 'order', 'title'])
+                ->map(fn (Page $page) => [
+                    'id' => $page->id,
+                    'slug' => $page->slug,
+                    'menu_group' => $page->menu_group,
+                    'order' => $page->order,
+                    'title' => $page->title,
+                ]),
             // Shared globally (not per-controller) since more than one
             // public form needs it (contact, newsletter signup).
             'honeypot' => app(Honeypot::class),
