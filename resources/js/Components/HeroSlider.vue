@@ -42,21 +42,21 @@ onUnmounted(() => clearInterval(timer));
              (card sits below the image) and right-to-left on larger
              screens (card floats on the right). -->
         <div
-            class="absolute inset-0 bg-gradient-to-t from-black/60 from-48% to-transparent to-55% sm:bg-gradient-to-l sm:from-black/70 sm:from-20% sm:via-black/30 sm:via-30% sm:to-transparent sm:to-50%"
+            class="absolute inset-0 bg-gradient-to-t from-black/80 from-45% to-transparent to-65% sm:bg-gradient-to-l sm:from-black/90 sm:from-15% sm:via-black/50 sm:via-35% sm:to-transparent sm:to-60%"
         />
 
         <!-- Text card, paired with the decorative kitten-vignette mark
              behind it — mirrors bengal-client's slider-description-content,
              modernized into a floating right-aligned card. -->
-        <div class="relative mx-auto flex w-full max-w-7xl justify-center px-6 sm:justify-end sm:pr-16">
+        <div class="relative mx-auto flex w-full max-w-7xl justify-center px-6 sm:justify-end sm:pr-0 sm:mr-10">
             <div
-                class="hero-cat-head relative flex min-h-[28rem] max-w-lg min-w-[22rem] flex-col items-center justify-center bg-contain bg-center bg-no-repeat px-12 py-20 text-center sm:min-h-[32rem] sm:min-w-[26rem] sm:px-16"
+                class="hero-cat-head relative flex min-h-[30rem] max-w-lg min-w-[22rem] flex-col items-center justify-center bg-contain bg-center bg-no-repeat px-12 pt-32 pb-16 text-center sm:min-h-[36rem] sm:min-w-[32rem] sm:px-16 sm:py-20"
                 :style="{ backgroundImage: `url(${catHead})` }"
             >
-                <p class="font-script text-4xl sm:text-5xl">Éleveur de chats</p>
-                <h1 class="font-round mt-2 text-2xl tracking-[0.3em] uppercase sm:text-4xl">Bengal</h1>
-                <p class="font-heading mt-5 text-base sm:text-lg">Créateur de bonheur depuis 2020</p>
-                <p class="mt-5 max-w-[15rem] text-xs text-neutral-200 sm:text-sm">
+                <p class="font-script text-4xl sm:text-6xl">Éleveur de chats</p>
+                <h1 class="font-round mt-2 text-2xl tracking-[0.1em] uppercase sm:text-5xl">Bengal</h1>
+                <p class="font-heading mt-5 text-lg font-semibold sm:text-xl">Créateur de bonheur depuis 2020</p>
+                <p class="mt-5 max-w-[15rem] text-xs font-semibold text-neutral-200 sm:max-w-[20rem] sm:text-base">
                     Nous élevons des chatons Bengal en parfaite santé, avec une apparence et un comportement à vous
                     faire rêver.
                 </p>
