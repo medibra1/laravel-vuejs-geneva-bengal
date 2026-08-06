@@ -67,6 +67,11 @@ onBeforeUnmount(() => {
     editor.value?.destroy();
 });
 
+// For RichTextEditor.spec.ts only: driving real ProseMirror commands
+// (e.g. selecting text before toggling a mark) needs the actual editor
+// instance — there's no other way to reach it from outside the component.
+defineExpose({ editor });
+
 function toggleBold(): void {
     editor.value?.chain().focus().toggleBold().run();
 }
