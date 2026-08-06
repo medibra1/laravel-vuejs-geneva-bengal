@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\FaqItem;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use App\Models\Testimonial;
@@ -33,6 +34,25 @@ it('shows the published contact page with site settings', function () {
         ->component('Public/Page')
         ->where('page.slug', 'contact')
         ->where('settings.address', '1209 Genève, Suisse')
+    );
+});
+
+it('shows the published contact page with faq items', function () {
+    refreshApplicationWithLocale('fr');
+
+    Page::factory()->create(['slug' => 'contact', 'is_published' => true]);
+    FaqItem::factory()->create([
+        'question' => ['fr' => 'Livrez-vous à l\'international ?', 'en' => 'Do you ship internationally?'],
+        'answer' => ['fr' => 'Oui, sous conditions.', 'en' => 'Yes, under conditions.'],
+    ]);
+
+    $response = $this->get('/fr/contact');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Public/Page')
+        ->has('faqItems', 1)
+        ->where('faqItems.0.question', 'Livrez-vous à l\'international ?')
     );
 });
 

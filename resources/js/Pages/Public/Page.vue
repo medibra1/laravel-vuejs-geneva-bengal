@@ -17,6 +17,12 @@ interface PublicTestimonial {
     rating: number | null;
 }
 
+interface PublicFaqItem {
+    id: number;
+    question: string;
+    answer: string;
+}
+
 interface PublicSettings {
     address: string | null;
     social_facebook: string | null;
@@ -41,6 +47,7 @@ const props = defineProps<{
     testimonials?: PublicTestimonial[];
     settings?: PublicSettings;
     prefilledCat?: PrefilledCat | null;
+    faqItems?: PublicFaqItem[];
 }>();
 
 const pageCtx = usePage<PageProps>();
@@ -85,6 +92,32 @@ function submitContact(): void {
                 class="mt-6 max-w-none text-neutral-700 [&_a]:text-brand-green [&_a]:underline [&_h2]:font-heading [&_h2]:mt-8 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:uppercase [&_h2]:tracking-wide [&_h2]:text-brand-gray [&_h3]:mt-6 [&_h3]:text-lg [&_h3]:font-semibold [&_img]:mt-4 [&_img]:max-w-full [&_img]:rounded-md [&_ol]:mt-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mt-4 [&_p:first-child]:mt-0 [&_ul]:mt-2 [&_ul]:list-disc [&_ul]:pl-6"
                 v-html="page.body"
             />
+        </section>
+
+        <section v-if="faqItems" id="faq" class="border-t border-gray-200 py-16 sm:py-24">
+            <div class="mx-auto max-w-3xl px-6">
+                <SectionHeading script="Questions fréquentes" center />
+                <div v-if="faqItems.length" class="mt-8 divide-y divide-gray-200">
+                    <details v-for="item in faqItems" :key="item.id" class="group py-4">
+                        <summary
+                            class="font-heading text-brand-gray flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold tracking-wide uppercase [&::-webkit-details-marker]:hidden"
+                        >
+                            {{ item.question }}
+                            <svg
+                                viewBox="0 0 24 24"
+                                class="h-3 w-3 shrink-0 transition group-open:rotate-180"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="3"
+                            >
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </summary>
+                        <p class="mt-3 text-neutral-700">{{ item.answer }}</p>
+                    </details>
+                </div>
+                <p v-else class="mt-4 text-neutral-500">Aucune question pour le moment.</p>
+            </div>
         </section>
 
         <section v-if="testimonials" id="temoignages" class="bg-brand-canvas border-t border-gray-200 py-16 sm:py-24">
