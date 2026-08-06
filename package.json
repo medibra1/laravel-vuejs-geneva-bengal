@@ -26,6 +26,11 @@
     },
     "dependencies": {
         "@primeuix/themes": "^1.2.5",
+        "@tiptap/extension-image": "^3.0.0",
+        "@tiptap/extension-placeholder": "^3.0.0",
+        "@tiptap/pm": "^3.0.0",
+        "@tiptap/starter-kit": "^3.0.0",
+        "@tiptap/vue-3": "^3.0.0",
         "@vueuse/core": "^11.3.0",
         "chart.js": "^4.5.1",
         "pinia": "^2.3.1",

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Mews\Purifier\Facades\Purifier;
 
 class UpdatePageRequest extends FormRequest
 {
@@ -34,5 +35,21 @@ class UpdatePageRequest extends FormRequest
             'meta_description.en' => ['nullable', 'string', 'max:500'],
             'is_published' => ['boolean'],
         ];
+    }
+
+    /**
+     * RichTextEditor.vue's output is trusted client-side but still crosses
+     * a trust boundary at save time — sanitize with the 'cms' HTMLPurifier
+     * profile (config/purifier.php) so a stored page can never carry a
+     * script tag or an on* handler regardless of what produced the HTML.
+     */
+    protected function passedValidation(): void
+    {
+        $this->merge([
+            'body' => [
+                'fr' => Purifier::clean((string) $this->input('body.fr', ''), 'cms'),
+                'en' => Purifier::clean((string) $this->input('body.en', ''), 'cms'),
+            ],
+        ]);
     }
 }

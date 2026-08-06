@@ -5,6 +5,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
 import LocaleTabs from '@/Components/LocaleTabs.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import RichTextEditor from '@/Components/RichTextEditor.vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
@@ -99,12 +100,10 @@ function submit(): void {
                             :en-has-error="!!form.errors['body.en']"
                         >
                             <template #fr>
-                                <textarea v-model="form.body.fr" rows="8" class="w-full rounded-md border-gray-300" />
-                                <InputError :message="form.errors['body.fr']" />
+                                <RichTextEditor v-model="form.body.fr" placeholder="Contenu de la page…" :error="form.errors['body.fr']" />
                             </template>
                             <template #en>
-                                <textarea v-model="form.body.en" rows="8" class="w-full rounded-md border-gray-300" />
-                                <InputError :message="form.errors['body.en']" />
+                                <RichTextEditor v-model="form.body.en" placeholder="Page content…" :error="form.errors['body.en']" />
                             </template>
                         </LocaleTabs>
                     </div>

@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\CatController;
 use App\Http\Controllers\Admin\ContactRequestController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DepositController;
+use App\Http\Controllers\Admin\EditorUploadController;
 use App\Http\Controllers\Admin\FaqItemController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\LitterController;
@@ -36,6 +37,8 @@ Route::prefix('admin')
         Route::resource('litters', LitterController::class)->except('show');
         Route::resource('galleries', GalleryController::class)->except('show');
         Route::resource('pages', PageController::class)->except('show');
+        // RichTextEditor.vue's image button, used on pages.body only.
+        Route::post('media/upload', [EditorUploadController::class, 'store'])->name('media.upload');
         Route::resource('faq-items', FaqItemController::class)->except('show');
         Route::resource('testimonials', TestimonialController::class)->except('show');
         Route::resource('contact-requests', ContactRequestController::class)->only(['index', 'update', 'destroy']);

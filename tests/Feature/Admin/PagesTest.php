@@ -72,6 +72,26 @@ it('lets an admin update a page', function () {
     expect($page->fresh()->is_published)->toBeFalse();
 });
 
+it('sanitizes body HTML on create, stripping tags outside the cms allowlist', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+
+    $this->actingAs($admin)->post(route('admin.pages.store'), [
+        'title' => ['fr' => 'Titre', 'en' => 'Title'],
+        'body' => [
+            'fr' => '<p onclick="alert(1)">Texte <script>alert(1)</script></p>',
+            'en' => '<p>Text</p>',
+        ],
+        'is_published' => true,
+    ]);
+
+    $page = Page::first();
+    expect($page->getTranslation('body', 'fr'))
+        ->not->toContain('<script')
+        ->not->toContain('onclick')
+        ->toContain('Texte');
+});
+
 it('lets an admin delete a page', function () {
     $admin = User::factory()->create(['email_verified_at' => now()]);
     $admin->assignRole('admin');
