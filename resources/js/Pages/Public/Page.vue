@@ -107,20 +107,30 @@ function submitContact(): void {
         <section v-if="faqItems" class="border-t border-gray-200 py-16 sm:py-24">
             <div class="mx-auto flex max-w-3xl justify-center px-6">
                 <div class="w-full">
-                    <SectionHeading script="Questions fréquentes" center />
-                    <div v-if="faqItems.length" class="mt-8 flex flex-col gap-4">
+                    <div v-if="faqItems.length" class="flex flex-col gap-4">
                         <div v-for="item in faqItems" :key="item.id" class="rounded-[10px] bg-white p-4 shadow-sm">
                             <h3
                                 class="font-heading text-brand-gray flex h-[50px] cursor-pointer items-center justify-between gap-4 text-sm font-semibold tracking-wide uppercase"
                                 @click="toggleFaq(item.id)"
                             >
                                 {{ item.question }}
-                                <i
-                                    class="pi shrink-0 text-lg text-brand-green"
-                                    :class="openFaqId === item.id ? 'pi-minus-circle' : 'pi-plus-circle'"
-                                />
+                                <span
+                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-green text-white transition-transform duration-300 ease-in-out"
+                                    :class="{ 'rotate-45': openFaqId === item.id }"
+                                >
+                                    <i class="pi pi-plus text-xs" />
+                                </span>
                             </h3>
-                            <p v-if="openFaqId === item.id" class="mt-2 text-neutral-700">{{ item.answer }}</p>
+                            <div
+                                class="grid transition-[grid-template-rows] duration-300 ease-in-out"
+                                :class="openFaqId === item.id ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'"
+                            >
+                                <div class="overflow-hidden">
+                                    <p class="mt-2 text-neutral-700 opacity-0 transition-opacity duration-300 ease-in-out" :class="{ 'opacity-100': openFaqId === item.id }">
+                                        {{ item.answer }}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <p v-else class="mt-4 text-neutral-500">Aucune question pour le moment.</p>
