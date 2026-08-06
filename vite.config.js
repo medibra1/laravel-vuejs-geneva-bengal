@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import laravel from "laravel-vite-plugin";
 import vue from "@vitejs/plugin-vue";
 import tailwindcss from "@tailwindcss/vite";
+import { fileURLToPath, URL } from "node:url";
 
 export default defineConfig({
     plugins: [
@@ -16,6 +17,16 @@ export default defineConfig({
         }),
         tailwindcss(),
     ],
+    resolve: {
+        // The laravel plugin normally provides this "@" -> resources/js
+        // alias itself, but it's skipped under Vitest (see above), so any
+        // component under test that itself imports via "@/..." would
+        // otherwise fail to resolve. Declared explicitly here so it holds
+        // regardless of which plugins are active.
+        alias: {
+            "@": fileURLToPath(new URL("./resources/js", import.meta.url)),
+        },
+    },
     test: {
         environment: "jsdom",
         globals: true,
