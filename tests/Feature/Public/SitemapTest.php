@@ -18,6 +18,7 @@ it('lists static pages with hreflang alternates for every locale', function () {
     expect($xml)->toContain('<loc>'.url('/fr/chatons-disponibles').'</loc>');
     expect($xml)->toContain('<loc>'.url('/fr/a-propos').'</loc>');
     expect($xml)->toContain('<loc>'.url('/fr/contact').'</loc>');
+    expect($xml)->toContain('<loc>'.url('/fr/galerie').'</loc>');
 });
 
 it('includes every kitten cat, one entry per locale', function () {

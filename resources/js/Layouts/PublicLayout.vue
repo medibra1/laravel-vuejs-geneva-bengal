@@ -78,7 +78,7 @@ watch(
                     <!-- Duplicated in the mobile drawer already — hidden
                          below `sm` to stop this bar from wrapping. -->
                     <li class="hidden sm:block"><Link :href="route('pages.a-propos')" class="hover:text-brand-green">À propos</Link></li>
-                    <li class="hidden sm:block"><a :href="placeholderHref" class="hover:text-brand-green">Galerie photo</a></li>
+                    <li class="hidden sm:block"><Link :href="route('galleries.index')" class="hover:text-brand-green">Galerie photo</Link></li>
                     <li class="hidden sm:block"><Link :href="route('pages.contact')" class="hover:text-brand-green">Contact</Link></li>
                     <li>
                         <Link :href="switchLocaleHref('fr')" :class="{ underline: currentLocale === 'fr' }">FR</Link>
@@ -271,7 +271,7 @@ watch(
                         </ul>
                     </li>
                     <li class="border-b border-white/10">
-                        <a :href="placeholderHref" class="block py-4">Galerie photo</a>
+                        <Link :href="route('galleries.index')" class="block py-4">Galerie photo</Link>
                     </li>
                     <li class="border-b border-white/10">
                         <Link :href="route('pages.a-propos')" class="block py-4">À propos</Link>

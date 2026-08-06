@@ -27,7 +27,7 @@ class SitemapController extends Controller
         $sitemap = Sitemap::create();
         $locales = array_keys(LaravelLocalization::getSupportedLocales());
 
-        foreach (['', '/chatons-disponibles', '/a-propos', '/contact'] as $path) {
+        foreach (['', '/chatons-disponibles', '/a-propos', '/contact', '/galerie'] as $path) {
             $this->addLocalizedEntry($sitemap, $path, $locales);
         }
 
