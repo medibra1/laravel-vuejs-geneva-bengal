@@ -306,7 +306,6 @@ watch(
                             <li><Link :href="route('pages.a-propos')" class="hover:text-brand-green">Notre histoire</Link></li>
                             <li><Link :href="`${route('pages.a-propos')}#temoignages`" class="hover:text-brand-green">Témoignages</Link></li>
                             <li><Link :href="route('pages.contact')" class="hover:text-brand-green">Contactez-nous</Link></li>
-                            <li><Link :href="`${route('pages.contact')}#faq`" class="hover:text-brand-green">Questions fréquentes</Link></li>
                         </ul>
                     </div>
                     <div>

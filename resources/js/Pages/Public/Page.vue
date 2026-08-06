@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
 import { useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 import NewsletterForm from '@/Components/NewsletterForm.vue';
 import SectionHeading from '@/Components/SectionHeading.vue';
@@ -53,6 +54,15 @@ const props = defineProps<{
 const pageCtx = usePage<PageProps>();
 const honeypot = pageCtx.props.honeypot;
 
+// Single-open accordion, same on every breakpoint — the reference site
+// (genevabengals.ch/chaton-bengal-a-vendre) only does this toggle on
+// mobile and shows a flat grid on desktop; ours uses it everywhere.
+const openFaqId = ref<number | null>(null);
+
+function toggleFaq(id: number): void {
+    openFaqId.value = openFaqId.value === id ? null : id;
+}
+
 const reasonOptions = [
     { label: 'Adopter un chaton', value: 'adopt' },
     { label: "S'inscrire en liste d'attente", value: 'waiting_list' },
@@ -94,29 +104,27 @@ function submitContact(): void {
             />
         </section>
 
-        <section v-if="faqItems" id="faq" class="border-t border-gray-200 py-16 sm:py-24">
-            <div class="mx-auto max-w-3xl px-6">
-                <SectionHeading script="Questions fréquentes" center />
-                <div v-if="faqItems.length" class="mt-8 divide-y divide-gray-200">
-                    <details v-for="item in faqItems" :key="item.id" class="group py-4">
-                        <summary
-                            class="font-heading text-brand-gray flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold tracking-wide uppercase [&::-webkit-details-marker]:hidden"
-                        >
-                            {{ item.question }}
-                            <svg
-                                viewBox="0 0 24 24"
-                                class="h-3 w-3 shrink-0 transition group-open:rotate-180"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="3"
+        <section v-if="faqItems" class="border-t border-gray-200 py-16 sm:py-24">
+            <div class="mx-auto flex max-w-3xl justify-center px-6">
+                <div class="w-full">
+                    <SectionHeading script="Questions fréquentes" center />
+                    <div v-if="faqItems.length" class="mt-8 flex flex-col gap-4">
+                        <div v-for="item in faqItems" :key="item.id" class="rounded-[10px] bg-white p-4 shadow-sm">
+                            <h3
+                                class="font-heading text-brand-gray flex h-[50px] cursor-pointer items-center justify-between gap-4 text-sm font-semibold tracking-wide uppercase"
+                                @click="toggleFaq(item.id)"
                             >
-                                <polyline points="6 9 12 15 18 9" />
-                            </svg>
-                        </summary>
-                        <p class="mt-3 text-neutral-700">{{ item.answer }}</p>
-                    </details>
+                                {{ item.question }}
+                                <i
+                                    class="pi shrink-0 text-lg text-brand-green"
+                                    :class="openFaqId === item.id ? 'pi-minus-circle' : 'pi-plus-circle'"
+                                />
+                            </h3>
+                            <p v-if="openFaqId === item.id" class="mt-2 text-neutral-700">{{ item.answer }}</p>
+                        </div>
+                    </div>
+                    <p v-else class="mt-4 text-neutral-500">Aucune question pour le moment.</p>
                 </div>
-                <p v-else class="mt-4 text-neutral-500">Aucune question pour le moment.</p>
             </div>
         </section>
 

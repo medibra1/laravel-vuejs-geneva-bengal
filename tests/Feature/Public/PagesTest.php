@@ -37,16 +37,16 @@ it('shows the published contact page with site settings', function () {
     );
 });
 
-it('shows the published contact page with faq items', function () {
+it('shows the published faq page with faq items', function () {
     refreshApplicationWithLocale('fr');
 
-    Page::factory()->create(['slug' => 'contact', 'is_published' => true]);
+    Page::factory()->create(['slug' => 'faq', 'menu_group' => 'adoption', 'is_published' => true]);
     FaqItem::factory()->create([
         'question' => ['fr' => 'Livrez-vous à l\'international ?', 'en' => 'Do you ship internationally?'],
         'answer' => ['fr' => 'Oui, sous conditions.', 'en' => 'Yes, under conditions.'],
     ]);
 
-    $response = $this->get('/fr/contact');
+    $response = $this->get('/fr/pages/faq');
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page

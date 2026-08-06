@@ -74,7 +74,9 @@ class PageController extends Controller
             $props['prefilledCat'] = $request->filled('chaton')
                 ? Cat::query()->where('slug', $request->query('chaton'))->first(['id', 'name'])
                 : null;
+        }
 
+        if ($page->slug === 'faq') {
             // faq_items has no is_published flag (see CLAUDE.md) — every row
             // is public. Same map-to-plain-array reasoning as testimonials
             // above: property access resolves the current locale, raw

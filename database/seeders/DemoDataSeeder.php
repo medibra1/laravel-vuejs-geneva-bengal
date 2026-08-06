@@ -145,6 +145,22 @@ class DemoDataSeeder extends Seeder
                 'is_published' => true,
             ]);
         }
+
+        // Its own page (not a section on another one) so it shows up
+        // alongside the other adoption-group pages in that nav dropdown —
+        // Public\PageController::show() attaches faq_items to it by slug.
+        Page::create([
+            'menu_group' => 'adoption',
+            'order' => count($adoptionPages),
+            'title' => ['fr' => 'FAQ', 'en' => 'FAQ'],
+            'body' => [
+                'fr' => '<p>Vous avez une question sur nos chatons ou le processus d\'adoption ? Vous trouverez peut-être déjà la réponse ci-dessous.</p>',
+                'en' => '<p>Have a question about our kittens or the adoption process? You might already find the answer below.</p>',
+            ],
+            'meta_title' => ['fr' => 'FAQ — Geneva Bengal', 'en' => 'FAQ — Geneva Bengal'],
+            'meta_description' => ['fr' => fake()->sentence(15), 'en' => fake()->sentence(15)],
+            'is_published' => true,
+        ]);
     }
 
     private function seedFaqItems(): void
