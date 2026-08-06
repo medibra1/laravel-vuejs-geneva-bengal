@@ -122,7 +122,7 @@ class DemoDataSeeder extends Seeder
                 'order' => $order,
                 'title' => $title,
                 'body' => ['fr' => fake()->paragraphs(3, true), 'en' => fake()->paragraphs(3, true)],
-                'meta_title' => [$title['fr'].' — Geneva Bengal', $title['en'].' — Geneva Bengal'],
+                'meta_title' => ['fr' => $title['fr'].' — Geneva Bengal', 'en' => $title['en'].' — Geneva Bengal'],
                 'meta_description' => ['fr' => fake()->sentence(15), 'en' => fake()->sentence(15)],
                 'is_published' => true,
             ]);
@@ -140,7 +140,7 @@ class DemoDataSeeder extends Seeder
                 'order' => $order,
                 'title' => $title,
                 'body' => ['fr' => fake()->paragraphs(3, true), 'en' => fake()->paragraphs(3, true)],
-                'meta_title' => [$title['fr'].' — Geneva Bengal', $title['en'].' — Geneva Bengal'],
+                'meta_title' => ['fr' => $title['fr'].' — Geneva Bengal', 'en' => $title['en'].' — Geneva Bengal'],
                 'meta_description' => ['fr' => fake()->sentence(15), 'en' => fake()->sentence(15)],
                 'is_published' => true,
             ]);
