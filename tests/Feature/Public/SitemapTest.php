@@ -19,6 +19,8 @@ it('lists static pages with hreflang alternates for every locale', function () {
     expect($xml)->toContain('<loc>'.url('/fr/a-propos').'</loc>');
     expect($xml)->toContain('<loc>'.url('/fr/contact').'</loc>');
     expect($xml)->toContain('<loc>'.url('/fr/galerie').'</loc>');
+    expect($xml)->toContain('<loc>'.url('/fr/nos-chats-reproducteurs').'</loc>');
+    expect($xml)->toContain('<loc>'.url('/fr/portees-prevues').'</loc>');
 });
 
 it('includes every kitten cat, one entry per locale', function () {
@@ -30,14 +32,21 @@ it('includes every kitten cat, one entry per locale', function () {
     expect($xml)->toContain('<loc>'.url("/en/chatons-disponibles/{$cat->slug}").'</loc>');
 });
 
-it('excludes non-kitten cats and unpublished pages', function () {
-    $reproducer = Cat::factory()->create(['type' => CatType::Breeder, 'name' => 'Reproducteur']);
+it('includes breeding cats alongside kittens, one entry per locale', function () {
+    $breeder = Cat::factory()->create(['type' => CatType::Breeder, 'name' => 'Reproducteur']);
+
+    $xml = $this->get('/sitemap.xml')->getContent();
+
+    expect($xml)->toContain('<loc>'.url("/fr/chatons-disponibles/{$breeder->slug}").'</loc>');
+    expect($xml)->toContain('<loc>'.url("/en/chatons-disponibles/{$breeder->slug}").'</loc>');
+});
+
+it('excludes unpublished pages', function () {
     $unpublished = Page::factory()->create(['slug' => 'brouillon', 'is_published' => false]);
     Page::factory()->create(['slug' => 'race', 'is_published' => true]);
 
     $xml = $this->get('/sitemap.xml')->getContent();
 
-    expect($xml)->not->toContain($reproducer->slug);
     expect($xml)->not->toContain($unpublished->slug);
     expect($xml)->toContain('<loc>'.url('/fr/pages/race').'</loc>');
 });

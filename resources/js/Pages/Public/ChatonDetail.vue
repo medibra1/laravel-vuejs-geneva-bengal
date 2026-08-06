@@ -25,6 +25,13 @@ const depositAmountLabel = computed(() =>
 
 const description = computed(() => props.cat.description[page.props.locale as 'fr' | 'en'] ?? '');
 
+// Only "chaton" is for adoption — this route/resource are otherwise
+// type-agnostic (also reached from Public/Reproducteurs.vue), so a "chat"
+// or "reproducteur" here just skips the adoption-specific sections below
+// rather than showing a status badge, deposit form or price that don't
+// apply to a breeding cat.
+const isKitten = computed(() => props.cat.type === 'chaton');
+
 // Per-cat description, not a generic site-wide one — precisely the gap
 // CLAUDE.md flags on the production site (same meta on every page, bad
 // for indexing individual kitten listings).
@@ -50,15 +57,15 @@ function formatPrice(cents: number | null): string {
 </script>
 
 <template>
-    <Head :title="`${cat.name} — Chaton Bengal disponible`">
+    <Head :title="isKitten ? `${cat.name} — Chaton Bengal disponible` : `${cat.name} — Chat Bengal reproducteur`">
         <meta v-if="metaDescription" head-key="description" name="description" :content="metaDescription" />
     </Head>
 
     <PublicLayout>
-        <PageBanner script="Chaton Bengal" :subtitle="cat.name" />
+        <PageBanner :script="isKitten ? 'Chaton Bengal' : 'Chat Bengal'" :subtitle="cat.name" />
 
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
-            <SectionHeading script="À propos de ce chaton bengal à vendre" />
+            <SectionHeading :script="isKitten ? 'À propos de ce chaton bengal à vendre' : 'À propos de ce chat Bengal reproducteur'" />
 
             <div class="mt-12 grid grid-cols-1 gap-16 md:grid-cols-2">
                 <div>
@@ -85,8 +92,10 @@ function formatPrice(cents: number | null): string {
                 </div>
 
                 <div>
-                    <h3 class="font-heading text-brand-gray text-xl font-bold">Nom du chaton : {{ cat.name }}</h3>
-                    <p class="text-brand-green mt-1 font-semibold uppercase tracking-wide">
+                    <h3 class="font-heading text-brand-gray text-xl font-bold">
+                        {{ isKitten ? 'Nom du chaton' : 'Nom' }} : {{ cat.name }}
+                    </h3>
+                    <p v-if="isKitten" class="text-brand-green mt-1 font-semibold uppercase tracking-wide">
                         {{ cat.status === 'disponible' ? 'Disponible' : 'En attente' }}
                     </p>
                     <p class="text-brand-tan mt-1">{{ cat.color?.name }} Bengal cat</p>
@@ -97,23 +106,27 @@ function formatPrice(cents: number | null): string {
                         <li><strong>Sexe :</strong> {{ cat.sex === 'male' ? 'Mâle' : 'Femelle' }}</li>
                         <li><strong>Date de naissance :</strong> {{ formatDate(cat.birth_date) }}</li>
                         <li><strong>Couleur des yeux :</strong> {{ cat.eye_color ?? '—' }}</li>
-                        <li><strong>Disponible à partir de :</strong> {{ formatDate(cat.available_at) }}</li>
+                        <li v-if="isKitten"><strong>Disponible à partir de :</strong> {{ formatDate(cat.available_at) }}</li>
                         <li><strong>Régime :</strong> {{ cat.diet ?? '—' }}</li>
-                        <li><strong>Formé à la litière :</strong> {{ cat.litter_trained ? 'Oui' : 'Non' }}</li>
-                        <li><strong>Castré/Stérilisé :</strong> {{ cat.neutered ? 'Oui' : 'Non' }}</li>
+                        <li v-if="isKitten"><strong>Formé à la litière :</strong> {{ cat.litter_trained ? 'Oui' : 'Non' }}</li>
                     </ul>
 
-                    <div class="mt-8 flex flex-wrap items-start gap-4">
+                    <div v-if="isKitten" class="mt-8 flex flex-wrap items-start gap-4">
                         <Link :href="route('pages.contact', { chaton: cat.slug })" class="btn-outline-brand">
                             Adopte moi
                         </Link>
                         <DepositForm v-if="cat.status === 'disponible'" :cat-id="cat.id" :amount-label="depositAmountLabel" />
                     </div>
+                    <div v-else class="mt-8">
+                        <Link :href="route('pages.contact')" class="btn-outline-brand">
+                            Nous contacter à son sujet
+                        </Link>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <section class="bg-brand-canvas border-t border-gray-200 py-16 sm:py-24">
+        <section v-if="isKitten" class="bg-brand-canvas border-t border-gray-200 py-16 sm:py-24">
             <div class="mx-auto max-w-3xl px-6 text-center">
                 <SectionHeading script="Chaton bengal à vendre" title="Voulez-vous adopter un chaton bengal ?" center />
                 <p class="mt-4 text-lg text-neutral-700">Prix : <span class="font-semibold">{{ formatPrice(cat.price) }}</span></p>

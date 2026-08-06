@@ -33,9 +33,6 @@ function switchLocaleHref(locale: string): string {
     return '/' + segments.join('/');
 }
 
-// TODO: still no dedicated route for these (Phase 4/Galerie).
-const placeholderHref = '#';
-
 // Mobile off-canvas menu: closed on every navigation (Inertia doesn't
 // unmount this layout between page visits), with its own nested
 // accordions for the two CMS-driven submenus.
@@ -112,8 +109,8 @@ watch(
                             </li>
                         </ul>
                     </li>
-                    <li><a :href="placeholderHref" class="hover:text-brand-tan">Nos chats reproducteurs</a></li>
-                    <li><a :href="placeholderHref" class="hover:text-brand-tan">Portées prévues</a></li>
+                    <li><Link :href="route('cats.breeders')" class="hover:text-brand-tan">Nos chats reproducteurs</Link></li>
+                    <li><Link :href="route('litters.index')" class="hover:text-brand-tan">Portées prévues</Link></li>
                     <li v-if="adoptionPages.length" class="group relative py-3">
                         <span class="hover:text-brand-tan flex cursor-default items-center gap-1">
                             Adoption et prix
@@ -245,10 +242,10 @@ watch(
                         </ul>
                     </li>
                     <li class="border-b border-white/10">
-                        <a :href="placeholderHref" class="block py-4">Nos chats reproducteurs</a>
+                        <Link :href="route('cats.breeders')" class="block py-4">Nos chats reproducteurs</Link>
                     </li>
                     <li class="border-b border-white/10">
-                        <a :href="placeholderHref" class="block py-4">Portées prévues</a>
+                        <Link :href="route('litters.index')" class="block py-4">Portées prévues</Link>
                     </li>
                     <li v-if="adoptionPages.length" class="border-b border-white/10">
                         <button type="button" class="flex w-full items-center justify-between py-4" @click="toggleMobileSection('adoption')">

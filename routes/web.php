@@ -6,6 +6,7 @@ use App\Http\Controllers\Public\ContactController;
 use App\Http\Controllers\Public\DepositController;
 use App\Http\Controllers\Public\GalleryController;
 use App\Http\Controllers\Public\HomeController;
+use App\Http\Controllers\Public\LitterController;
 use App\Http\Controllers\Public\NewsletterController;
 use App\Http\Controllers\Public\PageController;
 use App\Http\Controllers\Public\SitemapController;
@@ -24,6 +25,9 @@ Route::group([
 
     Route::get('/chatons-disponibles', [CatController::class, 'index'])->name('cats.index');
     Route::get('/chatons-disponibles/{cat:slug}', [CatController::class, 'show'])->name('cats.show');
+    Route::get('/nos-chats-reproducteurs', [CatController::class, 'breeders'])->name('cats.breeders');
+
+    Route::get('/portees-prevues', [LitterController::class, 'index'])->name('litters.index');
 
     Route::get('/galerie', [GalleryController::class, 'index'])->name('galleries.index');
 

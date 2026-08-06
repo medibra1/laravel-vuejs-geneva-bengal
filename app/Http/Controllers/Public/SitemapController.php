@@ -27,12 +27,12 @@ class SitemapController extends Controller
         $sitemap = Sitemap::create();
         $locales = array_keys(LaravelLocalization::getSupportedLocales());
 
-        foreach (['', '/chatons-disponibles', '/a-propos', '/contact', '/galerie'] as $path) {
+        foreach (['', '/chatons-disponibles', '/a-propos', '/contact', '/galerie', '/nos-chats-reproducteurs', '/portees-prevues'] as $path) {
             $this->addLocalizedEntry($sitemap, $path, $locales);
         }
 
         Cat::query()
-            ->where('type', CatType::Kitten)
+            ->whereIn('type', [CatType::Kitten, CatType::Breeder])
             ->get(['slug'])
             ->each(fn (Cat $cat) => $this->addLocalizedEntry($sitemap, "/chatons-disponibles/{$cat->slug}", $locales));
 

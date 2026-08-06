@@ -48,4 +48,21 @@ class CatController extends Controller
             'depositAmount' => SiteSetting::get('deposit_amount', 50000),
         ]);
     }
+
+    /**
+     * Breeding cats aren't for adoption — no status/price filtering, just
+     * the showcase. ChatonDetail.vue (reused for the "en savoir plus" link)
+     * hides its adoption-specific sections when cat.type isn't "chaton".
+     */
+    public function breeders(): Response
+    {
+        $cats = Cat::query()
+            ->where('type', CatType::Breeder)
+            ->with(['color', 'secondColor', 'media', 'statuses'])
+            ->get();
+
+        return Inertia::render('Public/Reproducteurs', [
+            'cats' => CatResource::collection($cats),
+        ]);
+    }
 }

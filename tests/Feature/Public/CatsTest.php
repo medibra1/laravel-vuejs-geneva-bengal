@@ -36,3 +36,33 @@ it('shows a single cat by slug', function () {
         ->where('cat.id', $cat->id)
     );
 });
+
+it('lists breeding cats, excluding kittens', function () {
+    refreshApplicationWithLocale('fr');
+
+    $breeder = Cat::factory()->create(['type' => CatType::Breeder]);
+    Cat::factory()->create(['type' => CatType::Kitten]);
+
+    $response = $this->get('/fr/nos-chats-reproducteurs');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Public/Reproducteurs')
+        ->has('cats', 1)
+        ->where('cats.0.id', $breeder->id)
+    );
+});
+
+it('shows a breeding cat detail page by the same route as kittens', function () {
+    refreshApplicationWithLocale('fr');
+
+    $breeder = Cat::factory()->create(['name' => 'Simba', 'type' => CatType::Breeder]);
+
+    $response = $this->get('/fr/chatons-disponibles/'.$breeder->slug);
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Public/ChatonDetail')
+        ->where('cat.type', 'reproducteur')
+    );
+});
