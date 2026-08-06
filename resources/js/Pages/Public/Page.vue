@@ -115,7 +115,7 @@ function submitContact(): void {
                             >
                                 {{ item.question }}
                                 <span
-                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-green text-white transition-transform duration-300 ease-in-out"
+                                    class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-green text-white transition-transform duration-300 ease-in-out"
                                     :class="{ 'rotate-45': openFaqId === item.id }"
                                 >
                                     <i class="pi pi-plus text-xs" />

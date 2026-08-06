@@ -6,8 +6,8 @@ import SectionHeading from '@/Components/SectionHeading.vue';
 import HeroSlider from '@/Components/HeroSlider.vue';
 import SocialLinks from '@/Components/SocialLinks.vue';
 import type { PageProps } from '@/types';
-import slider1 from '../../../images/home/slider-1.jpg';
-import slider2 from '../../../images/home/slider-2.jpg';
+// import slider1 from '../../../images/home/slider-1.jpg';
+// import slider2 from '../../../images/home/slider-2.jpg';
 import slider3 from '../../../images/home/slider-3.jpg';
 import slider4 from '../../../images/home/slider-4.jpg';
 import kittensMontage from '../../../images/home/kittens-montage.png';
@@ -32,10 +32,14 @@ const socialLinks = usePage<PageProps>().props.socialLinks;
 // PublicLayout.vue's own `placeholderHref`.
 const placeholderHref = '#';
 
-const slides = [slider1, slider2, slider3, slider4];
+const slides = [
+    // slider1,
+    // slider2,
+    slider3, slider4];
 </script>
 
 <template>
+
     <Head :title="seo.title">
         <meta head-key="description" name="description" :content="seo.description" />
     </Head>
@@ -82,7 +86,8 @@ const slides = [slider1, slider2, slider3, slider4];
                     </div>
                 </div>
                 <div>
-                    <img :src="kittensMontage" alt="Chatons Bengal de l'élevage Geneva Bengal" class="w-full rounded-lg" />
+                    <img :src="kittensMontage" alt="Chatons Bengal de l'élevage Geneva Bengal"
+                        class="w-full rounded-lg" />
                 </div>
             </div>
         </section>
@@ -96,7 +101,8 @@ const slides = [slider1, slider2, slider3, slider4];
                     au cœur. Voici les témoignages provenant des familles et éleveurs qui ont adopté un ou même deux
                     chats chez Geneva Bengal.
                 </p>
-                <Link :href="`${route('pages.a-propos')}#temoignages`" class="btn-outline-brand mt-6 !border-white !text-white hover:!border-brand-green">
+                <Link :href="`${route('pages.a-propos')}#temoignages`"
+                    class="btn-outline-brand mt-6 !border-white !text-white hover:!border-brand-green">
                     Voir tous les témoignages
                     <span aria-hidden="true">→</span>
                 </Link>
@@ -122,7 +128,8 @@ const slides = [slider1, slider2, slider3, slider4];
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
             <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
                 <div>
-                    <SectionHeading script="Nos chatons partout dans le monde" title="Nos chatons Bengal ont conquis le monde !" />
+                    <SectionHeading script="Nos chatons partout dans le monde"
+                        title="Nos chatons Bengal ont conquis le monde !" />
                     <p class="mt-4 text-neutral-600">
                         Nos magnifiques petites bêtes vivent maintenant chez des familles ou des éleveurs de chats
                         Bengal situés un peu partout sur la planète. Nous nous occupons de toutes les démarches
@@ -142,7 +149,8 @@ const slides = [slider1, slider2, slider3, slider4];
         </section>
 
         <section class="bg-brand-green py-10 text-white">
-            <div class="mx-auto flex max-w-7xl flex-col items-center justify-center gap-4 px-6 text-center sm:flex-row sm:justify-between sm:text-left">
+            <div
+                class="mx-auto flex max-w-7xl flex-col items-center justify-center gap-4 px-6 text-center sm:flex-row sm:justify-between sm:text-left">
                 <div>
                     <h2 class="font-script text-3xl">Nous sommes social</h2>
                     <h3 class="font-heading text-lg font-semibold tracking-wide uppercase">Suivez-nous !</h3>
@@ -154,12 +162,8 @@ const slides = [slider1, slider2, slider3, slider4];
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
             <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
                 <div class="grid grid-cols-3 gap-2">
-                    <a
-                        v-for="(tile, index) in socialTiles"
-                        :key="index"
-                        :href="placeholderHref"
-                        class="aspect-square overflow-hidden rounded"
-                    >
+                    <a v-for="(tile, index) in socialTiles" :key="index" :href="placeholderHref"
+                        class="aspect-square overflow-hidden rounded">
                         <img :src="tile" alt="" class="h-full w-full object-cover transition hover:scale-105" />
                     </a>
                 </div>
