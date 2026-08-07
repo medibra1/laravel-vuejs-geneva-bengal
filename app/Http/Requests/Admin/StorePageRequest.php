@@ -42,8 +42,14 @@ class StorePageRequest extends FormRequest
      * a trust boundary at save time — sanitize with the 'cms' HTMLPurifier
      * profile (config/purifier.php) so a stored page can never carry a
      * script tag or an on* handler regardless of what produced the HTML.
+     *
+     * Must run in prepareForValidation(), not passedValidation(): the
+     * FormRequest's Validator instance is built and memoized *before*
+     * passedValidation() fires, so a merge() there never reaches
+     * $request->validated() (what the controller actually persists) —
+     * it only updates $request->input(), which nothing reads here.
      */
-    protected function passedValidation(): void
+    protected function prepareForValidation(): void
     {
         $this->merge([
             'body' => [
