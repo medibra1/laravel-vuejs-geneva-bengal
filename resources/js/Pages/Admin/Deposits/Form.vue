@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -53,6 +53,34 @@ const amountChf = computed({
     },
 });
 
+// Keeps the admin from retyping the same contact details twice when
+// linking an existing owner — see CLAUDE.md. Backend-derived instead for a
+// *new* owner (see resolveContact() in Admin\DepositController), so those
+// fields aren't shown at all in that mode.
+function fillContactFromSelectedOwner(): void {
+    const owner = props.owners.find((candidate) => candidate.id === form.owner_id) ?? null;
+    form.name = owner ? `${owner.first_name} ${owner.last_name}` : '';
+    form.email = owner?.email ?? '';
+    form.phone = owner?.phone ?? '';
+}
+
+watch(ownerMode, (mode) => {
+    if (mode === 'existing') {
+        fillContactFromSelectedOwner();
+    } else {
+        form.name = '';
+        form.email = '';
+        form.phone = '';
+    }
+});
+
+watch(
+    () => form.owner_id,
+    () => {
+        if (ownerMode.value === 'existing') fillContactFromSelectedOwner();
+    },
+);
+
 function submit(): void {
     form.transform((data) => ({
         ...data,
@@ -73,25 +101,53 @@ function submit(): void {
         <div class="py-12">
             <div class="mx-auto max-w-2xl sm:px-6 lg:px-8">
                 <form class="space-y-6 bg-white dark:bg-neutral-800 p-6 shadow-sm sm:rounded-lg" @submit.prevent="submit">
+                    <div v-if="ownerMode !== 'new'">
+                        <h3 class="text-sm font-semibold text-neutral-900">Contact de la demande</h3>
+                        <p v-if="ownerMode === 'existing'" class="mt-1 text-xs text-neutral-500">
+                            Pré-rempli depuis l'adoptant sélectionné ci-dessous.
+                        </p>
+
+                        <div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-3">
+                            <div>
+                                <InputLabel for="name" value="Nom" />
+                                <InputText
+                                    id="name"
+                                    v-model="form.name"
+                                    :readonly="ownerMode === 'existing'"
+                                    class="mt-1 w-full"
+                                />
+                                <InputError :message="form.errors.name" />
+                            </div>
+
+                            <div>
+                                <InputLabel for="email" value="E-mail" />
+                                <InputText
+                                    id="email"
+                                    v-model="form.email"
+                                    type="email"
+                                    :readonly="ownerMode === 'existing'"
+                                    class="mt-1 w-full"
+                                />
+                                <InputError :message="form.errors.email" />
+                            </div>
+
+                            <div>
+                                <InputLabel for="phone" value="Téléphone (optionnel)" />
+                                <InputText
+                                    id="phone"
+                                    v-model="form.phone"
+                                    :readonly="ownerMode === 'existing'"
+                                    class="mt-1 w-full"
+                                />
+                                <InputError :message="form.errors.phone" />
+                            </div>
+                        </div>
+                    </div>
+                    <p v-else class="text-xs text-neutral-500">
+                        Les coordonnées du nouvel adoptant ci-dessous serviront aussi de contact pour cette demande.
+                    </p>
+
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <InputLabel for="name" value="Nom du client" />
-                            <InputText id="name" v-model="form.name" class="mt-1 w-full" />
-                            <InputError :message="form.errors.name" />
-                        </div>
-
-                        <div>
-                            <InputLabel for="email" value="E-mail" />
-                            <InputText id="email" v-model="form.email" type="email" class="mt-1 w-full" />
-                            <InputError :message="form.errors.email" />
-                        </div>
-
-                        <div>
-                            <InputLabel for="phone" value="Téléphone (optionnel)" />
-                            <InputText id="phone" v-model="form.phone" class="mt-1 w-full" />
-                            <InputError :message="form.errors.phone" />
-                        </div>
-
                         <div>
                             <InputLabel for="cat_id" value="Chat réservé (optionnel)" />
                             <Select

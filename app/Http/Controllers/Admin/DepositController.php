@@ -52,7 +52,7 @@ class DepositController extends Controller
             'cats' => Cat::query()->orderBy('name')->get(['id', 'name']),
             // For the "finalize" dialog's existing-owner picker — only
             // needed when a deposit has no owner_id yet.
-            'owners' => Owner::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email']),
+            'owners' => Owner::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email', 'phone']),
         ]);
     }
 
@@ -60,7 +60,7 @@ class DepositController extends Controller
     {
         return Inertia::render('Admin/Deposits/Form', [
             'cats' => $this->reservableCatOptions(),
-            'owners' => Owner::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email']),
+            'owners' => Owner::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email', 'phone']),
             'defaultAmount' => SiteSetting::get('deposit_amount', 50000),
         ]);
     }
@@ -75,12 +75,14 @@ class DepositController extends Controller
     {
         $owner = $this->resolveOwner($request);
 
+        [$name, $email, $phone] = $this->resolveContact($request, $owner);
+
         $deposit = Deposit::create([
             'cat_id' => $request->validated('cat_id'),
             'owner_id' => $owner?->id,
-            'name' => $request->validated('name'),
-            'email' => $request->validated('email'),
-            'phone' => $request->validated('phone'),
+            'name' => $name,
+            'email' => $email,
+            'phone' => $phone,
             'amount' => $request->validated('amount') ?? SiteSetting::get('deposit_amount', 50000),
             'currency' => 'CHF',
             'status' => DepositStatus::Pending->value,
@@ -171,6 +173,25 @@ class DepositController extends Controller
         $deposit->update(['status' => DepositStatus::Refunded]);
 
         return back()->with('success', __('Deposit refunded.'));
+    }
+
+    /**
+     * When a new Owner was just created inline (Form.vue's "new owner"
+     * mode), the deposit's name/email/phone are derived from it instead of
+     * the request — the form doesn't ask the admin to type the same
+     * contact details twice. Linking an *existing* owner still uses the
+     * submitted name/email/phone as-is (the form pre-fills them, read-only,
+     * from the selected owner — see StoreDepositRequest).
+     *
+     * @return array{0: string, 1: string, 2: ?string}
+     */
+    private function resolveContact(StoreDepositRequest $request, ?Owner $owner): array
+    {
+        if ($request->filled('new_owner') && $owner !== null) {
+            return [trim("{$owner->first_name} {$owner->last_name}"), $owner->email, $owner->phone];
+        }
+
+        return [$request->validated('name'), $request->validated('email'), $request->validated('phone')];
     }
 
     /**
