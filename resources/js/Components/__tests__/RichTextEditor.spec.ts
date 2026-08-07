@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mount } from "@vue/test-utils";
-import { nextTick } from "vue";
+import { mount, flushPromises } from "@vue/test-utils";
 import PrimeVue from "primevue/config";
 import type { Editor } from "@tiptap/core";
 import RichTextEditor from "../RichTextEditor.vue";
@@ -22,7 +21,12 @@ describe("RichTextEditor", () => {
             global,
             props: { modelValue: "<p>Bonjour</p>" },
         });
-        await nextTick();
+        // A single nextTick only flushes RichTextEditor's own onMounted
+        // (which creates the tiptap Editor instance). EditorContent then
+        // reacts to that in a *separate* watchEffect that schedules its
+        // own nested nextTick to actually append the ProseMirror DOM —
+        // flushPromises (a real macrotask) waits out both levels.
+        await flushPromises();
 
         expect(wrapper.text()).toContain("Bonjour");
     });
@@ -32,11 +36,11 @@ describe("RichTextEditor", () => {
             global,
             props: { modelValue: "<p>Texte</p>" },
         });
-        await nextTick();
+        await flushPromises();
 
         exposedEditor(wrapper).commands.selectAll();
         await wrapper.find('[aria-label="Gras"]').trigger("click");
-        await nextTick();
+        await flushPromises();
 
         const emitted = wrapper.emitted("update:modelValue");
         expect(emitted).toBeTruthy();
@@ -48,7 +52,7 @@ describe("RichTextEditor", () => {
             global,
             props: { modelValue: "", error: "Ce champ est requis." },
         });
-        await nextTick();
+        await flushPromises();
 
         expect(wrapper.text()).toContain("Ce champ est requis.");
     });
