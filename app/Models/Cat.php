@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -90,5 +91,25 @@ class Cat extends Model implements HasMedia
     public function litter(): BelongsTo
     {
         return $this->belongsTo(Litter::class);
+    }
+
+    /**
+     * Litters this cat sired — used by the admin Reproducteurs list to
+     * surface a breeder's linked litters. Distinct from litter() above,
+     * which is the litter *this* cat was born into as a kitten.
+     *
+     * @return HasMany<Litter, $this>
+     */
+    public function sireLitters(): HasMany
+    {
+        return $this->hasMany(Litter::class, 'sire_cat_id');
+    }
+
+    /**
+     * @return HasMany<Litter, $this>
+     */
+    public function damLitters(): HasMany
+    {
+        return $this->hasMany(Litter::class, 'dam_cat_id');
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
-use App\Http\Controllers\Admin\CatController;
+use App\Http\Controllers\Admin\Cats\AdoptionCatController;
+use App\Http\Controllers\Admin\Cats\BreederCatController;
 use App\Http\Controllers\Admin\ContactRequestController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DepositController;
@@ -31,8 +32,23 @@ Route::prefix('admin')
     ->name('admin.')
     ->middleware(['auth', 'verified', 'role:admin|super_admin'])
     ->group(function (): void {
-        Route::resource('cats', CatController::class)->except('show');
-        Route::delete('cats/{cat}/photos/{media}', [CatController::class, 'destroyPhoto'])->name('cats.photos.destroy');
+        // Two admin sections sharing one Cat model (see CLAUDE.md): kittens/
+        // cats up for adoption vs. breeding cats. Each ->parameters() call
+        // keeps the route param named {cat} (not {adoption}/{breeders},
+        // Laravel's default guess from the last URI segment) so it matches
+        // the Cat $cat type-hint in both controllers.
+        Route::resource('cats/adoption', AdoptionCatController::class)
+            ->except('show')
+            ->names('cats.adoption')
+            ->parameters(['adoption' => 'cat']);
+        Route::delete('cats/adoption/{cat}/photos/{media}', [AdoptionCatController::class, 'destroyPhoto'])->name('cats.adoption.photos.destroy');
+
+        Route::resource('cats/breeders', BreederCatController::class)
+            ->except('show')
+            ->names('cats.breeders')
+            ->parameters(['breeders' => 'cat']);
+        Route::delete('cats/breeders/{cat}/photos/{media}', [BreederCatController::class, 'destroyPhoto'])->name('cats.breeders.photos.destroy');
+
         Route::resource('owners', OwnerController::class)->except('show');
         Route::resource('litters', LitterController::class)->except('show');
         Route::resource('galleries', GalleryController::class)->except('show');

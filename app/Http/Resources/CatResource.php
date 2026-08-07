@@ -39,6 +39,11 @@ class CatResource extends JsonResource
             'litter_trained' => $cat->litter_trained,
             'neutered' => $cat->neutered,
             'status' => $cat->status,
+            // Only present when the controller eager-loads these counts
+            // (see BreederCatController::index()) — the adoption side never
+            // sets them, so whenCounted() omits both keys entirely there.
+            'sire_litters_count' => $this->whenCounted('sireLitters'),
+            'dam_litters_count' => $this->whenCounted('damLitters'),
             'photos' => $cat->getMedia('photos')->map(fn ($media) => [
                 'id' => $media->id,
                 'url' => $media->getUrl(),

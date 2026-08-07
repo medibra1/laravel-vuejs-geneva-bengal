@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Admin\Cats;
 
 use App\Enums\CatStatus;
+use App\Enums\CatType;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\StoreCatRequest;
-use App\Http\Requests\Admin\UpdateCatRequest;
+use App\Http\Requests\Admin\Cats\StoreAdoptionCatRequest;
+use App\Http\Requests\Admin\Cats\UpdateAdoptionCatRequest;
 use App\Http\Resources\CatResource;
 use App\Models\Cat;
 use App\Models\Color;
@@ -16,38 +17,40 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
-class CatController extends Controller
+/**
+ * Kittens and cats up for adoption — everything except Breeder cats, which
+ * live in BreederCatController instead. See CLAUDE.md: same Cat model,
+ * split admin sections because the two have almost nothing in common in
+ * the UI (status/price/availability here, litter links there).
+ */
+class AdoptionCatController extends Controller
 {
+    private const TYPES = [CatType::Kitten, CatType::Cat];
+
     public function index(): Response
     {
-        $cats = QueryBuilder::for(Cat::class)
+        $cats = QueryBuilder::for(Cat::query()->whereIn('type', self::TYPES))
             ->allowedFilters('name', 'type', AllowedFilter::exact('color_id'))
             ->with(['color', 'statuses', 'media'])
             ->latest()
             ->paginate(20)
             ->withQueryString();
 
-        // CatResource::collection($cats) would silently drop pagination
-        // meta/links here: that wrapping only applies when a resource is
-        // returned as the outermost HTTP response, not when embedded in
-        // an Inertia props array. ->through() keeps the paginator itself
-        // (which always serializes its meta) and just resource-shapes
-        // each item.
         $cats->through(fn (Cat $cat) => CatResource::make($cat)->resolve());
 
-        return Inertia::render('Admin/Cats/Index', [
+        return Inertia::render('Admin/Cats/Adoption/Index', [
             'cats' => $cats,
         ]);
     }
 
     public function create(): Response
     {
-        return Inertia::render('Admin/Cats/Form', [
+        return Inertia::render('Admin/Cats/Adoption/Form', [
             'colors' => Color::orderBy('name')->get(['id', 'name', 'hex_code']),
         ]);
     }
 
-    public function store(StoreCatRequest $request): RedirectResponse
+    public function store(StoreAdoptionCatRequest $request): RedirectResponse
     {
         $cat = Cat::create($request->safe()->except(['photos', 'status']));
 
@@ -57,21 +60,25 @@ class CatController extends Controller
             $cat->addMedia($photo)->toMediaCollection('photos');
         }
 
-        return redirect()->route('admin.cats.index')->with('success', __('Cat created.'));
+        return redirect()->route('admin.cats.adoption.index')->with('success', __('Cat created.'));
     }
 
     public function edit(Cat $cat): Response
     {
+        $this->ensureAdoptionType($cat);
+
         $cat->load(['color', 'secondColor', 'media', 'statuses']);
 
-        return Inertia::render('Admin/Cats/Form', [
+        return Inertia::render('Admin/Cats/Adoption/Form', [
             'cat' => CatResource::make($cat),
             'colors' => Color::orderBy('name')->get(['id', 'name', 'hex_code']),
         ]);
     }
 
-    public function update(UpdateCatRequest $request, Cat $cat): RedirectResponse
+    public function update(UpdateAdoptionCatRequest $request, Cat $cat): RedirectResponse
     {
+        $this->ensureAdoptionType($cat);
+
         $cat->update($request->safe()->except(['photos', 'status']));
 
         $status = $request->validated('status');
@@ -84,26 +91,36 @@ class CatController extends Controller
             $cat->addMedia($photo)->toMediaCollection('photos');
         }
 
-        return redirect()->route('admin.cats.index')->with('success', __('Cat updated.'));
+        return redirect()->route('admin.cats.adoption.index')->with('success', __('Cat updated.'));
     }
 
     public function destroy(Cat $cat): RedirectResponse
     {
+        $this->ensureAdoptionType($cat);
+
         $cat->delete();
 
-        return redirect()->route('admin.cats.index')->with('success', __('Cat deleted.'));
+        return redirect()->route('admin.cats.adoption.index')->with('success', __('Cat deleted.'));
     }
 
-    /**
-     * Only the store()/update() actions could add photos — there was no
-     * way to remove a single bad one short of deleting the whole cat.
-     */
     public function destroyPhoto(Cat $cat, Media $media): RedirectResponse
     {
+        $this->ensureAdoptionType($cat);
+
         abort_unless($media->model_type === Cat::class && $media->model_id === $cat->id, 404);
 
         $media->delete();
 
         return back()->with('success', __('Photo deleted.'));
+    }
+
+    /**
+     * Guards against a Breeder cat's id being edited/updated/deleted
+     * through the adoption section's URLs — the two sections' route model
+     * binding alone can't tell them apart.
+     */
+    private function ensureAdoptionType(Cat $cat): void
+    {
+        abort_unless(in_array($cat->type, self::TYPES, true), 404);
     }
 }
