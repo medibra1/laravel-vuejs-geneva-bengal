@@ -25,14 +25,21 @@ class StoreDepositRequest extends FormRequest
      * attached later, at finalize() time) or pick an existing Owner
      * instead.
      *
+     * name/email are required unless new_owner is present: when creating a
+     * new owner inline, DepositController::store() derives the deposit's
+     * contact fields from that owner instead — no point making the admin
+     * type the same name/email twice (see Admin/Deposits/Form.vue). Linking
+     * an *existing* owner still submits name/email as normal — the form
+     * just pre-fills them read-only from the selected owner.
+     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
             'cat_id' => ['nullable', 'exists:cats,id', new CatIsAvailableForDeposit],
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255'],
+            'name' => ['required_without:new_owner', 'nullable', 'string', 'max:255'],
+            'email' => ['required_without:new_owner', 'nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'amount' => ['nullable', 'integer', 'min:0'],
             'payment_method' => ['required', Rule::enum(PaymentMethod::class)],

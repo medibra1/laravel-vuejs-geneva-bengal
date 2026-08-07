@@ -164,8 +164,6 @@ it('creates a new owner inline when requested at deposit creation', function () 
     $admin->assignRole('admin');
 
     $this->actingAs($admin)->post(route('admin.deposits.store'), [
-        'name' => 'Jeanne Dupont',
-        'email' => 'jeanne@example.com',
         'amount' => 60000,
         'payment_method' => 'twint_manual',
         'new_owner' => [
@@ -175,10 +173,59 @@ it('creates a new owner inline when requested at deposit creation', function () 
         ],
     ]);
 
-    $deposit = Deposit::firstWhere('email', 'jeanne@example.com');
     $owner = Owner::firstWhere('email', 'jeanne.owner@example.com');
     expect($owner)->not->toBeNull();
-    expect($deposit->owner_id)->toBe($owner->id);
+    $deposit = Deposit::firstWhere('owner_id', $owner->id);
+    expect($deposit)->not->toBeNull();
+});
+
+it('derives the deposit contact fields from the owner created inline, instead of requiring them twice', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.store'), [
+        'amount' => 60000,
+        'payment_method' => 'twint_manual',
+        'new_owner' => [
+            'first_name' => 'Jeanne',
+            'last_name' => 'Dupont',
+            'email' => 'jeanne.owner@example.com',
+            'phone' => '+41 79 111 22 33',
+        ],
+    ]);
+
+    $response->assertSessionDoesntHaveErrors(['name', 'email']);
+    $owner = Owner::firstWhere('email', 'jeanne.owner@example.com');
+    $deposit = Deposit::firstWhere('owner_id', $owner->id);
+    expect($deposit->name)->toBe('Jeanne Dupont');
+    expect($deposit->email)->toBe('jeanne.owner@example.com');
+    expect($deposit->phone)->toBe('+41 79 111 22 33');
+});
+
+it('requires name and email when no owner is linked at all', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.store'), [
+        'amount' => 60000,
+        'payment_method' => 'cash',
+    ]);
+
+    $response->assertSessionHasErrors(['name', 'email']);
+});
+
+it('still requires name and email when linking an existing owner — the form pre-fills them, the backend does not derive them', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $owner = Owner::factory()->create();
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.store'), [
+        'amount' => 60000,
+        'payment_method' => 'cash',
+        'owner_id' => $owner->id,
+    ]);
+
+    $response->assertSessionHasErrors(['name', 'email']);
 });
 
 it('generates a Stripe payment link when payment_method is stripe', function () {
