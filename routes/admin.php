@@ -64,10 +64,14 @@ Route::prefix('admin')
         Route::get('newsletter-subscribers', [NewsletterSubscriberController::class, 'index'])->name('newsletter-subscribers.index');
         Route::get('newsletter-subscribers/export', [NewsletterSubscriberController::class, 'export'])->name('newsletter-subscribers.export');
         Route::patch('newsletter-subscribers/{newsletterSubscriber}/toggle-unsubscribed', [NewsletterSubscriberController::class, 'toggleUnsubscribed'])->name('newsletter-subscribers.toggle-unsubscribed');
-        // Refunding (below) is super_admin-only per CLAUDE.md, but viewing
-        // the list isn't — deposits are business content like the rest of
-        // this group.
+        // Refunding (below) is super_admin-only per CLAUDE.md, but viewing/
+        // creating/finalizing isn't — deposits are business content like
+        // the rest of this group.
         Route::get('deposits', [DepositController::class, 'index'])->name('deposits.index');
+        Route::get('deposits/create', [DepositController::class, 'create'])->name('deposits.create');
+        Route::post('deposits', [DepositController::class, 'store'])->name('deposits.store');
+        Route::post('deposits/{deposit}/mark-paid', [DepositController::class, 'markPaid'])->name('deposits.mark-paid');
+        Route::post('deposits/{deposit}/finalize', [DepositController::class, 'finalize'])->name('deposits.finalize');
     });
 
 // site_settings is super_admin-only per CLAUDE.md's role split — deliberately

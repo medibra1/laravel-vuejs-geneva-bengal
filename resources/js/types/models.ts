@@ -158,16 +158,28 @@ export interface Deposit {
     id: number;
     cat_id: number | null;
     cat?: { id: number; name: string } | null;
+    owner_id: number | null;
+    owner?: { id: number; first_name: string; last_name: string } | null;
     name: string;
     email: string;
     phone: string | null;
     amount: number;
     currency: string;
     status: 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled';
+    payment_method: 'stripe' | 'cash' | 'bank_transfer' | 'twint_manual';
+    payment_link_url: string | null;
     provider: string;
     provider_reference: string | null;
     paid_at: string | null;
+    finalized_at: string | null;
     created_at: string;
+}
+
+export interface OwnerOption {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
 }
 
 export interface ChartData {

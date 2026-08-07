@@ -59,7 +59,7 @@ const contentLinks: NavItem[] = [
     { name: 'admin.newsletter-subscribers.index', label: 'Newsletter', icon: 'pi-send' },
 ];
 
-const paymentLinks: NavItem[] = [{ name: 'admin.deposits.index', label: 'Acomptes', icon: 'pi-wallet' }];
+const paymentLinks: NavItem[] = [{ name: 'admin.deposits.index', label: 'Réservations', icon: 'pi-wallet' }];
 
 const adminLinks: NavItem[] = [
     { name: 'admin.users.index', label: 'Comptes admin', icon: 'pi-shield' },

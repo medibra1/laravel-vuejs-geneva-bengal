@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['first_name', 'last_name', 'email', 'phone', 'city', 'desired_cat_id', 'desired_color_id'])]
 class Owner extends Model
@@ -28,5 +29,13 @@ class Owner extends Model
     public function desiredColor(): BelongsTo
     {
         return $this->belongsTo(Color::class, 'desired_color_id');
+    }
+
+    /**
+     * @return HasMany<Deposit, $this>
+     */
+    public function deposits(): HasMany
+    {
+        return $this->hasMany(Deposit::class);
     }
 }

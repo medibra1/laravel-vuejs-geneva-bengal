@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DepositStatus;
+use App\Enums\PaymentMethod;
 use Database\Factories\DepositFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,9 +13,15 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property DepositStatus $status Larastan doesn't infer enum casts declared via the casts(): array method syntax.
+ * @property PaymentMethod $payment_method Larastan doesn't infer enum casts declared via the casts(): array method syntax.
  * @property Carbon|null $paid_at
+ * @property Carbon|null $finalized_at
  */
-#[Fillable(['cat_id', 'name', 'email', 'phone', 'amount', 'currency', 'status', 'provider', 'provider_reference', 'paid_at'])]
+#[Fillable([
+    'cat_id', 'owner_id', 'name', 'email', 'phone', 'amount', 'currency',
+    'status', 'provider', 'provider_reference', 'payment_link_url',
+    'payment_method', 'created_by', 'paid_at', 'finalized_at',
+])]
 class Deposit extends Model
 {
     /** @use HasFactory<DepositFactory> */
@@ -24,7 +31,9 @@ class Deposit extends Model
     {
         return [
             'status' => DepositStatus::class,
+            'payment_method' => PaymentMethod::class,
             'paid_at' => 'datetime',
+            'finalized_at' => 'datetime',
         ];
     }
 
@@ -34,5 +43,23 @@ class Deposit extends Model
     public function cat(): BelongsTo
     {
         return $this->belongsTo(Cat::class);
+    }
+
+    /**
+     * @return BelongsTo<Owner, $this>
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(Owner::class);
+    }
+
+    /**
+     * Null when created through the public checkout flow.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }
