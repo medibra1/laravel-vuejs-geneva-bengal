@@ -28,6 +28,10 @@ export interface Cat {
     litter_trained: boolean;
     neutered: boolean;
     status: string;
+    // Only set on Admin/Cats/Breeders/Index.vue's data (see
+    // BreederCatController::index() -> CatResource::whenCounted()).
+    sire_litters_count?: number;
+    dam_litters_count?: number;
     photos: CatPhoto[];
 }
 

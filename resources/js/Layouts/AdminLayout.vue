@@ -47,7 +47,8 @@ interface NavItem {
 const mainLinks: NavItem[] = [{ name: 'dashboard', label: 'Tableau de bord', icon: 'pi-home' }];
 
 const contentLinks: NavItem[] = [
-    { name: 'admin.cats.index', label: 'Chats', icon: 'pi-heart' },
+    { name: 'admin.cats.adoption.index', label: 'Chatons (adoption)', icon: 'pi-heart' },
+    { name: 'admin.cats.breeders.index', label: 'Reproducteurs', icon: 'pi-star' },
     { name: 'admin.owners.index', label: 'Adoptants', icon: 'pi-users' },
     { name: 'admin.litters.index', label: 'Portées', icon: 'pi-sitemap' },
     { name: 'admin.galleries.index', label: 'Galerie', icon: 'pi-images' },

@@ -4,40 +4,36 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
-import Tag from 'primevue/tag';
 import type { Cat, Paginated } from '@/types/models';
 
 defineProps<{
     cats: Paginated<Cat>;
 }>();
 
-function statusSeverity(status: string): 'success' | 'warn' | 'secondary' {
-    if (status === 'disponible') return 'success';
-    if (status === 'en_attente') return 'warn';
-
-    return 'secondary';
+function litterCount(cat: Cat): number {
+    return (cat.sire_litters_count ?? 0) + (cat.dam_litters_count ?? 0);
 }
 
 function goToPage(page: number): void {
-    router.get(route('admin.cats.index'), { page }, { preserveState: true, preserveScroll: true });
+    router.get(route('admin.cats.breeders.index'), { page }, { preserveState: true, preserveScroll: true });
 }
 
 function destroy(cat: Cat): void {
     if (confirm(`Supprimer ${cat.name} ?`)) {
-        router.delete(route('admin.cats.destroy', cat.id));
+        router.delete(route('admin.cats.breeders.destroy', cat.id));
     }
 }
 </script>
 
 <template>
-    <Head title="Chats" />
+    <Head title="Reproducteurs" />
 
     <AdminLayout>
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">Chats</h2>
-                <Link :href="route('admin.cats.create')">
-                    <Button label="Nouveau chat" icon="pi pi-plus" />
+                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">Reproducteurs</h2>
+                <Link :href="route('admin.cats.breeders.create')">
+                    <Button label="Nouveau reproducteur" icon="pi pi-plus" />
                 </Link>
             </div>
         </template>
@@ -58,20 +54,17 @@ function destroy(cat: Cat): void {
                             </template>
                         </Column>
                         <Column field="name" header="Nom" />
-                        <Column field="type" header="Type" />
                         <Column field="sex" header="Sexe" />
                         <Column header="Couleur">
                             <template #body="{ data }">{{ data.color?.name }}</template>
                         </Column>
-                        <Column header="Statut">
-                            <template #body="{ data }">
-                                <Tag :value="data.status" :severity="statusSeverity(data.status)" />
-                            </template>
+                        <Column header="Portées liées">
+                            <template #body="{ data }">{{ litterCount(data) }}</template>
                         </Column>
                         <Column header="Actions">
                             <template #body="{ data }">
                                 <div class="flex gap-2">
-                                    <Link :href="route('admin.cats.edit', data.id)">
+                                    <Link :href="route('admin.cats.breeders.edit', data.id)">
                                         <Button icon="pi pi-pencil" severity="secondary" size="small" text />
                                     </Link>
                                     <Button
