@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\EditorUploadController;
 use App\Http\Controllers\Admin\FaqItemController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\LitterController;
+use App\Http\Controllers\Admin\NewsletterSubscriberController;
 use App\Http\Controllers\Admin\OwnerController;
 use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\SiteSettingController;
@@ -42,6 +43,11 @@ Route::prefix('admin')
         Route::resource('faq-items', FaqItemController::class)->except('show');
         Route::resource('testimonials', TestimonialController::class)->except('show');
         Route::resource('contact-requests', ContactRequestController::class)->only(['index', 'update', 'destroy']);
+        // Kept separate from contact-requests per CLAUDE.md — different
+        // module, different legal obligation (unsubscribe must work).
+        Route::get('newsletter-subscribers', [NewsletterSubscriberController::class, 'index'])->name('newsletter-subscribers.index');
+        Route::get('newsletter-subscribers/export', [NewsletterSubscriberController::class, 'export'])->name('newsletter-subscribers.export');
+        Route::patch('newsletter-subscribers/{newsletterSubscriber}/toggle-unsubscribed', [NewsletterSubscriberController::class, 'toggleUnsubscribed'])->name('newsletter-subscribers.toggle-unsubscribed');
         // Refunding (below) is super_admin-only per CLAUDE.md, but viewing
         // the list isn't — deposits are business content like the rest of
         // this group.

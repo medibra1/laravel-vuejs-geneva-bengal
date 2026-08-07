@@ -55,6 +55,7 @@ const contentLinks: NavItem[] = [
     { name: 'admin.faq-items.index', label: 'FAQ', icon: 'pi-question-circle' },
     { name: 'admin.testimonials.index', label: 'Témoignages', icon: 'pi-comment' },
     { name: 'admin.contact-requests.index', label: 'Demandes de contact', icon: 'pi-envelope' },
+    { name: 'admin.newsletter-subscribers.index', label: 'Newsletter', icon: 'pi-send' },
 ];
 
 const paymentLinks: NavItem[] = [{ name: 'admin.deposits.index', label: 'Acomptes', icon: 'pi-wallet' }];

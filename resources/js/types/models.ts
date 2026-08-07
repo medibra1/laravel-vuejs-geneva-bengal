@@ -143,6 +143,13 @@ export interface ContactRequest {
     created_at: string;
 }
 
+export interface NewsletterSubscriber {
+    id: number;
+    email: string;
+    unsubscribed_at: string | null;
+    created_at: string;
+}
+
 export interface Deposit {
     id: number;
     cat_id: number | null;
