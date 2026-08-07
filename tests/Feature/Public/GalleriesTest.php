@@ -9,6 +9,8 @@ beforeEach(function () {
 });
 
 it('lists gallery photos ordered by position', function () {
+    refreshApplicationWithLocale('fr');
+
     $second = Gallery::factory()->create(['caption' => 'Second', 'position' => 1]);
     $second->addMedia(UploadedFile::fake()->image('second.jpg'))->toMediaCollection('image');
 
@@ -27,6 +29,8 @@ it('lists gallery photos ordered by position', function () {
 });
 
 it('shows an empty state with no gallery photos', function () {
+    refreshApplicationWithLocale('fr');
+
     $response = $this->get('/fr/galerie');
 
     $response->assertOk();
