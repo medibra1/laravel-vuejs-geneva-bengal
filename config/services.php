@@ -41,4 +41,9 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    'brevo' => [
+        'key' => env('BREVO_API_KEY'),
+        'list_id' => env('BREVO_LIST_ID'),
+    ],
+
 ];

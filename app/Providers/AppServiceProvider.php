@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Services\Newsletter\BrevoNewsletterService;
 use App\Services\Payments\PaymentGateway;
 use App\Services\Payments\StripeGateway;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -24,6 +25,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PaymentGateway::class, fn () => new StripeGateway(
             new StripeClient(config('services.stripe.secret')),
             (string) config('services.stripe.webhook_secret'),
+        ));
+
+        $this->app->singleton(BrevoNewsletterService::class, fn () => new BrevoNewsletterService(
+            config('services.brevo.key'),
+            config('services.brevo.list_id') ? (int) config('services.brevo.list_id') : null,
         ));
     }
 

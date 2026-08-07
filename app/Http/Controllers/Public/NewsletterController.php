@@ -4,15 +4,50 @@ namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreNewsletterSubscriberRequest;
+use App\Jobs\SyncNewsletterSubscriberWithBrevo;
 use App\Models\NewsletterSubscriber;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Str;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class NewsletterController extends Controller
 {
     public function store(StoreNewsletterSubscriberRequest $request): RedirectResponse
     {
-        NewsletterSubscriber::firstOrCreate(['email' => $request->validated('email')]);
+        $subscriber = NewsletterSubscriber::firstOrNew(['email' => $request->validated('email')]);
+        $isNew = ! $subscriber->exists;
+        $isResubscribing = $subscriber->exists && $subscriber->isUnsubscribed();
+
+        if ($isNew || $isResubscribing) {
+            $subscriber->unsubscribe_token ??= Str::random(48);
+            $subscriber->unsubscribed_at = null;
+            $subscriber->save();
+
+            SyncNewsletterSubscriberWithBrevo::dispatch($subscriber);
+        }
 
         return back()->with('success', __('Subscribed.'));
+    }
+
+    /**
+     * Reached from the unsubscribe link in Brevo campaign emails — always
+     * renders the same confirmation page, whether the token matched or
+     * not, rather than a 404 (an expired/mistyped link shouldn't look
+     * broken to the visitor).
+     */
+    public function unsubscribe(string $token): Response
+    {
+        $subscriber = NewsletterSubscriber::where('unsubscribe_token', $token)->first();
+
+        if ($subscriber && ! $subscriber->isUnsubscribed()) {
+            $subscriber->update(['unsubscribed_at' => now()]);
+
+            SyncNewsletterSubscriberWithBrevo::dispatch($subscriber);
+        }
+
+        return Inertia::render('Public/NewsletterUnsubscribed', [
+            'found' => $subscriber !== null,
+        ]);
     }
 }

@@ -51,6 +51,8 @@ Route::group([
     Route::post('/newsletter', [NewsletterController::class, 'store'])
         ->middleware(ProtectAgainstSpam::class)
         ->name('newsletter.store');
+    Route::get('/newsletter/unsubscribe/{token}', [NewsletterController::class, 'unsubscribe'])
+        ->name('newsletter.unsubscribe');
 
     Route::post('/deposits', [DepositController::class, 'store'])
         ->middleware(ProtectAgainstSpam::class)
