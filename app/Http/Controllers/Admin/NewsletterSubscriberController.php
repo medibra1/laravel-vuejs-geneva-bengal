@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\SyncNewsletterSubscriberWithBrevo;
 use App\Models\NewsletterSubscriber;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -25,9 +24,10 @@ class NewsletterSubscriberController extends Controller
     }
 
     /**
-     * Full CSV of every subscriber — for one-off offline use. Day-to-day
-     * campaigns go through the Brevo list this app keeps in sync instead
-     * (see BrevoNewsletterService), not through this export.
+     * Full CSV of every subscriber, for one-off offline use. Semicolon
+     * delimiter (not comma) and a UTF-8 BOM: Excel's French locale reads
+     * comma-separated files as a single column and mangles accented
+     * headers without the BOM.
      */
     public function export(): StreamedResponse
     {
@@ -35,15 +35,16 @@ class NewsletterSubscriberController extends Controller
 
         return response()->streamDownload(function () use ($subscribers): void {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['email', 'status', 'subscribed_at', 'unsubscribed_at']);
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, ['E-mail', 'Statut', 'Inscrit le', 'Désabonné le'], ';');
 
             foreach ($subscribers as $subscriber) {
                 fputcsv($handle, [
                     $subscriber->email,
-                    $subscriber->isUnsubscribed() ? 'unsubscribed' : 'active',
+                    $subscriber->isUnsubscribed() ? 'Désabonné' : 'Actif',
                     $subscriber->created_at?->toDateString(),
                     $subscriber->unsubscribed_at?->toDateString(),
-                ]);
+                ], ';');
             }
 
             fclose($handle);
@@ -55,8 +56,6 @@ class NewsletterSubscriberController extends Controller
         $newsletterSubscriber->update([
             'unsubscribed_at' => $newsletterSubscriber->isUnsubscribed() ? null : now(),
         ]);
-
-        SyncNewsletterSubscriberWithBrevo::dispatch($newsletterSubscriber);
 
         return back()->with('success', __('Subscriber status updated.'));
     }

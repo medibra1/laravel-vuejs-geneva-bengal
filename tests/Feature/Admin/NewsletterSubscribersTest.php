@@ -37,7 +37,7 @@ it('lets an admin list newsletter subscribers', function () {
     );
 });
 
-it('lets an admin export subscribers as CSV', function () {
+it('lets an admin export subscribers as a semicolon-delimited French CSV', function () {
     $admin = User::factory()->create(['email_verified_at' => now()]);
     $admin->assignRole('admin');
     NewsletterSubscriber::factory()->create(['email' => 'fan@example.com']);
@@ -46,7 +46,11 @@ it('lets an admin export subscribers as CSV', function () {
 
     $response->assertOk();
     $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
-    expect($response->streamedContent())->toContain('fan@example.com');
+    $content = $response->streamedContent();
+    // fputcsv quotes any field containing a space (multi-word headers here),
+    // which is valid/expected CSV, not a formatting bug.
+    expect($content)->toContain("\xEF\xBB\xBFE-mail;Statut;\"Inscrit le\";\"Désabonné le\"");
+    expect($content)->toContain('fan@example.com;Actif;');
 });
 
 it('lets an admin manually unsubscribe a subscriber', function () {
