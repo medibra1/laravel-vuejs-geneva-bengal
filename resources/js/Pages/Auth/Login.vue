@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import Checkbox from '@/Components/Checkbox.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
+import InputText from 'primevue/inputtext';
+import Password from 'primevue/password';
+import Checkbox from 'primevue/checkbox';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
 defineProps<{
@@ -29,70 +30,63 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Log in" />
+        <Head title="Connexion" />
 
-        <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
+        <h2 class="font-heading text-xl font-bold text-neutral-900 dark:text-white">Connexion</h2>
+        <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Accédez à l'espace d'administration Geneva Bengal.</p>
+
+        <div v-if="status" class="mt-4 rounded-md bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
             {{ status }}
         </div>
 
-        <form @submit.prevent="submit">
+        <form class="mt-6 space-y-5" @submit.prevent="submit">
             <div>
                 <InputLabel for="email" value="Email" />
-
-                <TextInput
+                <InputText
                     id="email"
-                    type="email"
-                    class="mt-1 block w-full"
                     v-model="form.email"
+                    type="email"
+                    class="mt-1 w-full"
                     required
                     autofocus
                     autocomplete="username"
                 />
-
                 <InputError class="mt-2" :message="form.errors.email" />
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-
-                <TextInput
+            <div>
+                <InputLabel for="password" value="Mot de passe" />
+                <Password
                     id="password"
-                    type="password"
-                    class="mt-1 block w-full"
                     v-model="form.password"
+                    class="mt-1 w-full"
+                    input-class="w-full"
+                    toggle-mask
+                    :feedback="false"
                     required
                     autocomplete="current-password"
                 />
-
                 <InputError class="mt-2" :message="form.errors.password" />
             </div>
 
-            <div class="mt-4 block">
-                <label class="flex items-center">
-                    <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600"
-                        >Remember me</span
-                    >
+            <div class="flex items-center justify-between">
+                <label class="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
+                    <Checkbox v-model="form.remember" binary name="remember" />
+                    Se souvenir de moi
                 </label>
-            </div>
 
-            <div class="mt-4 flex items-center justify-end">
                 <Link
                     v-if="canResetPassword"
                     :href="route('password.request')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    class="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400"
                 >
-                    Forgot your password?
+                    Mot de passe oublié ?
                 </Link>
-
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    Log in
-                </PrimaryButton>
             </div>
+
+            <PrimaryButton class="w-full justify-center" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                Se connecter
+            </PrimaryButton>
         </form>
     </GuestLayout>
 </template>
