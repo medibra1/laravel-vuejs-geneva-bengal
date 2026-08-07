@@ -109,6 +109,39 @@ it('lets a plain admin create a cash deposit with no owner yet', function () {
     expect($deposit->created_by)->toBe($admin->id);
 });
 
+it('holds the cat (en_attente) as soon as an admin creates a deposit for it', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create();
+    $cat->setStatus(CatStatus::Available->value);
+
+    $this->actingAs($admin)->post(route('admin.deposits.store'), [
+        'cat_id' => $cat->id,
+        'name' => 'Jeanne Dupont',
+        'email' => 'jeanne@example.com',
+        'payment_method' => 'cash',
+    ]);
+
+    expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
+});
+
+it('refuses an admin deposit for a cat that already has one pending or paid', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create();
+    Deposit::factory()->create(['cat_id' => $cat->id, 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.store'), [
+        'cat_id' => $cat->id,
+        'name' => 'Second Visitor',
+        'email' => 'second@example.com',
+        'payment_method' => 'cash',
+    ]);
+
+    $response->assertSessionHasErrors(['cat_id']);
+    expect(Deposit::where('email', 'second@example.com')->exists())->toBeFalse();
+});
+
 it('links an existing owner when creating a deposit', function () {
     $admin = User::factory()->create(['email_verified_at' => now()]);
     $admin->assignRole('admin');

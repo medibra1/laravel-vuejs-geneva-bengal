@@ -62,6 +62,8 @@ function submit(): void {
                 Vous allez être redirigé vers notre partenaire de paiement Stripe (carte ou TWINT).
             </p>
 
+            <p v-if="form.errors.cat_id" class="text-sm text-red-600">{{ form.errors.cat_id }}</p>
+
             <div>
                 <label for="deposit-name" class="block text-sm font-medium text-neutral-700">Nom complet</label>
                 <input

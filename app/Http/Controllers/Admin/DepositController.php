@@ -71,7 +71,7 @@ class DepositController extends Controller
      * input instead of derived server-side, since this is staff recording
      * a reservation made in person/by phone, not a public form.
      */
-    public function store(StoreDepositRequest $request, PaymentGateway $gateway): RedirectResponse
+    public function store(StoreDepositRequest $request, PaymentGateway $gateway, DepositPaymentProcessor $processor): RedirectResponse
     {
         $owner = $this->resolveOwner($request);
 
@@ -92,6 +92,8 @@ class DepositController extends Controller
             'provider' => $request->validated('payment_method'),
             'created_by' => $request->user()->id,
         ]);
+
+        $processor->reserve($deposit);
 
         if ($deposit->payment_method === PaymentMethod::Stripe) {
             $checkout = $gateway->createCheckout($deposit);

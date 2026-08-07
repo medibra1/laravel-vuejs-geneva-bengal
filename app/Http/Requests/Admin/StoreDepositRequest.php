@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\PaymentMethod;
+use App\Rules\CatIsAvailableForDeposit;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -29,7 +30,7 @@ class StoreDepositRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cat_id' => ['nullable', 'exists:cats,id'],
+            'cat_id' => ['nullable', 'exists:cats,id', new CatIsAvailableForDeposit],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],

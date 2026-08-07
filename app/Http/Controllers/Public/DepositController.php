@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreDepositRequest;
 use App\Models\Deposit;
 use App\Models\SiteSetting;
+use App\Services\Payments\DepositPaymentProcessor;
 use App\Services\Payments\PaymentGateway;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,7 +19,7 @@ class DepositController extends Controller
      * Amount is never taken from the request — it's whatever the client
      * has configured in site_settings, so a visitor can't tamper with it.
      */
-    public function store(StoreDepositRequest $request, PaymentGateway $gateway): SymfonyResponse
+    public function store(StoreDepositRequest $request, PaymentGateway $gateway, DepositPaymentProcessor $processor): SymfonyResponse
     {
         $deposit = Deposit::create([
             'cat_id' => $request->validated('cat_id'),
@@ -30,6 +31,8 @@ class DepositController extends Controller
             'status' => DepositStatus::Pending,
             'provider' => 'stripe',
         ]);
+
+        $processor->reserve($deposit);
 
         $checkout = $gateway->createCheckout($deposit);
 

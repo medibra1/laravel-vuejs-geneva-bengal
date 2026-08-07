@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Public;
 
+use App\Rules\CatIsAvailableForDeposit;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -22,7 +23,7 @@ class StoreDepositRequest extends FormRequest
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             // Nullable: a generic waiting-list deposit isn't tied to a cat.
-            'cat_id' => ['nullable', 'exists:cats,id'],
+            'cat_id' => ['nullable', 'exists:cats,id', new CatIsAvailableForDeposit],
         ];
     }
 }
