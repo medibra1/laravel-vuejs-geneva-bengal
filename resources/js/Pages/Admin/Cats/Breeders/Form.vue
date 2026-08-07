@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -8,7 +7,6 @@ import LocaleTabs from '@/Components/LocaleTabs.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
-import InputNumber from 'primevue/inputnumber';
 import Select from 'primevue/select';
 import DatePicker from 'primevue/datepicker';
 import ToggleSwitch from 'primevue/toggleswitch';
@@ -19,26 +17,13 @@ const props = defineProps<{
     colors: Color[];
 }>();
 
-const typeOptions = [
-    { label: 'Chaton', value: 'chaton' },
-    { label: 'Chat', value: 'chat' },
-    { label: 'Reproducteur', value: 'reproducteur' },
-];
-
 const sexOptions = [
     { label: 'Mâle', value: 'male' },
     { label: 'Femelle', value: 'femelle' },
 ];
 
-const statusOptions = [
-    { label: 'Disponible', value: 'disponible' },
-    { label: 'En attente', value: 'en_attente' },
-    { label: 'Adopté', value: 'adopte' },
-];
-
 const form = useForm({
     name: props.cat?.name ?? '',
-    type: props.cat?.type ?? 'chaton',
     sex: props.cat?.sex ?? 'male',
     color_id: props.cat?.color_id ?? null,
     second_color_id: props.cat?.second_color_id ?? null,
@@ -46,26 +31,12 @@ const form = useForm({
         fr: props.cat?.description.fr ?? '',
         en: props.cat?.description.en ?? '',
     },
-    price: props.cat?.price ?? null,
     birth_date: props.cat?.birth_date ? new Date(props.cat.birth_date) : null,
     eye_color: props.cat?.eye_color ?? '',
-    available_at: props.cat?.available_at ? new Date(props.cat.available_at) : null,
     diet: props.cat?.diet ?? '',
     litter_trained: props.cat?.litter_trained ?? false,
     neutered: props.cat?.neutered ?? false,
-    status: props.cat?.status ?? 'disponible',
     photos: [] as File[],
-});
-
-// form.price stays in centimes (what's stored and validated) —
-// InputNumber's currency mode reads/writes whole CHF, so binding it
-// directly would silently divide every price by 100 on save (500 CHF
-// entered -> 500 saved -> "5.00 CHF" shown on the public site).
-const priceChf = computed({
-    get: () => (form.price !== null ? form.price / 100 : null),
-    set: (value: number | null) => {
-        form.price = value !== null ? Math.round(value * 100) : null;
-    },
 });
 
 function onFilesSelected(event: Event): void {
@@ -76,11 +47,11 @@ function onFilesSelected(event: Event): void {
 function submit(): void {
     if (props.cat) {
         form.transform((data) => ({ ...data, _method: 'put' })).post(
-            route('admin.cats.update', props.cat.id),
+            route('admin.cats.breeders.update', props.cat.id),
             { forceFormData: true },
         );
     } else {
-        form.post(route('admin.cats.store'), { forceFormData: true });
+        form.post(route('admin.cats.breeders.store'), { forceFormData: true });
     }
 }
 
@@ -88,19 +59,19 @@ function deletePhoto(photoId: number): void {
     if (!props.cat) return;
 
     if (confirm('Supprimer cette photo ?')) {
-        router.delete(route('admin.cats.photos.destroy', [props.cat.id, photoId]), { preserveScroll: true });
+        router.delete(route('admin.cats.breeders.photos.destroy', [props.cat.id, photoId]), { preserveScroll: true });
     }
 }
 </script>
 
 <template>
 
-    <Head :title="cat ? `Modifier ${cat.name}` : 'Nouveau chat'" />
+    <Head :title="cat ? `Modifier ${cat.name}` : 'Nouveau reproducteur'" />
 
     <AdminLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">
-                {{ cat ? `Modifier ${cat.name}` : 'Nouveau chat' }}
+                {{ cat ? `Modifier ${cat.name}` : 'Nouveau reproducteur' }}
             </h2>
         </template>
 
@@ -115,24 +86,10 @@ function deletePhoto(photoId: number): void {
                         </div>
 
                         <div>
-                            <InputLabel for="type" value="Type" />
-                            <Select id="type" v-model="form.type" :options="typeOptions" option-label="label"
-                                option-value="value" class="mt-1 w-full" />
-                            <InputError :message="form.errors.type" />
-                        </div>
-
-                        <div>
                             <InputLabel for="sex" value="Sexe" />
                             <Select id="sex" v-model="form.sex" :options="sexOptions" option-label="label"
                                 option-value="value" class="mt-1 w-full" />
                             <InputError :message="form.errors.sex" />
-                        </div>
-
-                        <div>
-                            <InputLabel for="status" value="Statut" />
-                            <Select id="status" v-model="form.status" :options="statusOptions" option-label="label"
-                                option-value="value" class="mt-1 w-full" />
-                            <InputError :message="form.errors.status" />
                         </div>
 
                         <div>
@@ -150,13 +107,6 @@ function deletePhoto(photoId: number): void {
                         </div>
 
                         <div>
-                            <InputLabel for="price" value="Prix (CHF)" />
-                            <InputNumber id="price" v-model="priceChf" mode="currency" currency="CHF" locale="fr-CH"
-                                class="mt-1 w-full" />
-                            <InputError :message="form.errors.price" />
-                        </div>
-
-                        <div>
                             <InputLabel for="eye_color" value="Couleur des yeux" />
                             <InputText id="eye_color" v-model="form.eye_color" class="mt-1 w-full" />
                             <InputError :message="form.errors.eye_color" />
@@ -167,13 +117,6 @@ function deletePhoto(photoId: number): void {
                             <DatePicker id="birth_date" v-model="form.birth_date" date-format="yy-mm-dd"
                                 class="mt-1 w-full" />
                             <InputError :message="form.errors.birth_date" />
-                        </div>
-
-                        <div>
-                            <InputLabel for="available_at" value="Disponible à partir de" />
-                            <DatePicker id="available_at" v-model="form.available_at" date-format="yy-mm-dd"
-                                class="mt-1 w-full" />
-                            <InputError :message="form.errors.available_at" />
                         </div>
 
                         <div>
@@ -244,7 +187,7 @@ function deletePhoto(photoId: number): void {
                             {{ cat ? 'Enregistrer' : 'Créer' }}
                         </PrimaryButton>
                         <Button label="Annuler" severity="secondary" text
-                            @click="$inertia.get(route('admin.cats.index'))" />
+                            @click="$inertia.get(route('admin.cats.breeders.index'))" />
                     </div>
                 </form>
             </div>

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Admin;
+namespace App\Http\Requests\Admin\Cats;
 
 use App\Enums\CatSex;
 use App\Enums\CatStatus;
@@ -9,7 +9,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreCatRequest extends FormRequest
+class UpdateAdoptionCatRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -31,7 +31,7 @@ class StoreCatRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', Rule::enum(CatType::class)],
+            'type' => ['required', Rule::in([CatType::Kitten->value, CatType::Cat->value])],
             'sex' => ['required', Rule::enum(CatSex::class)],
             'color_id' => ['required', 'exists:colors,id'],
             'second_color_id' => ['nullable', 'different:color_id', 'exists:colors,id'],
