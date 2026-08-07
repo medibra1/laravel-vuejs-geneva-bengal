@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -24,6 +25,25 @@ const form = useForm({
     default_seo_title: props.settings.default_seo_title ?? '',
     default_seo_description: props.settings.default_seo_description ?? '',
 });
+
+// form.* stays in centimes (what's stored and what admin.settings.update
+// validates) — PrimeVue's InputNumber in currency mode reads/writes whole
+// CHF, so it can't bind to those fields directly without silently
+// truncating every amount to 1/100th of what was typed (100 CHF entered ->
+// 100 saved -> "1.00 CHF" shown on the public site, which is exactly the
+// bug this fixes).
+function chfModel(key: 'deposit_amount' | 'price_range_min' | 'price_range_max') {
+    return computed({
+        get: () => (form[key] !== null ? form[key]! / 100 : null),
+        set: (value: number | null) => {
+            form[key] = value !== null ? Math.round(value * 100) : null;
+        },
+    });
+}
+
+const depositAmountChf = chfModel('deposit_amount');
+const priceRangeMinChf = chfModel('price_range_min');
+const priceRangeMaxChf = chfModel('price_range_max');
 
 function submit(): void {
     form.put(route('admin.settings.update'));
@@ -81,19 +101,19 @@ function submit(): void {
                         <div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-3">
                             <div>
                                 <InputLabel for="deposit_amount" value="Montant de l'acompte" />
-                                <InputNumber id="deposit_amount" v-model="form.deposit_amount" mode="currency"
+                                <InputNumber id="deposit_amount" v-model="depositAmountChf" mode="currency"
                                     currency="CHF" locale="fr-CH" class="mt-1 w-full" />
                                 <InputError :message="form.errors.deposit_amount" />
                             </div>
                             <div>
                                 <InputLabel for="price_range_min" value="Prix minimum" />
-                                <InputNumber id="price_range_min" v-model="form.price_range_min" mode="currency"
+                                <InputNumber id="price_range_min" v-model="priceRangeMinChf" mode="currency"
                                     currency="CHF" locale="fr-CH" class="mt-1 w-full" />
                                 <InputError :message="form.errors.price_range_min" />
                             </div>
                             <div>
                                 <InputLabel for="price_range_max" value="Prix maximum" />
-                                <InputNumber id="price_range_max" v-model="form.price_range_max" mode="currency"
+                                <InputNumber id="price_range_max" v-model="priceRangeMaxChf" mode="currency"
                                     currency="CHF" locale="fr-CH" class="mt-1 w-full" />
                                 <InputError :message="form.errors.price_range_max" />
                             </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -54,6 +55,17 @@ const form = useForm({
     neutered: props.cat?.neutered ?? false,
     status: props.cat?.status ?? 'disponible',
     photos: [] as File[],
+});
+
+// form.price stays in centimes (what's stored and validated) —
+// InputNumber's currency mode reads/writes whole CHF, so binding it
+// directly would silently divide every price by 100 on save (500 CHF
+// entered -> 500 saved -> "5.00 CHF" shown on the public site).
+const priceChf = computed({
+    get: () => (form.price !== null ? form.price / 100 : null),
+    set: (value: number | null) => {
+        form.price = value !== null ? Math.round(value * 100) : null;
+    },
 });
 
 function onFilesSelected(event: Event): void {
@@ -139,7 +151,7 @@ function deletePhoto(photoId: number): void {
 
                         <div>
                             <InputLabel for="price" value="Prix (CHF)" />
-                            <InputNumber id="price" v-model="form.price" mode="currency" currency="CHF" locale="fr-CH"
+                            <InputNumber id="price" v-model="priceChf" mode="currency" currency="CHF" locale="fr-CH"
                                 class="mt-1 w-full" />
                             <InputError :message="form.errors.price" />
                         </div>
