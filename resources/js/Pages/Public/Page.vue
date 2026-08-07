@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
 import { useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 import NewsletterForm from '@/Components/NewsletterForm.vue';
 import SectionHeading from '@/Components/SectionHeading.vue';
@@ -24,14 +24,6 @@ interface PublicFaqItem {
     answer: string;
 }
 
-interface PublicSettings {
-    address: string | null;
-    social_facebook: string | null;
-    social_instagram: string | null;
-    social_youtube: string | null;
-    social_pinterest: string | null;
-}
-
 interface PrefilledCat {
     id: number;
     name: string;
@@ -46,13 +38,14 @@ const props = defineProps<{
         meta_description: string | null;
     };
     testimonials?: PublicTestimonial[];
-    settings?: PublicSettings;
     prefilledCat?: PrefilledCat | null;
     faqItems?: PublicFaqItem[];
 }>();
 
 const pageCtx = usePage<PageProps>();
 const honeypot = pageCtx.props.honeypot;
+const address = computed(() => pageCtx.props.address);
+const socialLinks = computed(() => pageCtx.props.socialLinks);
 
 // Single-open accordion, same on every breakpoint — the reference site
 // (genevabengals.ch/chaton-bengal-a-vendre) only does this toggle on
@@ -163,18 +156,12 @@ function submitContact(): void {
             </div>
         </section>
 
-        <section v-if="settings" class="bg-brand-canvas border-t border-gray-200 py-16 sm:py-24">
+        <section v-if="page.slug === 'contact'" class="bg-brand-canvas border-t border-gray-200 py-16 sm:py-24">
             <div class="mx-auto grid max-w-4xl gap-12 px-6 md:grid-cols-2">
                 <div>
                     <h2 class="font-heading text-brand-gray text-2xl font-bold uppercase tracking-wide">Nous contacter</h2>
-                    <p v-if="settings.address" class="mt-4 text-neutral-700">{{ settings.address }}</p>
-                    <SocialLinks
-                        class="[&_a]:hover:text-brand-green mt-4 text-brand-gray"
-                        :facebook="settings.social_facebook"
-                        :instagram="settings.social_instagram"
-                        :youtube="settings.social_youtube"
-                        :pinterest="settings.social_pinterest"
-                    />
+                    <p v-if="address" class="mt-4 text-neutral-700">{{ address }}</p>
+                    <SocialLinks class="[&_a]:hover:text-brand-green mt-4 text-brand-gray" v-bind="socialLinks" />
                 </div>
 
                 <form class="space-y-4" @submit.prevent="submitContact">

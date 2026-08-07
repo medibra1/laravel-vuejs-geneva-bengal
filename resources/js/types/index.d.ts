@@ -23,6 +23,7 @@ export type PageProps<
         youtube: string | null;
         pinterest: string | null;
     };
+    address: string | null;
     honeypot: Honeypot;
     alternateUrls: Record<string, string>;
 };

@@ -21,7 +21,7 @@ it('shows the published a-propos page with testimonials', function () {
     );
 });
 
-it('shows the published contact page with site settings', function () {
+it('shows the published contact page with the contact box', function () {
     refreshApplicationWithLocale('fr');
 
     Page::factory()->create(['slug' => 'contact', 'is_published' => true]);
@@ -33,7 +33,22 @@ it('shows the published contact page with site settings', function () {
     $response->assertInertia(fn ($page) => $page
         ->component('Public/Page')
         ->where('page.slug', 'contact')
-        ->where('settings.address', '1209 Genève, Suisse')
+        ->where('address', '1209 Genève, Suisse')
+    );
+});
+
+it('shares the site address on every public page, not just contact', function () {
+    refreshApplicationWithLocale('fr');
+
+    Page::factory()->create(['slug' => 'a-propos', 'is_published' => true]);
+    SiteSetting::set('address', '1209 Genève, Suisse');
+
+    $response = $this->get('/fr/a-propos');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Public/Page')
+        ->where('address', '1209 Genève, Suisse')
     );
 });
 

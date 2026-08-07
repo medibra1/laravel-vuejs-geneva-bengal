@@ -68,16 +68,18 @@ class HandleInertiaRequests extends Middleware
             // needs the color list on every public page, not just the
             // listing page itself.
             'colors' => Color::query()->orderBy('name')->get(['id', 'name', 'hex_code']),
-            // Shared globally rather than per-controller (PageController's
-            // `settings` prop still carries the address for the contact
-            // box): the header, footer and homepage "follow us" sections
-            // all need these links too.
+            // Shared globally rather than per-controller: the header,
+            // footer and homepage "follow us" sections all need these
+            // links too, not just the contact page.
             'socialLinks' => [
                 'facebook' => SiteSetting::get('social_facebook'),
                 'instagram' => SiteSetting::get('social_instagram'),
                 'youtube' => SiteSetting::get('social_youtube'),
                 'pinterest' => SiteSetting::get('social_pinterest'),
             ],
+            // Same reasoning — the footer shows it on every public page,
+            // not just Contact.
+            'address' => SiteSetting::get('address'),
             // Shared globally (not per-controller) since more than one
             // public form needs it (contact, newsletter signup).
             'honeypot' => app(Honeypot::class),

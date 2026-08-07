@@ -13,6 +13,7 @@ const menuPages = computed(() => page.props.menuPages);
 const colors = computed(() => page.props.colors);
 const alternateUrls = computed(() => page.props.alternateUrls);
 const socialLinks = computed(() => page.props.socialLinks);
+const address = computed(() => page.props.address);
 
 const raceInfoPages = computed(() => menuPages.value.filter((p) => p.menu_group === 'race_info'));
 const adoptionPages = computed(() => menuPages.value.filter((p) => p.menu_group === 'adoption'));
@@ -292,7 +293,7 @@ watch(
                 <div class="grid grid-cols-1 gap-x-12 gap-y-12 text-center sm:grid-cols-2 sm:text-left lg:grid-cols-4">
                     <div>
                         <img :src="logoFooter" alt="Geneva Bengal" class="mx-auto h-24 w-auto rounded-full sm:mx-0" />
-                        <p class="my-8 text-sm text-neutral-200">1209 Genève, Suisse</p>
+                        <p v-if="address" class="my-8 text-sm text-neutral-200">{{ address }}</p>
                         <SocialLinks v-bind="socialLinks" class="[&_a]:hover:text-brand-green justify-center sm:justify-start" />
                     </div>
                     <div>
