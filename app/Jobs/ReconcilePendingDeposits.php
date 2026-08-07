@@ -14,6 +14,11 @@ use Illuminate\Foundation\Queue\Queueable;
  * blip, Stripe retries exhausted, etc.) — see CLAUDE.md. Only looks at
  * deposits at least an hour old so it never races the webhook for one
  * that's simply still being paid.
+ *
+ * Also releases the cat held by a deposit whose Checkout session was
+ * abandoned/expired (see Deposit::PENDING_EXPIRY_HOURS) rather than paid —
+ * otherwise a cat would stay stuck at `en_attente` forever once a visitor
+ * walks away from checkout.
  */
 class ReconcilePendingDeposits implements ShouldQueue
 {
@@ -28,6 +33,12 @@ class ReconcilePendingDeposits implements ShouldQueue
             ->each(function (Deposit $deposit) use ($gateway, $processor): void {
                 if ($gateway->isCheckoutPaid($deposit)) {
                     $processor->markPaid($deposit, (string) $deposit->provider_reference);
+
+                    return;
+                }
+
+                if ($deposit->created_at->lte(now()->subHours(Deposit::PENDING_EXPIRY_HOURS))) {
+                    $processor->expire($deposit);
                 }
             });
     }
