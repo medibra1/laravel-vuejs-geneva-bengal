@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\CatStatus;
 use App\Enums\DepositStatus;
 use App\Models\Cat;
 use App\Models\Deposit;
@@ -55,6 +56,75 @@ it('links a deposit to a specific cat when one is given', function () {
     ]);
 
     expect(Deposit::sole()->cat_id)->toBe($cat->id);
+});
+
+it('holds the cat (en_attente) as soon as the deposit is created, before any payment is confirmed', function () {
+    refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
+    $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
+    $cat = Cat::factory()->create();
+    $cat->setStatus(CatStatus::Available->value);
+
+    $this->post('/fr/deposits', [
+        'name' => 'Marie Dupont',
+        'email' => 'marie@example.com',
+        'cat_id' => $cat->id,
+    ]);
+
+    expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
+});
+
+it('refuses a new deposit for a cat that already has one pending', function () {
+    refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
+    $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
+    $cat = Cat::factory()->create();
+    Deposit::factory()->create(['cat_id' => $cat->id, 'status' => DepositStatus::Pending]);
+
+    $response = $this->post('/fr/deposits', [
+        'name' => 'Second Visitor',
+        'email' => 'second@example.com',
+        'cat_id' => $cat->id,
+    ]);
+
+    $response->assertSessionHasErrors(['cat_id']);
+    expect(Deposit::where('email', 'second@example.com')->exists())->toBeFalse();
+});
+
+it('refuses a new deposit for a cat that already has one paid', function () {
+    refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
+    $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
+    $cat = Cat::factory()->create();
+    Deposit::factory()->paid()->create(['cat_id' => $cat->id]);
+
+    $response = $this->post('/fr/deposits', [
+        'name' => 'Second Visitor',
+        'email' => 'second@example.com',
+        'cat_id' => $cat->id,
+    ]);
+
+    $response->assertSessionHasErrors(['cat_id']);
+});
+
+it('allows a new deposit for a cat whose only pending deposit is old enough to be considered abandoned', function () {
+    refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
+    $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
+    $cat = Cat::factory()->create();
+    Deposit::factory()->create([
+        'cat_id' => $cat->id,
+        'status' => DepositStatus::Pending,
+        'created_at' => now()->subHours(25),
+    ]);
+
+    $response = $this->post('/fr/deposits', [
+        'name' => 'Second Visitor',
+        'email' => 'second@example.com',
+        'cat_id' => $cat->id,
+    ]);
+
+    $response->assertSessionDoesntHaveErrors(['cat_id']);
 });
 
 it('validates required fields', function () {

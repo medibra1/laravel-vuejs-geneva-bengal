@@ -23,6 +23,25 @@ it('lists available kittens but excludes adopted ones', function () {
     );
 });
 
+it('excludes a kitten that is en_attente (an active deposit already holds it)', function () {
+    refreshApplicationWithLocale('fr');
+
+    $available = Cat::factory()->create(['type' => CatType::Kitten]);
+    $available->setStatus(CatStatus::Available->value);
+
+    $pending = Cat::factory()->create(['type' => CatType::Kitten]);
+    $pending->setStatus(CatStatus::Pending->value);
+
+    $response = $this->get('/fr/chatons-disponibles');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Public/ChatonsDisponibles')
+        ->has('cats', 1)
+        ->where('cats.0.id', $available->id)
+    );
+});
+
 it('shows a single cat by slug', function () {
     refreshApplicationWithLocale('fr');
 

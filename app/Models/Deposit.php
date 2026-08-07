@@ -27,6 +27,16 @@ class Deposit extends Model
     /** @use HasFactory<DepositFactory> */
     use HasFactory;
 
+    /**
+     * Matches Stripe Checkout's own default session lifetime (see
+     * StripeGateway::createCheckout(), which doesn't override expires_at) —
+     * a pending deposit older than this can only be an abandoned/expired
+     * checkout, never one still legitimately in progress. Shared by
+     * ReconcilePendingDeposits and blocksNewReservation() so both agree on
+     * what "still active" means.
+     */
+    public const PENDING_EXPIRY_HOURS = 24;
+
     protected function casts(): array
     {
         return [
@@ -61,5 +71,25 @@ class Deposit extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * True when this cat already has a deposit actively holding it — paid,
+     * or pending and not yet old enough to be considered an abandoned
+     * checkout (see PENDING_EXPIRY_HOURS). Used to refuse a second deposit
+     * (public or admin) for the same cat — see CatIsAvailableForDeposit.
+     */
+    public static function blocksNewReservation(int $catId): bool
+    {
+        return static::query()
+            ->where('cat_id', $catId)
+            ->where(function ($query): void {
+                $query->where('status', DepositStatus::Paid)
+                    ->orWhere(function ($query): void {
+                        $query->where('status', DepositStatus::Pending)
+                            ->where('created_at', '>', now()->subHours(self::PENDING_EXPIRY_HOURS));
+                    });
+            })
+            ->exists();
     }
 }
