@@ -8,7 +8,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property Carbon|null $expected_date Larastan doesn't infer casts declared via the casts(): array method syntax.
+ */
 #[Fillable(['sire_cat_id', 'dam_cat_id', 'expected_date', 'notes'])]
 class Litter extends Model
 {
