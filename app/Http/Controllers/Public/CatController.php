@@ -15,7 +15,10 @@ use Inertia\Response;
 class CatController extends Controller
 {
     /**
-     * List available kittens (excludes cats already marked as adopted).
+     * List available kittens. Filtered explicitly on `disponible` — not
+     * just "not adopted" — so a kitten currently `en_attente` (an
+     * in-progress or paid deposit already holding it) doesn't show up as
+     * bookable to a second visitor.
      * Optionally filtered to a single color via `?color_id=`, matching
      * either the primary or secondary color (Bengals are often two-tone).
      */
@@ -30,7 +33,7 @@ class CatController extends Controller
                 ->orWhere('second_color_id', $colorId)))
             ->with(['color', 'secondColor', 'media', 'statuses'])
             ->get()
-            ->reject(fn (Cat $cat) => $cat->status === CatStatus::Adopted->value)
+            ->filter(fn (Cat $cat) => $cat->status === CatStatus::Available->value)
             ->values();
 
         return Inertia::render('Public/ChatonsDisponibles', [
