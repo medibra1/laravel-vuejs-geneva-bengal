@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\Cats\UpdateAdoptionCatRequest;
 use App\Http\Resources\CatResource;
 use App\Models\Cat;
 use App\Models\Color;
+use App\Models\Owner;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -67,11 +68,18 @@ class AdoptionCatController extends Controller
     {
         $this->ensureAdoptionType($cat);
 
-        $cat->load(['color', 'secondColor', 'media', 'statuses']);
+        $cat->load([
+            'color', 'secondColor', 'media', 'statuses',
+            'deposits' => fn ($query) => $query->latest()->with('owner'),
+        ]);
 
         return Inertia::render('Admin/Cats/Adoption/Form', [
             'cat' => CatResource::make($cat),
             'colors' => Color::orderBy('name')->get(['id', 'name', 'hex_code']),
+            // For CatAdoptionPanel.vue's "finalize" owner picker — only
+            // needed when a paid deposit has no owner_id yet, same as
+            // Admin\DepositController::index()/create().
+            'owners' => Owner::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email', 'phone']),
         ]);
     }
 

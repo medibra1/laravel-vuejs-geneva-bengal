@@ -2,6 +2,7 @@
 
 use App\Models\Cat;
 use App\Models\Color;
+use App\Models\Deposit;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -152,6 +153,24 @@ it('lets an admin delete a single photo without deleting the cat', function () {
     $response->assertRedirect();
     expect($cat->fresh()->getMedia('photos'))->toHaveCount(1);
     expect($cat->fresh()->getMedia('photos')->first()->id)->toBe($keep->id);
+});
+
+it('exposes a cat\'s own deposits on edit(), not another cat\'s', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create(['type' => 'chaton']);
+    $otherCat = Cat::factory()->create(['type' => 'chaton']);
+    $deposit = Deposit::factory()->paid()->create(['cat_id' => $cat->id]);
+    Deposit::factory()->create(['cat_id' => $otherCat->id]);
+
+    $response = $this->actingAs($admin)->get(route('admin.cats.adoption.edit', $cat));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Admin/Cats/Adoption/Form')
+        ->has('cat.deposits', 1)
+        ->where('cat.deposits.0.id', $deposit->id)
+    );
 });
 
 it('refuses to edit a breeder cat through the adoption section', function () {
