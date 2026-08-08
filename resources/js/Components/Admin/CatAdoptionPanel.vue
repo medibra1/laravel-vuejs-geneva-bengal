@@ -3,7 +3,9 @@ import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
+import ConfirmPasswordModal from '@/Components/ConfirmPasswordModal.vue';
 import FinalizeOwnerDialog from '@/Components/Admin/FinalizeOwnerDialog.vue';
+import { useConfirmsPassword } from '@/Composables/useConfirmsPassword';
 import { formatAmount, formatDate, paymentMethodLabels, statusSeverity, useDepositActions } from '@/Composables/useDepositActions';
 import type { PageProps } from '@/types';
 import type { Cat, OwnerOption } from '@/types/models';
@@ -36,6 +38,11 @@ const {
     ownerMode,
     finalizeForm,
 } = useDepositActions();
+
+// Same password-confirmation gate as Admin/Deposits/Index.vue's — refund,
+// finalize and verify-stripe are behind password.confirm server-side too
+// when reached from here.
+const { confirmingPassword, form: confirmPasswordForm, confirmPassword, submitPassword: submitConfirmPassword } = useConfirmsPassword();
 </script>
 
 <template>
@@ -101,7 +108,7 @@ const {
                     icon="pi pi-refresh"
                     severity="info"
                     size="small"
-                    @click="verifyStripe(deposit)"
+                    @click="confirmPassword(() => verifyStripe(deposit))"
                 />
                 <Button
                     v-if="deposit.status === 'paid' && !deposit.finalized_at"
@@ -109,7 +116,7 @@ const {
                     icon="pi pi-heart-fill"
                     severity="info"
                     size="small"
-                    @click="finalize({ id: deposit.id, owner_id: deposit.owner?.id ?? null }, ownerLabel)"
+                    @click="confirmPassword(() => finalize({ id: deposit.id, owner_id: deposit.owner?.id ?? null }, ownerLabel))"
                 />
                 <Button
                     v-if="isSuperAdmin && deposit.status === 'paid'"
@@ -117,7 +124,7 @@ const {
                     icon="pi pi-replay"
                     severity="danger"
                     size="small"
-                    @click="refund(deposit, ownerLabel)"
+                    @click="confirmPassword(() => refund(deposit, ownerLabel))"
                 />
             </div>
         </div>
@@ -128,6 +135,12 @@ const {
             :owners="owners"
             :form="finalizeForm"
             @submit="submitFinalize()"
+        />
+
+        <ConfirmPasswordModal
+            v-model:visible="confirmingPassword"
+            :form="confirmPasswordForm"
+            @submit="submitConfirmPassword()"
         />
     </div>
 </template>

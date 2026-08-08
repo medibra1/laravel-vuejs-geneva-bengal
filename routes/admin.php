@@ -71,8 +71,15 @@ Route::prefix('admin')
         Route::get('deposits/create', [DepositController::class, 'create'])->name('deposits.create');
         Route::post('deposits', [DepositController::class, 'store'])->name('deposits.store');
         Route::post('deposits/{deposit}/mark-paid', [DepositController::class, 'markPaid'])->name('deposits.mark-paid');
-        Route::post('deposits/{deposit}/verify-stripe', [DepositController::class, 'verifyStripe'])->name('deposits.verify-stripe');
-        Route::post('deposits/{deposit}/finalize', [DepositController::class, 'finalize'])->name('deposits.finalize');
+        // Re-prompts for the current password if the last confirmation is
+        // stale (see config('auth.password_timeout')) — these two touch
+        // money/ownership, mark-paid/assign-cat above don't.
+        Route::post('deposits/{deposit}/verify-stripe', [DepositController::class, 'verifyStripe'])
+            ->middleware('password.confirm')
+            ->name('deposits.verify-stripe');
+        Route::post('deposits/{deposit}/finalize', [DepositController::class, 'finalize'])
+            ->middleware('password.confirm')
+            ->name('deposits.finalize');
         // Turns a waiting-list entry (cat_id null) into a reservation for a
         // specific kitten once one becomes available — see CLAUDE.md's
         // "assigner un chat" bonus.
@@ -88,9 +95,19 @@ Route::prefix('admin')
         Route::get('settings', [SiteSettingController::class, 'edit'])->name('settings.edit');
         Route::put('settings', [SiteSettingController::class, 'update'])->name('settings.update');
 
-        Route::resource('users', UserController::class)->except('show');
-        Route::post('users/{user}/resend-reset-link', [UserController::class, 'resendResetLink'])->name('users.resend-reset-link');
-        Route::patch('users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
+        // index/create/edit are just reading data/rendering a form — only
+        // the actions that actually create/change/remove an admin account
+        // need a fresh password confirmation.
+        Route::resource('users', UserController::class)->except('show')
+            ->middlewareFor(['store', 'update', 'destroy'], 'password.confirm');
+        Route::post('users/{user}/resend-reset-link', [UserController::class, 'resendResetLink'])
+            ->middleware('password.confirm')
+            ->name('users.resend-reset-link');
+        Route::patch('users/{user}/toggle-active', [UserController::class, 'toggleActive'])
+            ->middleware('password.confirm')
+            ->name('users.toggle-active');
 
-        Route::post('deposits/{deposit}/refund', [DepositController::class, 'refund'])->name('deposits.refund');
+        Route::post('deposits/{deposit}/refund', [DepositController::class, 'refund'])
+            ->middleware('password.confirm')
+            ->name('deposits.refund');
     });

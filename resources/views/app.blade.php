@@ -3,6 +3,10 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        {{-- No axios in this app (Inertia's own router handles everything
+             else) — useConfirmsPassword.ts reads this directly for the one
+             place it needs a plain fetch() instead of an Inertia visit. --}}
+        <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 

@@ -5,11 +5,18 @@ import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import Tag from 'primevue/tag';
+import ConfirmPasswordModal from '@/Components/ConfirmPasswordModal.vue';
+import { useConfirmsPassword } from '@/Composables/useConfirmsPassword';
 import type { AdminUser } from '@/types/models';
 
 defineProps<{
     users: AdminUser[];
 }>();
+
+// destroy/toggle-active/resend-reset-link all sit behind password.confirm
+// server-side (see routes/admin.php) — creating/removing/locking out an
+// admin account is exactly the kind of action that middleware exists for.
+const { confirmingPassword, form: confirmPasswordForm, confirmPassword, submitPassword: submitConfirmPassword } = useConfirmsPassword();
 
 function formatDate(date: string | null): string {
     if (!date) return 'Jamais connecté';
@@ -21,17 +28,17 @@ function toggleActive(user: AdminUser): void {
     const verb = user.is_active ? 'désactiver' : 'réactiver';
 
     if (confirm(`Voulez-vous ${verb} le compte de ${user.name} ?`)) {
-        router.patch(route('admin.users.toggle-active', user.id), {}, { preserveScroll: true });
+        confirmPassword(() => router.patch(route('admin.users.toggle-active', user.id), {}, { preserveScroll: true }));
     }
 }
 
 function resendResetLink(user: AdminUser): void {
-    router.post(route('admin.users.resend-reset-link', user.id), {}, { preserveScroll: true });
+    confirmPassword(() => router.post(route('admin.users.resend-reset-link', user.id), {}, { preserveScroll: true }));
 }
 
 function destroy(user: AdminUser): void {
     if (confirm(`Supprimer définitivement le compte de ${user.name} ?`)) {
-        router.delete(route('admin.users.destroy', user.id), { preserveScroll: true });
+        confirmPassword(() => router.delete(route('admin.users.destroy', user.id), { preserveScroll: true }));
     }
 }
 </script>
@@ -91,5 +98,11 @@ function destroy(user: AdminUser): void {
                 </div>
             </div>
         </div>
+
+        <ConfirmPasswordModal
+            v-model:visible="confirmingPassword"
+            :form="confirmPasswordForm"
+            @submit="submitConfirmPassword()"
+        />
     </AdminLayout>
 </template>

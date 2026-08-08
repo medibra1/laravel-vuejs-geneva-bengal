@@ -8,7 +8,9 @@ import DataTable from 'primevue/datatable';
 import Dialog from 'primevue/dialog';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
+import ConfirmPasswordModal from '@/Components/ConfirmPasswordModal.vue';
 import FinalizeOwnerDialog from '@/Components/Admin/FinalizeOwnerDialog.vue';
+import { useConfirmsPassword } from '@/Composables/useConfirmsPassword';
 import { formatAmount, formatDate, paymentMethodLabels, statusSeverity, useDepositActions } from '@/Composables/useDepositActions';
 import type { PageProps } from '@/types';
 import type { Deposit, OwnerCatOption, OwnerOption, Paginated } from '@/types/models';
@@ -43,6 +45,11 @@ const {
     ownerMode,
     finalizeForm,
 } = useDepositActions();
+
+// Refund, finalize and verify-stripe all touch money or ownership and sit
+// behind password.confirm server-side (see routes/admin.php) — this is
+// the client-side half, see useConfirmsPassword.ts.
+const { confirmingPassword, form: confirmPasswordForm, confirmPassword, submitPassword: submitConfirmPassword } = useConfirmsPassword();
 
 // Turns a waiting-list entry into a reservation for a specific kitten —
 // see Admin\DepositController::assignCat(). Local to this page (unlike the
@@ -249,7 +256,7 @@ function goToPage(pageNumber: number): void {
                                         severity="info"
                                         size="small"
                                         text
-                                        @click="verifyStripe(data)"
+                                        @click="confirmPassword(() => verifyStripe(data))"
                                     />
                                     <Button
                                         v-if="data.status === 'paid' && !data.finalized_at"
@@ -258,7 +265,7 @@ function goToPage(pageNumber: number): void {
                                         severity="info"
                                         size="small"
                                         text
-                                        @click="finalize(data, data.name)"
+                                        @click="confirmPassword(() => finalize(data, data.name))"
                                     />
                                     <Button
                                         v-if="isSuperAdmin && data.status === 'paid'"
@@ -267,7 +274,7 @@ function goToPage(pageNumber: number): void {
                                         severity="danger"
                                         size="small"
                                         text
-                                        @click="refund(data, data.name)"
+                                        @click="confirmPassword(() => refund(data, data.name))"
                                     />
                                 </div>
                             </template>
@@ -317,5 +324,11 @@ function goToPage(pageNumber: number): void {
                 <Button label="Assigner" :disabled="assignCatForm.processing || !assignCatForm.cat_id" @click="submitAssignCat()" />
             </template>
         </Dialog>
+
+        <ConfirmPasswordModal
+            v-model:visible="confirmingPassword"
+            :form="confirmPasswordForm"
+            @submit="submitConfirmPassword()"
+        />
     </AdminLayout>
 </template>

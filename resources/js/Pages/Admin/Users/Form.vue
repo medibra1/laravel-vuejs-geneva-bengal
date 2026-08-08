@@ -7,6 +7,8 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
+import ConfirmPasswordModal from '@/Components/ConfirmPasswordModal.vue';
+import { useConfirmsPassword } from '@/Composables/useConfirmsPassword';
 import type { AdminUser } from '@/types/models';
 
 const props = defineProps<{
@@ -24,12 +26,20 @@ const form = useForm({
     role: props.user?.role ?? 'admin',
 });
 
+// store/update also sit behind password.confirm server-side (see
+// routes/admin.php) — without this, submitting after the confirmation
+// window expires would hit a full-page redirect to /confirm-password and
+// lose whatever was typed in this form.
+const { confirmingPassword, form: confirmPasswordForm, confirmPassword, submitPassword: submitConfirmPassword } = useConfirmsPassword();
+
 function submit(): void {
-    if (props.user) {
-        form.put(route('admin.users.update', props.user.id));
-    } else {
-        form.post(route('admin.users.store'));
-    }
+    confirmPassword(() => {
+        if (props.user) {
+            form.put(route('admin.users.update', props.user.id));
+        } else {
+            form.post(route('admin.users.store'));
+        }
+    });
 }
 </script>
 
@@ -86,5 +96,11 @@ function submit(): void {
                 </form>
             </div>
         </div>
+
+        <ConfirmPasswordModal
+            v-model:visible="confirmingPassword"
+            :form="confirmPasswordForm"
+            @submit="submitConfirmPassword()"
+        />
     </AdminLayout>
 </template>
