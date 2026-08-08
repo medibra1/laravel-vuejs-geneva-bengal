@@ -28,17 +28,17 @@ Route::prefix('admin')
     ->group(function (): void {
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
-
-        // NotificationBell.vue — refreshed via HandleInertiaRequests'
-        // shared prop on every navigation, no polling.
-        Route::post('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
-        Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     });
 
 Route::prefix('admin')
     ->name('admin.')
     ->middleware(['auth', 'verified', 'role:admin|super_admin'])
     ->group(function (): void {
+        // NotificationBell.vue — refreshed via HandleInertiaRequests'
+        // shared prop on every navigation, no polling.
+        Route::post('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
+        Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+
         // Two admin sections sharing one Cat model (see CLAUDE.md): kittens/
         // cats up for adoption vs. breeding cats. Each ->parameters() call
         // keeps the route param named {cat} (not {adoption}/{breeders},
