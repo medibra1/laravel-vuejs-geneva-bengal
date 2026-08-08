@@ -6,6 +6,7 @@ use App\Models\Color;
 use App\Models\Page;
 use App\Models\SiteSetting;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Inertia\Middleware;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
 use Spatie\Honeypot\Honeypot;
@@ -42,6 +43,11 @@ class HandleInertiaRequests extends Middleware
                 'roles' => $request->user()?->getRoleNames() ?? [],
             ],
             'locale' => app()->getLocale(),
+            // Admin-only, but shared globally rather than per-controller so
+            // NotificationBell.vue (mounted once in AdminLayout.vue) always
+            // has fresh data without a dedicated endpoint — refreshed on
+            // every Inertia navigation, no polling needed.
+            'notifications' => $this->notifications($request),
             // Only the info/adoption dropdown sub-menus are CMS-driven —
             // top-level nav (Accueil/Chatons/À propos/Contact/Galerie)
             // stays hardcoded in PublicLayout.vue, per CLAUDE.md.
@@ -94,6 +100,38 @@ class HandleInertiaRequests extends Middleware
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
+        ];
+    }
+
+    /**
+     * Null on any page with no authenticated user (all public pages, plus
+     * the admin login screen itself) — the frontend treats a null
+     * `notifications` prop as "hide the bell" rather than "zero unread".
+     *
+     * @return array{unread_count: int, recent: array<int, array<string, mixed>>}|null
+     */
+    private function notifications(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return null;
+        }
+
+        return [
+            'unread_count' => $user->unreadNotifications()->count(),
+            'recent' => $user->notifications()->latest()->take(10)->get()
+                ->map(fn (DatabaseNotification $notification) => [
+                    'id' => $notification->id,
+                    'type' => $notification->data['type'] ?? null,
+                    'title' => $notification->data['title'] ?? null,
+                    'message' => $notification->data['message'] ?? null,
+                    'url' => $notification->data['url'] ?? null,
+                    'reason' => $notification->data['reason'] ?? null,
+                    'read_at' => $notification->read_at,
+                    'created_at' => $notification->created_at,
+                ])
+                ->all(),
         ];
     }
 

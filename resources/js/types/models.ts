@@ -234,6 +234,24 @@ export interface AdminUser {
     last_login_at: string | null;
 }
 
+// `type`/`reason` mirror the `data` payload each App\Notifications\*
+// class writes via toDatabase() — see HandleInertiaRequests::notifications().
+export interface AppNotification {
+    id: string;
+    type: 'contact_request' | 'deposit_created' | 'stripe_issue' | null;
+    title: string | null;
+    message: string | null;
+    url: string | null;
+    reason: 'error' | 'expired' | null;
+    read_at: string | null;
+    created_at: string;
+}
+
+export interface AppNotifications {
+    unread_count: number;
+    recent: AppNotification[];
+}
+
 export interface Paginated<T> {
     data: T[];
     current_page: number;

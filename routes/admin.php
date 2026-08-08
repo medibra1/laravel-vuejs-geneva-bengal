@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\FaqItemController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\LitterController;
 use App\Http\Controllers\Admin\NewsletterSubscriberController;
+use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\OwnerController;
 use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\SiteSettingController;
@@ -27,6 +28,11 @@ Route::prefix('admin')
     ->group(function (): void {
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
+
+        // NotificationBell.vue — refreshed via HandleInertiaRequests'
+        // shared prop on every navigation, no polling.
+        Route::post('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
+        Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     });
 
 Route::prefix('admin')
