@@ -504,6 +504,23 @@ it('assigns a cat to a pending waiting-list deposit and holds it', function () {
     expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
 });
 
+it('does not re-send the new-reservation notification when assigning a cat to an existing waiting-list deposit', function () {
+    Notification::fake();
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $otherAdmin = User::factory()->create(['is_active' => true]);
+    $otherAdmin->assignRole('admin');
+    $cat = Cat::factory()->create(['type' => 'chaton']);
+    $cat->setStatus(CatStatus::Available->value);
+    $deposit = Deposit::factory()->create(['cat_id' => null, 'status' => DepositStatus::Pending]);
+
+    $this->actingAs($admin)->post(route('admin.deposits.assign-cat', $deposit), [
+        'cat_id' => $cat->id,
+    ]);
+
+    Notification::assertNothingSent();
+});
+
 it('refuses to assign a cat to a deposit that already has one', function () {
     $admin = User::factory()->create(['email_verified_at' => now()]);
     $admin->assignRole('admin');

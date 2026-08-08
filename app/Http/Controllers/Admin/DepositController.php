@@ -212,7 +212,11 @@ class DepositController extends Controller
         }
 
         $deposit->update(['cat_id' => $request->validated('cat_id')]);
-        $processor->reserve($deposit);
+        // false: reserve() only needs to run here for its cat-status side
+        // effect — the deposit itself isn't new, so it shouldn't re-fire
+        // the "new reservation" staff notification. See
+        // DepositPaymentProcessor::reserve().
+        $processor->reserve($deposit, notifyStaff: false);
 
         return back()->with('success', __('Cat assigned to the reservation.'));
     }
