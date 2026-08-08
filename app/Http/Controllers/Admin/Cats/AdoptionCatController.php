@@ -53,7 +53,14 @@ class AdoptionCatController extends Controller
 
     public function store(StoreAdoptionCatRequest $request): RedirectResponse
     {
-        $cat = Cat::create($request->safe()->except(['photos', 'status']));
+        // Forced server-side, never accepted from the form — same as
+        // BreederCatController::store() does for CatType::Breeder. This
+        // section only ever creates kittens; an existing "chat"-type
+        // record is legacy data, still editable here, just not creatable.
+        $cat = Cat::create([
+            ...$request->safe()->except(['photos', 'status']),
+            'type' => CatType::Kitten->value,
+        ]);
 
         $cat->setStatus($request->validated('status') ?? CatStatus::Available->value);
 

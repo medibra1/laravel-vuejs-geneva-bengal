@@ -4,7 +4,6 @@ namespace App\Http\Requests\Admin\Cats;
 
 use App\Enums\CatSex;
 use App\Enums\CatStatus;
-use App\Enums\CatType;
 use App\Models\Cat;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -27,13 +26,18 @@ class UpdateAdoptionCatRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
+     * No `type` field — same as StoreAdoptionCatRequest, it can't be set
+     * from this form. Omitting it from validation also means
+     * `$request->safe()` never carries it, so AdoptionCatController::update()'s
+     * `$cat->update(...)` leaves an existing "chat"-type record's type
+     * untouched rather than silently forcing it to "chaton".
+     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', Rule::in([CatType::Kitten->value, CatType::Cat->value])],
             'sex' => ['required', Rule::enum(CatSex::class)],
             'color_id' => ['required', 'exists:colors,id'],
             'second_color_id' => ['nullable', 'different:color_id', 'exists:colors,id'],

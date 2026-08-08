@@ -26,11 +26,6 @@ const props = defineProps<{
     owners?: OwnerOption[];
 }>();
 
-const typeOptions = [
-    { label: 'Chaton', value: 'chaton' },
-    { label: 'Chat', value: 'chat' },
-];
-
 const sexOptions = [
     { label: 'Mâle', value: 'male' },
     { label: 'Femelle', value: 'femelle' },
@@ -46,7 +41,6 @@ const statusOptions = [
 
 const form = useForm({
     name: props.cat?.name ?? '',
-    type: props.cat?.type ?? 'chaton',
     sex: props.cat?.sex ?? 'male',
     color_id: props.cat?.color_id ?? null,
     second_color_id: props.cat?.second_color_id ?? null,
@@ -128,13 +122,6 @@ function deletePhoto(photoId: number): void {
                                             <InputLabel for="name" value="Nom" />
                                             <InputText id="name" v-model="form.name" class="mt-1 w-full" />
                                             <InputError :message="form.errors.name" />
-                                        </div>
-
-                                        <div>
-                                            <InputLabel for="type" value="Type" />
-                                            <Select id="type" v-model="form.type" :options="typeOptions" option-label="label"
-                                                option-value="value" class="mt-1 w-full" />
-                                            <InputError :message="form.errors.type" />
                                         </div>
 
                                         <div>
