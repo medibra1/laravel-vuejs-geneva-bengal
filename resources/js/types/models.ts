@@ -238,7 +238,7 @@ export interface AdminUser {
 // class writes via toDatabase() — see HandleInertiaRequests::notifications().
 export interface AppNotification {
     id: string;
-    type: 'contact_request' | 'deposit_created' | 'stripe_issue' | null;
+    type: 'contact_request' | 'deposit_created' | 'stripe_issue' | 'newsletter_subscriber' | null;
     title: string | null;
     message: string | null;
     url: string | null;

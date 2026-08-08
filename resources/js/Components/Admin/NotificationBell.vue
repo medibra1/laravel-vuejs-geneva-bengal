@@ -25,7 +25,10 @@ function iconFor(notification: AppNotification): string {
         return notification.reason === 'error' ? 'pi-exclamation-triangle' : 'pi-info-circle';
     }
 
-    return notification.type === 'deposit_created' ? 'pi-wallet' : 'pi-envelope';
+    if (notification.type === 'deposit_created') return 'pi-wallet';
+    if (notification.type === 'newsletter_subscriber') return 'pi-send';
+
+    return 'pi-envelope';
 }
 
 function iconColorClass(notification: AppNotification): string {
