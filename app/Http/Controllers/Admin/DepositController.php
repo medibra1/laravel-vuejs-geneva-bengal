@@ -143,6 +143,32 @@ class DepositController extends Controller
     }
 
     /**
+     * On-demand counterpart to the webhook and ReconcilePendingDeposits'
+     * daily poll — lets an admin check right now instead of waiting for
+     * either, e.g. when a client says they paid but the webhook seems
+     * stuck. Only meaningful for a still-pending Stripe deposit: any other
+     * combination is already resolved one way or another.
+     */
+    public function verifyStripe(Deposit $deposit, PaymentGateway $gateway, DepositPaymentProcessor $processor): RedirectResponse
+    {
+        if ($deposit->payment_method !== PaymentMethod::Stripe) {
+            return back()->with('error', __('Only a Stripe deposit can be verified against Stripe.'));
+        }
+
+        if ($deposit->status !== DepositStatus::Pending) {
+            return back()->with('error', __('Only a pending deposit can be verified.'));
+        }
+
+        if (! $gateway->isCheckoutPaid($deposit)) {
+            return back()->with('error', __('Stripe reports this payment is not confirmed yet.'));
+        }
+
+        $processor->markPaid($deposit, $deposit->provider_reference);
+
+        return back()->with('success', __('Payment confirmed on Stripe — deposit marked as paid.'));
+    }
+
+    /**
      * "Finalize the adoption": requires a paid deposit, links/creates the
      * Owner (skipped if the deposit already has one — e.g. set back at
      * creation), and moves the reserved cat, if any, to `adopte`.

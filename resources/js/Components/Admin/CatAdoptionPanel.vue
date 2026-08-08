@@ -28,6 +28,7 @@ const {
     copiedId,
     copyPaymentLink,
     markPaid,
+    verifyStripe,
     refund,
     finalize,
     submitFinalize,
@@ -93,6 +94,14 @@ const {
                     severity="secondary"
                     size="small"
                     @click="copyPaymentLink(deposit)"
+                />
+                <Button
+                    v-if="deposit.payment_method === 'stripe' && deposit.status === 'pending'"
+                    label="Vérifier sur Stripe"
+                    icon="pi pi-refresh"
+                    severity="info"
+                    size="small"
+                    @click="verifyStripe(deposit)"
                 />
                 <Button
                     v-if="deposit.status === 'paid' && !deposit.finalized_at"

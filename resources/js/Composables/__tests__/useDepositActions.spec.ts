@@ -77,6 +77,15 @@ describe('useDepositActions', () => {
         expect(finalizeDialogVisible.value).toBe(true);
     });
 
+    it('posts to verify-stripe without asking for confirmation', () => {
+        vi.stubGlobal('confirm', vi.fn(() => false));
+        const { verifyStripe } = useDepositActions();
+
+        verifyStripe({ id: 11 });
+
+        expect(routerPost).toHaveBeenCalledWith('/admin.deposits.verify-stripe/11', {}, expect.objectContaining({ preserveScroll: true }));
+    });
+
     it('copies the payment link and clears it again after the timeout', async () => {
         vi.useFakeTimers();
         const { copyPaymentLink, copiedId } = useDepositActions();

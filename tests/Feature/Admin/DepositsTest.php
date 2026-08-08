@@ -6,6 +6,7 @@ use App\Models\Cat;
 use App\Models\Deposit;
 use App\Models\Owner;
 use App\Models\User;
+use App\Notifications\DepositConfirmedNotification;
 use App\Services\Payments\PaymentGateway;
 use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Role;
@@ -299,6 +300,72 @@ it('refuses to mark an already-paid deposit as paid again', function () {
     $response = $this->actingAs($admin)->post(route('admin.deposits.mark-paid', $deposit));
 
     $response->assertRedirect();
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
+});
+
+// --- verify-stripe: on-demand check against Stripe, in place of waiting
+// for the webhook or the daily reconciliation job -----------------------
+
+it('marks a pending stripe deposit as paid when Stripe confirms the checkout is paid', function () {
+    Notification::fake();
+    $gateway = new FakePaymentGateway;
+    $gateway->checkoutPaidResult = true;
+    $this->app->instance(PaymentGateway::class, $gateway);
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create();
+    $deposit = Deposit::factory()->create([
+        'cat_id' => $cat->id,
+        'payment_method' => 'stripe',
+        'status' => DepositStatus::Pending,
+        'provider_reference' => 'cs_test_123',
+    ]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.verify-stripe', $deposit));
+
+    $response->assertRedirect();
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
+    expect($deposit->fresh()->paid_at)->not->toBeNull();
+    expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
+    Notification::assertSentOnDemand(DepositConfirmedNotification::class);
+});
+
+it('leaves a pending stripe deposit untouched when Stripe reports it as unpaid', function () {
+    $gateway = new FakePaymentGateway;
+    $gateway->checkoutPaidResult = false;
+    $this->app->instance(PaymentGateway::class, $gateway);
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $deposit = Deposit::factory()->create(['payment_method' => 'stripe', 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.verify-stripe', $deposit));
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Pending);
+});
+
+it('refuses to verify a non-stripe deposit against Stripe', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $deposit = Deposit::factory()->create(['payment_method' => 'cash', 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.verify-stripe', $deposit));
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Pending);
+});
+
+it('refuses to verify a stripe deposit that is not pending', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $deposit = Deposit::factory()->paid()->create(['payment_method' => 'stripe']);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.verify-stripe', $deposit));
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
     expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
 });
 

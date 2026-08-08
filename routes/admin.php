@@ -71,6 +71,7 @@ Route::prefix('admin')
         Route::get('deposits/create', [DepositController::class, 'create'])->name('deposits.create');
         Route::post('deposits', [DepositController::class, 'store'])->name('deposits.store');
         Route::post('deposits/{deposit}/mark-paid', [DepositController::class, 'markPaid'])->name('deposits.mark-paid');
+        Route::post('deposits/{deposit}/verify-stripe', [DepositController::class, 'verifyStripe'])->name('deposits.verify-stripe');
         Route::post('deposits/{deposit}/finalize', [DepositController::class, 'finalize'])->name('deposits.finalize');
         // Turns a waiting-list entry (cat_id null) into a reservation for a
         // specific kitten once one becomes available — see CLAUDE.md's

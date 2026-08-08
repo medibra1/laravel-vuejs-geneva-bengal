@@ -35,6 +35,7 @@ const {
     copiedId,
     copyPaymentLink,
     markPaid,
+    verifyStripe,
     refund,
     finalize,
     submitFinalize,
@@ -240,6 +241,15 @@ function goToPage(pageNumber: number): void {
                                         size="small"
                                         text
                                         @click="copyPaymentLink(data)"
+                                    />
+                                    <Button
+                                        v-if="data.payment_method === 'stripe' && data.status === 'pending'"
+                                        label="Vérifier sur Stripe"
+                                        icon="pi pi-refresh"
+                                        severity="info"
+                                        size="small"
+                                        text
+                                        @click="verifyStripe(data)"
                                     />
                                     <Button
                                         v-if="data.status === 'paid' && !data.finalized_at"

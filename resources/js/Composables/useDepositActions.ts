@@ -67,6 +67,14 @@ export function useDepositActions() {
         }
     }
 
+    // No confirm() — unlike markPaid/refund/finalize, this doesn't change
+    // anything by itself, it only asks Stripe and applies markPaid() when
+    // Stripe agrees the checkout is actually paid. Safe to fire freely,
+    // e.g. when a client says they paid but the webhook seems stuck.
+    function verifyStripe(deposit: { id: number }, onSuccess?: () => void): void {
+        router.post(route('admin.deposits.verify-stripe', deposit.id), {}, { preserveScroll: true, onSuccess });
+    }
+
     function refund(deposit: { id: number; amount: number; currency: string }, label: string, onSuccess?: () => void): void {
         if (confirm(`Rembourser l'acompte de ${formatAmount(deposit.amount, deposit.currency)} de ${label} ?`)) {
             router.post(route('admin.deposits.refund', deposit.id), {}, { preserveScroll: true, onSuccess });
@@ -124,6 +132,7 @@ export function useDepositActions() {
         copiedId,
         copyPaymentLink,
         markPaid,
+        verifyStripe,
         refund,
         finalize,
         submitFinalize,
