@@ -426,6 +426,22 @@ it('filters the deposits list by cat', function () {
     $response->assertInertia(fn ($page) => $page->has('deposits.data', 1));
 });
 
+it('filters the deposits list to waiting-list entries only (no cat attached)', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create();
+    Deposit::factory()->create(['cat_id' => $cat->id]);
+    Deposit::factory()->create(['cat_id' => null]);
+
+    $response = $this->actingAs($admin)->get(route('admin.deposits.index', ['filter' => ['waiting_list' => 1]]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->has('deposits.data', 1)
+        ->where('deposits.data.0.cat_id', null)
+    );
+});
+
 it('filters the deposits list by period', function () {
     $admin = User::factory()->create(['email_verified_at' => now()]);
     $admin->assignRole('admin');

@@ -41,6 +41,13 @@ class DepositController extends Controller
                     'to',
                     fn ($query, $value) => $query->where('created_at', '<=', Carbon::parse($value)->endOfDay()),
                 ),
+                // Waiting-list entries are deposits with no cat attached
+                // (see CLAUDE.md: cat_id nullable = generic reservation) —
+                // surfaced as its own nav destination, see AdminLayout.vue.
+                AllowedFilter::callback(
+                    'waiting_list',
+                    fn ($query, $value) => $value ? $query->whereNull('cat_id') : $query,
+                ),
             )
             ->with(['cat:id,name', 'owner:id,first_name,last_name'])
             ->latest()
