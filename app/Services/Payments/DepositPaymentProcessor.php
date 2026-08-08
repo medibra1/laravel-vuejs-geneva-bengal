@@ -6,7 +6,9 @@ use App\Enums\CatStatus;
 use App\Enums\DepositStatus;
 use App\Models\Deposit;
 use App\Models\Owner;
+use App\Notifications\Concerns\NotifiesStaff;
 use App\Notifications\DepositConfirmedNotification;
+use App\Notifications\NewDepositCreatedNotification;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -17,6 +19,8 @@ use Illuminate\Support\Facades\Notification;
  */
 class DepositPaymentProcessor
 {
+    use NotifiesStaff;
+
     /**
      * Holds the cat as soon as a deposit is created (status `pending`), not
      * only once payment is confirmed — otherwise a second visitor could
@@ -30,6 +34,11 @@ class DepositPaymentProcessor
         if ($deposit->cat_id !== null) {
             $deposit->cat->setStatus(CatStatus::Pending->value);
         }
+
+        // created_by is only set for a deposit an admin recorded themselves
+        // (see Admin\DepositController::store()) — excluded so they don't
+        // get notified of their own action.
+        Notification::send($this->activeStaff($deposit->created_by), new NewDepositCreatedNotification($deposit));
     }
 
     /**

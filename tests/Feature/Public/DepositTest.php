@@ -5,14 +5,26 @@ use App\Enums\DepositStatus;
 use App\Models\Cat;
 use App\Models\Deposit;
 use App\Models\SiteSetting;
+use App\Models\User;
+use App\Notifications\NewDepositCreatedNotification;
 use App\Services\Payments\PaymentGateway;
+use Illuminate\Support\Facades\Notification;
 use Spatie\Honeypot\Honeypot;
+use Spatie\Permission\Models\Role;
 use Tests\Doubles\FakePaymentGateway;
 
 // PaymentGateway is (re)bound inside each test, after
 // refreshApplicationWithLocale() — that helper rebuilds the whole
 // application container, which would otherwise discard a binding made in
 // beforeEach().
+
+beforeEach(function () {
+    // reserve() (called by store()) now notifies active staff — see
+    // NotifiesStaff — which looks these roles up even when there's no
+    // staff to find.
+    Role::findOrCreate('admin');
+    Role::findOrCreate('super_admin');
+});
 
 it('creates a pending deposit and redirects to the Stripe checkout URL', function () {
     refreshApplicationWithLocale('fr');
@@ -149,6 +161,22 @@ it('silently discards spam submissions caught by the honeypot', function () {
 
     $response->assertOk();
     expect(Deposit::count())->toBe(0);
+});
+
+it('notifies active staff when a public visitor creates a reservation', function () {
+    refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
+    $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
+    Notification::fake();
+    $activeAdmin = User::factory()->create(['is_active' => true]);
+    $activeAdmin->assignRole('admin');
+
+    $this->post('/fr/deposits', [
+        'name' => 'Marie Dupont',
+        'email' => 'marie@example.com',
+    ]);
+
+    Notification::assertSentTo($activeAdmin, NewDepositCreatedNotification::class);
 });
 
 it('shows a waiting/status page without ever trusting the redirect alone', function () {

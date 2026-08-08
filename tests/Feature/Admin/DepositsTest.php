@@ -7,6 +7,7 @@ use App\Models\Deposit;
 use App\Models\Owner;
 use App\Models\User;
 use App\Notifications\DepositConfirmedNotification;
+use App\Notifications\NewDepositCreatedNotification;
 use App\Services\Payments\PaymentGateway;
 use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Role;
@@ -108,6 +109,25 @@ it('lets a plain admin create a cash deposit with no owner yet', function () {
     expect($deposit->status)->toBe(DepositStatus::Pending);
     expect($deposit->owner_id)->toBeNull();
     expect($deposit->created_by)->toBe($admin->id);
+});
+
+it('does not notify the admin who just created the reservation themselves, but does notify other active staff', function () {
+    Notification::fake();
+    $creator = User::factory()->create(['email_verified_at' => now(), 'is_active' => true]);
+    $creator->assignRole('admin');
+    $otherAdmin = User::factory()->create(['is_active' => true]);
+    $otherAdmin->assignRole('admin');
+    $cat = Cat::factory()->create();
+
+    $this->actingAs($creator)->post(route('admin.deposits.store'), [
+        'cat_id' => $cat->id,
+        'name' => 'Jeanne Dupont',
+        'email' => 'jeanne@example.com',
+        'payment_method' => 'cash',
+    ]);
+
+    Notification::assertNotSentTo($creator, NewDepositCreatedNotification::class);
+    Notification::assertSentTo($otherAdmin, NewDepositCreatedNotification::class);
 });
 
 it('holds the cat (en_attente) as soon as an admin creates a deposit for it', function () {
