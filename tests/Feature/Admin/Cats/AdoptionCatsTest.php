@@ -105,6 +105,49 @@ it('lets an admin transition a cat status', function () {
     expect($cat->fresh()->status)->toBe('en_attente');
 });
 
+it('refuses to set a cat to adopted through the status field — only DepositController::finalize() may do that', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create(['type' => 'chaton']);
+    $cat->setStatus('disponible');
+
+    $response = $this->actingAs($admin)->put(route('admin.cats.adoption.update', $cat), [
+        'name' => $cat->name,
+        'type' => $cat->type->value,
+        'sex' => $cat->sex->value,
+        'color_id' => $cat->color_id,
+        'description' => ['fr' => 'x', 'en' => 'y'],
+        'litter_trained' => true,
+        'neutered' => false,
+        'status' => 'adopte',
+    ]);
+
+    $response->assertSessionHasErrors('status');
+    expect($cat->fresh()->status)->toBe('disponible');
+});
+
+it('lets an admin re-save an already-adopted cat without breaking on its own unchanged status', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create(['type' => 'chaton']);
+    $cat->setStatus('adopte');
+
+    $response = $this->actingAs($admin)->put(route('admin.cats.adoption.update', $cat), [
+        'name' => 'Nom corrigé',
+        'type' => $cat->type->value,
+        'sex' => $cat->sex->value,
+        'color_id' => $cat->color_id,
+        'description' => ['fr' => 'x', 'en' => 'y'],
+        'litter_trained' => true,
+        'neutered' => false,
+        'status' => 'adopte',
+    ]);
+
+    $response->assertRedirect(route('admin.cats.adoption.index'));
+    expect($cat->fresh()->name)->toBe('Nom corrigé');
+    expect($cat->fresh()->status)->toBe('adopte');
+});
+
 it('lets an admin delete a cat', function () {
     $admin = User::factory()->create(['email_verified_at' => now()]);
     $admin->assignRole('admin');
