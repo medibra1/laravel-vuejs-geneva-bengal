@@ -120,91 +120,7 @@ function submit(): void {
         <div class="py-12">
             <div class="mx-auto max-w-2xl sm:px-6 lg:px-8">
                 <form class="space-y-6 bg-white dark:bg-neutral-800 p-6 shadow-sm sm:rounded-lg" @submit.prevent="submit">
-                    <div v-if="ownerMode !== 'new'">
-                        <h3 class="text-sm font-semibold text-neutral-900">Contact de la demande</h3>
-                        <p v-if="ownerMode === 'existing'" class="mt-1 text-xs text-neutral-500">
-                            Pré-rempli depuis l'adoptant sélectionné ci-dessous.
-                        </p>
-
-                        <div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-3">
-                            <div>
-                                <InputLabel for="name" value="Nom" />
-                                <InputText
-                                    id="name"
-                                    v-model="form.name"
-                                    :readonly="ownerMode === 'existing'"
-                                    class="mt-1 w-full"
-                                />
-                                <InputError :message="form.errors.name" />
-                            </div>
-
-                            <div>
-                                <InputLabel for="email" value="E-mail" />
-                                <InputText
-                                    id="email"
-                                    v-model="form.email"
-                                    type="email"
-                                    :readonly="ownerMode === 'existing'"
-                                    class="mt-1 w-full"
-                                />
-                                <InputError :message="form.errors.email" />
-                            </div>
-
-                            <div>
-                                <InputLabel for="phone" value="Téléphone (optionnel)" />
-                                <InputText
-                                    id="phone"
-                                    v-model="form.phone"
-                                    :readonly="ownerMode === 'existing'"
-                                    class="mt-1 w-full"
-                                />
-                                <InputError :message="form.errors.phone" />
-                            </div>
-                        </div>
-                    </div>
-                    <p v-else class="text-xs text-neutral-500">
-                        Les coordonnées du nouvel adoptant ci-dessous serviront aussi de contact pour cette demande.
-                    </p>
-
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div v-if="!isWaitingListContext">
-                            <InputLabel for="cat_id" value="Chat réservé (optionnel)" />
-                            <Select
-                                id="cat_id"
-                                v-model="form.cat_id"
-                                :options="cats"
-                                option-label="name"
-                                option-value="id"
-                                show-clear
-                                placeholder="Liste d'attente"
-                                class="mt-1 w-full"
-                            />
-                            <InputError :message="form.errors.cat_id" />
-                        </div>
-
-                        <div>
-                            <InputLabel for="amount" value="Montant (CHF)" />
-                            <InputNumber id="amount" v-model="amountChf" mode="currency" currency="CHF" locale="fr-CH"
-                                class="mt-1 w-full" />
-                            <InputError :message="form.errors.amount" />
-                        </div>
-
-                        <div>
-                            <InputLabel for="payment_method" value="Méthode de paiement" />
-                            <Select id="payment_method" v-model="form.payment_method" :options="paymentMethodOptions"
-                                option-label="label" option-value="value" class="mt-1 w-full" />
-                            <InputError :message="form.errors.payment_method" />
-                            <p v-if="form.payment_method === 'stripe'" class="mt-1 text-xs text-neutral-500">
-                                Un lien de paiement Stripe sera généré — à copier depuis la liste et envoyer au
-                                client, pas de saisie de carte ici.
-                            </p>
-                            <p v-else class="mt-1 text-xs text-neutral-500">
-                                À marquer "payé" manuellement une fois le paiement reçu.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="border-t border-gray-200 pt-6">
+                    <div>
                         <h3 class="text-sm font-semibold text-neutral-900">Adoptant (optionnel)</h3>
                         <p class="mt-1 text-xs text-neutral-500">
                             Peut être laissé de côté pour l'instant et lié plus tard, à la finalisation de
@@ -264,6 +180,90 @@ function submit(): void {
                                 <InputText id="new_owner_city" v-model="form.new_owner.city" class="mt-1 w-full" />
                                 <InputError :message="form.errors['new_owner.city']" />
                             </div>
+                        </div>
+                    </div>
+
+                    <div v-if="ownerMode !== 'new'" class="border-t border-gray-200 pt-6">
+                        <h3 class="text-sm font-semibold text-neutral-900">Contact de la demande</h3>
+                        <p v-if="ownerMode === 'existing'" class="mt-1 text-xs text-neutral-500">
+                            Pré-rempli depuis l'adoptant sélectionné ci-dessus.
+                        </p>
+
+                        <div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-3">
+                            <div>
+                                <InputLabel for="name" value="Nom" />
+                                <InputText
+                                    id="name"
+                                    v-model="form.name"
+                                    :readonly="ownerMode === 'existing'"
+                                    class="mt-1 w-full"
+                                />
+                                <InputError :message="form.errors.name" />
+                            </div>
+
+                            <div>
+                                <InputLabel for="email" value="E-mail" />
+                                <InputText
+                                    id="email"
+                                    v-model="form.email"
+                                    type="email"
+                                    :readonly="ownerMode === 'existing'"
+                                    class="mt-1 w-full"
+                                />
+                                <InputError :message="form.errors.email" />
+                            </div>
+
+                            <div>
+                                <InputLabel for="phone" value="Téléphone (optionnel)" />
+                                <InputText
+                                    id="phone"
+                                    v-model="form.phone"
+                                    :readonly="ownerMode === 'existing'"
+                                    class="mt-1 w-full"
+                                />
+                                <InputError :message="form.errors.phone" />
+                            </div>
+                        </div>
+                    </div>
+                    <p v-else class="border-t border-gray-200 pt-6 text-xs text-neutral-500">
+                        Les coordonnées du nouvel adoptant ci-dessus serviront aussi de contact pour cette demande.
+                    </p>
+
+                    <div class="grid grid-cols-1 gap-6 border-t border-gray-200 pt-6 sm:grid-cols-2">
+                        <div v-if="!isWaitingListContext">
+                            <InputLabel for="cat_id" value="Chat réservé (optionnel)" />
+                            <Select
+                                id="cat_id"
+                                v-model="form.cat_id"
+                                :options="cats"
+                                option-label="name"
+                                option-value="id"
+                                show-clear
+                                placeholder="Liste d'attente"
+                                class="mt-1 w-full"
+                            />
+                            <InputError :message="form.errors.cat_id" />
+                        </div>
+
+                        <div>
+                            <InputLabel for="amount" value="Montant (CHF)" />
+                            <InputNumber id="amount" v-model="amountChf" mode="currency" currency="CHF" locale="fr-CH"
+                                class="mt-1 w-full" />
+                            <InputError :message="form.errors.amount" />
+                        </div>
+
+                        <div>
+                            <InputLabel for="payment_method" value="Méthode de paiement" />
+                            <Select id="payment_method" v-model="form.payment_method" :options="paymentMethodOptions"
+                                option-label="label" option-value="value" class="mt-1 w-full" />
+                            <InputError :message="form.errors.payment_method" />
+                            <p v-if="form.payment_method === 'stripe'" class="mt-1 text-xs text-neutral-500">
+                                Un lien de paiement Stripe sera généré — à copier depuis la liste et envoyer au
+                                client, pas de saisie de carte ici.
+                            </p>
+                            <p v-else class="mt-1 text-xs text-neutral-500">
+                                À marquer "payé" manuellement une fois le paiement reçu.
+                            </p>
                         </div>
                     </div>
 
