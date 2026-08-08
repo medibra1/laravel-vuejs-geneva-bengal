@@ -9,6 +9,18 @@ export interface CatPhoto {
     url: string;
 }
 
+export interface CatDeposit {
+    id: number;
+    status: 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled';
+    amount: number;
+    currency: string;
+    payment_method: 'stripe' | 'cash' | 'bank_transfer' | 'twint_manual';
+    payment_link_url: string | null;
+    paid_at: string | null;
+    finalized_at: string | null;
+    owner: { id: number; first_name: string; last_name: string; email: string; phone: string | null } | null;
+}
+
 export interface Cat {
     id: number;
     slug: string;
@@ -32,6 +44,9 @@ export interface Cat {
     // BreederCatController::index() -> CatResource::whenCounted()).
     sire_litters_count?: number;
     dam_litters_count?: number;
+    // Only set on Admin/Cats/Adoption/Form.vue's edit data (see
+    // AdoptionCatController::edit() -> CatResource::whenLoaded()).
+    deposits?: CatDeposit[];
     photos: CatPhoto[];
 }
 
