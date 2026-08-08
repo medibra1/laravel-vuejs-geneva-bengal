@@ -21,6 +21,12 @@ class FakePaymentGateway implements PaymentGateway
 
     public bool $checkoutPaidResult = false;
 
+    /**
+     * Set to simulate isCheckoutPaid() blowing up (network error, Stripe
+     * API error, ...) — see ReconcilePendingDeposits' try/catch.
+     */
+    public ?\Throwable $checkoutPaidException = null;
+
     public function createCheckout(Deposit $deposit): CheckoutSession
     {
         return new CheckoutSession(id: 'cs_test_fake_'.$deposit->id, url: 'https://checkout.stripe.com/fake/'.$deposit->id);
@@ -38,6 +44,10 @@ class FakePaymentGateway implements PaymentGateway
 
     public function isCheckoutPaid(Deposit $deposit): bool
     {
+        if ($this->checkoutPaidException !== null) {
+            throw $this->checkoutPaidException;
+        }
+
         return $this->checkoutPaidResult;
     }
 }
