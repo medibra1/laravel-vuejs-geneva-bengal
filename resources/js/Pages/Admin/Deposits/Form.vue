@@ -27,8 +27,19 @@ const paymentMethodOptions = [
 
 const ownerMode = ref<'none' | 'existing' | 'new'>('none');
 
+// Two entry points set these, both via a plain query param (not a
+// spatie/laravel-query-builder filter — this is a create-page context, not
+// a filtered list): the "Liste d'attente" nav link (AdminLayout.vue,
+// carried over from Deposits/Index.vue's own "Nouvelle inscription"
+// button) and CatAdoptionPanel.vue's "Créer une réservation" link, which
+// preselects the cat instead of leaving the admin to find it again in the
+// dropdown.
+const initialParams = new URLSearchParams(window.location.search);
+const isWaitingListContext = initialParams.get('waiting_list') === '1';
+const initialCatId = initialParams.get('cat_id') ? Number(initialParams.get('cat_id')) : null;
+
 const form = useForm({
-    cat_id: null as number | null,
+    cat_id: initialCatId,
     name: '',
     email: '',
     phone: '',
@@ -81,6 +92,14 @@ watch(
     },
 );
 
+const preselectedCat = props.cats.find((cat) => cat.id === initialCatId) ?? null;
+const pageTitle = computed(() => {
+    if (isWaitingListContext) return "Nouvelle inscription en liste d'attente";
+    if (preselectedCat) return `Nouvelle réservation pour ${preselectedCat.name}`;
+
+    return 'Nouvelle réservation';
+});
+
 function submit(): void {
     form.transform((data) => ({
         ...data,
@@ -91,11 +110,11 @@ function submit(): void {
 </script>
 
 <template>
-    <Head title="Nouvelle réservation" />
+    <Head :title="pageTitle" />
 
     <AdminLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">Nouvelle réservation</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">{{ pageTitle }}</h2>
         </template>
 
         <div class="py-12">
@@ -148,7 +167,7 @@ function submit(): void {
                     </p>
 
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
+                        <div v-if="!isWaitingListContext">
                             <InputLabel for="cat_id" value="Chat réservé (optionnel)" />
                             <Select
                                 id="cat_id"

@@ -42,6 +42,14 @@ interface NavItem {
     name: string;
     label: string;
     icon: string;
+    // Only set when the link needs query params the plain route(name) call
+    // wouldn't add (e.g. the waiting-list filter below) — falls back to
+    // route(name) otherwise.
+    href?: string;
+    // Only set when route().current(name) isn't precise enough — e.g. two
+    // links sharing the same route name but distinguished by a query
+    // param (see paymentLinks below).
+    isActive?: () => boolean;
 }
 
 const mainLinks: NavItem[] = [{ name: 'dashboard', label: 'Tableau de bord', icon: 'pi-home' }];
@@ -59,15 +67,31 @@ const contentLinks: NavItem[] = [
     { name: 'admin.newsletter-subscribers.index', label: 'Newsletter', icon: 'pi-send' },
 ];
 
-const paymentLinks: NavItem[] = [{ name: 'admin.deposits.index', label: 'Réservations', icon: 'pi-wallet' }];
+const paymentLinks: NavItem[] = [
+    {
+        name: 'admin.deposits.index',
+        label: 'Réservations',
+        icon: 'pi-wallet',
+        isActive: () => route().current('admin.deposits.index') && !window.location.search.includes('waiting_list'),
+    },
+    {
+        name: 'admin.deposits.index',
+        label: "Liste d'attente",
+        icon: 'pi-list',
+        href: route('admin.deposits.index', { filter: { waiting_list: 1 } }),
+        isActive: () => route().current('admin.deposits.index') && window.location.search.includes('waiting_list'),
+    },
+];
 
 const adminLinks: NavItem[] = [
     { name: 'admin.users.index', label: 'Comptes admin', icon: 'pi-shield' },
     { name: 'admin.settings.edit', label: 'Réglages du site', icon: 'pi-cog' },
 ];
 
-function isActive(name: string): boolean {
-    return route().current(name) || route().current(`${name}.*`);
+function isActive(link: NavItem): boolean {
+    if (link.isActive) return link.isActive();
+
+    return route().current(link.name) || route().current(`${link.name}.*`);
 }
 </script>
 
@@ -108,12 +132,12 @@ function isActive(name: string): boolean {
                     <div class="space-y-1">
                         <Link
                             v-for="link in mainLinks"
-                            :key="link.name"
-                            :href="route(link.name)"
+                            :key="link.label"
+                            :href="link.href ?? route(link.name)"
                             :title="link.label"
                             class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition"
                             :class="
-                                isActive(link.name)
+                                isActive(link)
                                     ? 'bg-emerald-700 text-white'
                                     : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/5 dark:hover:text-white'
                             "
@@ -130,12 +154,12 @@ function isActive(name: string): boolean {
                         <div class="mt-2 space-y-1">
                             <Link
                                 v-for="link in contentLinks"
-                                :key="link.name"
-                                :href="route(link.name)"
+                                :key="link.label"
+                                :href="link.href ?? route(link.name)"
                                 :title="link.label"
                                 class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition"
                                 :class="
-                                    isActive(link.name)
+                                    isActive(link)
                                         ? 'bg-emerald-700 text-white'
                                         : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/5 dark:hover:text-white'
                                 "
@@ -153,12 +177,12 @@ function isActive(name: string): boolean {
                         <div class="mt-2 space-y-1">
                             <Link
                                 v-for="link in paymentLinks"
-                                :key="link.name"
-                                :href="route(link.name)"
+                                :key="link.label"
+                                :href="link.href ?? route(link.name)"
                                 :title="link.label"
                                 class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition"
                                 :class="
-                                    isActive(link.name)
+                                    isActive(link)
                                         ? 'bg-emerald-700 text-white'
                                         : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/5 dark:hover:text-white'
                                 "
@@ -176,12 +200,12 @@ function isActive(name: string): boolean {
                         <div class="mt-2 space-y-1">
                             <Link
                                 v-for="link in adminLinks"
-                                :key="link.name"
-                                :href="route(link.name)"
+                                :key="link.label"
+                                :href="link.href ?? route(link.name)"
                                 :title="link.label"
                                 class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition"
                                 :class="
-                                    isActive(link.name)
+                                    isActive(link)
                                         ? 'bg-emerald-700 text-white'
                                         : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/5 dark:hover:text-white'
                                 "

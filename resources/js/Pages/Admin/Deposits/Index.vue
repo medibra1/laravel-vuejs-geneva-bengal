@@ -51,6 +51,14 @@ const filters = reactive({
     to: initialParams.get('filter[to]') ?? '',
 });
 
+// Set from the nav's "Liste d'attente" link (AdminLayout.vue) — kept as-is
+// across filter changes/pagination below rather than as its own filter
+// control, since it's a separate nav destination, not something the admin
+// toggles from this page.
+const isWaitingList = initialParams.get('filter[waiting_list]') === '1';
+const pageTitle = isWaitingList ? "Liste d'attente" : 'Réservations';
+const createLabel = isWaitingList ? 'Nouvelle inscription' : 'Nouvelle réservation';
+
 function applyFilters(): void {
     router.get(
         route('admin.deposits.index'),
@@ -60,6 +68,7 @@ function applyFilters(): void {
                 cat_id: filters.cat_id ?? undefined,
                 from: filters.from || undefined,
                 to: filters.to || undefined,
+                waiting_list: isWaitingList ? 1 : undefined,
             },
         },
         { preserveState: true, preserveScroll: true, replace: true },
@@ -67,19 +76,32 @@ function applyFilters(): void {
 }
 
 function goToPage(pageNumber: number): void {
-    router.get(route('admin.deposits.index'), { page: pageNumber }, { preserveState: true, preserveScroll: true });
+    router.get(
+        route('admin.deposits.index'),
+        {
+            filter: {
+                status: filters.status ?? undefined,
+                cat_id: filters.cat_id ?? undefined,
+                from: filters.from || undefined,
+                to: filters.to || undefined,
+                waiting_list: isWaitingList ? 1 : undefined,
+            },
+            page: pageNumber,
+        },
+        { preserveState: true, preserveScroll: true },
+    );
 }
 </script>
 
 <template>
-    <Head title="Réservations" />
+    <Head :title="pageTitle" />
 
     <AdminLayout>
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">Réservations</h2>
-                <Link :href="route('admin.deposits.create')">
-                    <Button label="Nouvelle réservation" icon="pi pi-plus" />
+                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">{{ pageTitle }}</h2>
+                <Link :href="route('admin.deposits.create', isWaitingList ? { waiting_list: 1 } : {})">
+                    <Button :label="createLabel" icon="pi pi-plus" />
                 </Link>
             </div>
         </template>
@@ -136,7 +158,7 @@ function goToPage(pageNumber: number): void {
                 <div class="overflow-hidden bg-white dark:bg-neutral-800 p-6 shadow-sm sm:rounded-lg">
                     <DataTable :value="deposits.data" data-key="id">
                         <Column field="name" header="Nom" />
-                        <Column header="Chat">
+                        <Column v-if="!isWaitingList" header="Chat">
                             <template #body="{ data }">{{ data.cat?.name ?? "Liste d'attente" }}</template>
                         </Column>
                         <Column header="Adoptant">
