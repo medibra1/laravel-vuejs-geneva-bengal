@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { computed, reactive, ref } from 'vue';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
+import Dialog from 'primevue/dialog';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 import FinalizeOwnerDialog from '@/Components/Admin/FinalizeOwnerDialog.vue';
@@ -16,6 +17,7 @@ const props = defineProps<{
     deposits: Paginated<Deposit>;
     cats: OwnerCatOption[];
     owners: OwnerOption[];
+    reservableCats: OwnerCatOption[];
 }>();
 
 const page = usePage<PageProps>();
@@ -40,6 +42,32 @@ const {
     ownerMode,
     finalizeForm,
 } = useDepositActions();
+
+// Turns a waiting-list entry into a reservation for a specific kitten —
+// see Admin\DepositController::assignCat(). Local to this page (unlike the
+// composable's actions above): not something CatAdoptionPanel.vue needs,
+// since a cat's own edit page already knows which cat it is.
+const assignCatDialogVisible = ref(false);
+const assigningDepositId = ref<number | null>(null);
+const assignCatForm = useForm({ cat_id: null as number | null });
+
+function openAssignCat(deposit: Deposit): void {
+    assigningDepositId.value = deposit.id;
+    assignCatForm.reset();
+    assignCatForm.clearErrors();
+    assignCatDialogVisible.value = true;
+}
+
+function submitAssignCat(): void {
+    if (!assigningDepositId.value) return;
+
+    assignCatForm.post(route('admin.deposits.assign-cat', assigningDepositId.value), {
+        preserveScroll: true,
+        onSuccess: () => {
+            assignCatDialogVisible.value = false;
+        },
+    });
+}
 
 // Filters — read from the URL once (spatie/laravel-query-builder's
 // filter[...] shape) so a reload/shared link keeps the current view.
@@ -187,6 +215,15 @@ function goToPage(pageNumber: number): void {
                             <template #body="{ data }">
                                 <div class="flex flex-wrap gap-2">
                                     <Button
+                                        v-if="!data.cat && data.status === 'pending'"
+                                        label="Assigner un chat"
+                                        icon="pi pi-tag"
+                                        severity="contrast"
+                                        size="small"
+                                        text
+                                        @click="openAssignCat(data)"
+                                    />
+                                    <Button
                                         v-if="data.payment_method !== 'stripe' && data.status === 'pending'"
                                         label="Marquer payé"
                                         icon="pi pi-check"
@@ -249,5 +286,26 @@ function goToPage(pageNumber: number): void {
             :form="finalizeForm"
             @submit="submitFinalize()"
         />
+
+        <Dialog v-model:visible="assignCatDialogVisible" header="Assigner un chat" modal class="w-full max-w-md">
+            <p class="mb-4 text-sm text-neutral-500">
+                Cette entrée passera en réservation pour le chat choisi, qui sera mis en attente.
+            </p>
+
+            <Select
+                v-model="assignCatForm.cat_id"
+                :options="reservableCats"
+                option-label="name"
+                option-value="id"
+                placeholder="Choisir un chat"
+                class="w-full"
+            />
+            <p v-if="assignCatForm.errors.cat_id" class="mt-1 text-sm text-red-600">{{ assignCatForm.errors.cat_id }}</p>
+
+            <template #footer>
+                <Button label="Annuler" severity="secondary" text @click="assignCatDialogVisible = false" />
+                <Button label="Assigner" :disabled="assignCatForm.processing || !assignCatForm.cat_id" @click="submitAssignCat()" />
+            </template>
+        </Dialog>
     </AdminLayout>
 </template>

@@ -72,6 +72,10 @@ Route::prefix('admin')
         Route::post('deposits', [DepositController::class, 'store'])->name('deposits.store');
         Route::post('deposits/{deposit}/mark-paid', [DepositController::class, 'markPaid'])->name('deposits.mark-paid');
         Route::post('deposits/{deposit}/finalize', [DepositController::class, 'finalize'])->name('deposits.finalize');
+        // Turns a waiting-list entry (cat_id null) into a reservation for a
+        // specific kitten once one becomes available — see CLAUDE.md's
+        // "assigner un chat" bonus.
+        Route::post('deposits/{deposit}/assign-cat', [DepositController::class, 'assignCat'])->name('deposits.assign-cat');
     });
 
 // site_settings is super_admin-only per CLAUDE.md's role split — deliberately

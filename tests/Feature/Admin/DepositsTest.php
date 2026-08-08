@@ -399,6 +399,82 @@ it('finalizing a waiting-list deposit (no cat) does not touch any cat status', f
     expect($deposit->fresh()->finalized_at)->not->toBeNull();
 });
 
+// --- assign-cat: turning a waiting-list entry into a reservation -------
+
+it('assigns a cat to a pending waiting-list deposit and holds it', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create(['type' => 'chaton']);
+    $cat->setStatus(CatStatus::Available->value);
+    $deposit = Deposit::factory()->create(['cat_id' => null, 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.assign-cat', $deposit), [
+        'cat_id' => $cat->id,
+    ]);
+
+    $response->assertRedirect();
+    expect($deposit->fresh()->cat_id)->toBe($cat->id);
+    expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
+});
+
+it('refuses to assign a cat to a deposit that already has one', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $existingCat = Cat::factory()->create();
+    $newCat = Cat::factory()->create(['type' => 'chaton']);
+    $deposit = Deposit::factory()->create(['cat_id' => $existingCat->id, 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.assign-cat', $deposit), [
+        'cat_id' => $newCat->id,
+    ]);
+
+    $response->assertRedirect();
+    expect($deposit->fresh()->cat_id)->toBe($existingCat->id);
+});
+
+it('refuses to assign a cat once the waiting-list deposit is no longer pending', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create(['type' => 'chaton']);
+    $deposit = Deposit::factory()->paid()->create(['cat_id' => null]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.assign-cat', $deposit), [
+        'cat_id' => $cat->id,
+    ]);
+
+    $response->assertRedirect();
+    expect($deposit->fresh()->cat_id)->toBeNull();
+});
+
+it('refuses to assign a breeder cat to a waiting-list deposit', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $breeder = Cat::factory()->create(['type' => 'reproducteur']);
+    $deposit = Deposit::factory()->create(['cat_id' => null, 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.assign-cat', $deposit), [
+        'cat_id' => $breeder->id,
+    ]);
+
+    $response->assertSessionHasErrors('cat_id');
+    expect($deposit->fresh()->cat_id)->toBeNull();
+});
+
+it('refuses to assign a cat that already has an active reservation elsewhere', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create(['type' => 'chaton']);
+    Deposit::factory()->create(['cat_id' => $cat->id, 'status' => DepositStatus::Pending]);
+    $waitingListDeposit = Deposit::factory()->create(['cat_id' => null, 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.assign-cat', $waitingListDeposit), [
+        'cat_id' => $cat->id,
+    ]);
+
+    $response->assertSessionHasErrors('cat_id');
+    expect($waitingListDeposit->fresh()->cat_id)->toBeNull();
+});
+
 // --- index filters ------------------------------------------------------
 
 it('filters the deposits list by status', function () {

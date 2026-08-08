@@ -7,6 +7,7 @@ use App\Enums\CatType;
 use App\Enums\DepositStatus;
 use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AssignCatToDepositRequest;
 use App\Http\Requests\Admin\FinalizeDepositRequest;
 use App\Http\Requests\Admin\StoreDepositRequest;
 use App\Models\Cat;
@@ -60,6 +61,11 @@ class DepositController extends Controller
             // For the "finalize" dialog's existing-owner picker — only
             // needed when a deposit has no owner_id yet.
             'owners' => Owner::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email', 'phone']),
+            // For the "assign a cat" dialog on a waiting-list entry — unlike
+            // `cats` above (a plain filter, any cat is a valid choice
+            // there), this excludes breeders and already-reserved/adopted
+            // cats, same as the create() form's own cat picker.
+            'reservableCats' => $this->reservableCatOptions(),
         ]);
     }
 
@@ -160,6 +166,29 @@ class DepositController extends Controller
         $processor->finalize($deposit, $owner);
 
         return back()->with('success', __('Adoption finalized.'));
+    }
+
+    /**
+     * Turns a waiting-list entry (cat_id null) into a reservation for a
+     * specific kitten once one becomes available. Restricted to a still-
+     * pending deposit: once it's paid, the deposit is tied to whatever the
+     * family already paid a deposit for — reassigning the cat under it
+     * afterwards would misrepresent what they actually paid for.
+     */
+    public function assignCat(AssignCatToDepositRequest $request, Deposit $deposit, DepositPaymentProcessor $processor): RedirectResponse
+    {
+        if ($deposit->cat_id !== null) {
+            return back()->with('error', __('This reservation is already tied to a cat.'));
+        }
+
+        if ($deposit->status !== DepositStatus::Pending) {
+            return back()->with('error', __('A cat can only be assigned to a still-pending waiting-list entry.'));
+        }
+
+        $deposit->update(['cat_id' => $request->validated('cat_id')]);
+        $processor->reserve($deposit);
+
+        return back()->with('success', __('Cat assigned to the reservation.'));
     }
 
     /**
