@@ -81,7 +81,7 @@ class HandleInertiaRequests extends Middleware
                 'facebook' => SiteSetting::get('social_facebook'),
                 'instagram' => SiteSetting::get('social_instagram'),
                 'youtube' => SiteSetting::get('social_youtube'),
-                'pinterest' => SiteSetting::get('social_pinterest'),
+                'tiktok' => SiteSetting::get('social_tiktok'),
             ],
             // Same reasoning — the footer shows it on every public page,
             // not just Contact.

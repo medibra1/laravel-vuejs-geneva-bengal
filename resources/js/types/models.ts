@@ -131,7 +131,7 @@ export interface SiteSettings {
     social_facebook: string | null;
     social_instagram: string | null;
     social_youtube: string | null;
-    social_pinterest: string | null;
+    social_tiktok: string | null;
     address: string | null;
     deposit_amount: number | null;
     price_range_min: number | null;

@@ -10,7 +10,6 @@ use App\Models\ContactRequest;
 use App\Models\Gallery;
 use App\Models\Litter;
 use App\Models\Owner;
-use App\Models\SiteSetting;
 use App\Models\Testimonial;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
@@ -20,8 +19,10 @@ use Illuminate\Support\Collection;
  * galleries, contact requests, testimonials) actually have something to
  * look at in local dev. Never run in production — see DatabaseSeeder.
  *
- * Real CMS content (pages, FAQ) moved to ContentPagesSeeder — that one
- * always runs, this one is demo/test data only.
+ * Real CMS content (pages, FAQ) moved to ContentPagesSeeder, and real
+ * site settings (social links, address, deposit/price/SEO defaults)
+ * moved to SiteSettingsSeeder — both always run, this one is demo/test
+ * data only.
  */
 class DemoDataSeeder extends Seeder
 {
@@ -41,7 +42,6 @@ class DemoDataSeeder extends Seeder
 
     public function run(): void
     {
-        $this->seedSiteSettings();
         $this->seedTestimonials();
 
         $cats = $this->seedCats();
@@ -49,23 +49,6 @@ class DemoDataSeeder extends Seeder
         $this->seedOwners($cats);
         $this->seedGalleries();
         $this->seedContactRequests($cats);
-    }
-
-    private function seedSiteSettings(): void
-    {
-        SiteSetting::set('social_facebook', 'https://facebook.com/genevabengal');
-        SiteSetting::set('social_instagram', 'https://instagram.com/genevabengal');
-        SiteSetting::set('social_youtube', 'https://youtube.com/@genevabengal');
-        SiteSetting::set('social_pinterest', 'https://pinterest.com/genevabengal');
-        SiteSetting::set('address', '1209 Genève, Suisse');
-        SiteSetting::set('deposit_amount', 50000);
-        SiteSetting::set('price_range_min', 150000);
-        SiteSetting::set('price_range_max', 350000);
-        SiteSetting::set('default_seo_title', 'Geneva Bengal | Éleveur de chats Bengal à Genève');
-        SiteSetting::set(
-            'default_seo_description',
-            "Élevage de chats Bengal à Genève, Suisse. Chatons en parfaite santé, élevés avec amour, disponibles à l'adoption.",
-        );
     }
 
     private function seedTestimonials(): void

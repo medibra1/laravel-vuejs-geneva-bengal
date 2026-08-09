@@ -17,7 +17,7 @@ const form = useForm({
     social_facebook: props.settings.social_facebook ?? '',
     social_instagram: props.settings.social_instagram ?? '',
     social_youtube: props.settings.social_youtube ?? '',
-    social_pinterest: props.settings.social_pinterest ?? '',
+    social_tiktok: props.settings.social_tiktok ?? '',
     address: props.settings.address ?? '',
     deposit_amount: props.settings.deposit_amount ?? null,
     price_range_min: props.settings.price_range_min ?? null,
@@ -81,9 +81,9 @@ function submit(): void {
                                 <InputError :message="form.errors.social_youtube" />
                             </div>
                             <div>
-                                <InputLabel for="social_pinterest" value="Pinterest" />
-                                <InputText id="social_pinterest" v-model="form.social_pinterest" class="mt-1 w-full" />
-                                <InputError :message="form.errors.social_pinterest" />
+                                <InputLabel for="social_tiktok" value="TikTok" />
+                                <InputText id="social_tiktok" v-model="form.social_tiktok" class="mt-1 w-full" />
+                                <InputError :message="form.errors.social_tiktok" />
                             </div>
                         </div>
                     </section>

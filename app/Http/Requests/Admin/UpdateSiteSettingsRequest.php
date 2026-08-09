@@ -30,7 +30,7 @@ class UpdateSiteSettingsRequest extends FormRequest
             'social_facebook' => ['nullable', 'url', 'max:255'],
             'social_instagram' => ['nullable', 'url', 'max:255'],
             'social_youtube' => ['nullable', 'url', 'max:255'],
-            'social_pinterest' => ['nullable', 'url', 'max:255'],
+            'social_tiktok' => ['nullable', 'url', 'max:255'],
             'address' => ['nullable', 'string', 'max:500'],
             'deposit_amount' => ['nullable', 'integer', 'min:0'],
             'price_range_min' => ['nullable', 'integer', 'min:0'],

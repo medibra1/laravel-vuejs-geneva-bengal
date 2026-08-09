@@ -24,7 +24,7 @@ export type PageProps<
         facebook: string | null;
         instagram: string | null;
         youtube: string | null;
-        pinterest: string | null;
+        tiktok: string | null;
     };
     address: string | null;
     honeypot: Honeypot;

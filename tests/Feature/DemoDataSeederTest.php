@@ -5,13 +5,13 @@ use App\Models\ContactRequest;
 use App\Models\Gallery;
 use App\Models\Litter;
 use App\Models\Owner;
-use App\Models\SiteSetting;
 use App\Models\Testimonial;
 use Database\Seeders\ColorSeeder;
 use Database\Seeders\DemoDataSeeder;
 
-// Pages/FAQ are real content, always seeded — see ContentPagesSeederTest.php,
-// not this file. DemoDataSeeder is Faker-generated data only.
+// Pages/FAQ and site settings are real content, always seeded — see
+// ContentPagesSeederTest.php/SiteSettingsSeederTest.php, not this file.
+// DemoDataSeeder is Faker-generated data only.
 
 it('seeds cats with at least one photo each and a mix of statuses', function () {
     $this->seed(ColorSeeder::class);
@@ -39,7 +39,6 @@ it('seeds the rest of the demo content', function () {
     expect(Litter::count())->toBeGreaterThan(0);
     expect(Gallery::count())->toBeGreaterThan(0);
     expect(ContactRequest::count())->toBeGreaterThan(0);
-    expect(SiteSetting::get('deposit_amount'))->not->toBeNull();
 });
 
 it('never deletes the shared homepage images it reuses as demo photos', function () {
