@@ -151,6 +151,8 @@
         "paid_body": "Un e-mail de confirmation vient de vous être envoyé. Nous reviendrons vers vous très prochainement.",
         "cancelled_heading": "Paiement non finalisé",
         "cancelled_body": "Vous avez annulé le paiement, aucun montant n'a été débité. Vous pouvez réessayer à tout moment depuis la fiche du chaton.",
+        "unavailable_heading": "Ce chaton vient d'être réservé",
+        "unavailable_body": "Quelqu'un d'autre vient de finaliser sa réservation quelques instants avant vous. Rassurez-vous : vous n'avez pas été débité(e), l'autorisation de paiement a été annulée. N'hésitez pas à consulter nos autres chatons disponibles.",
         "pending_heading": "Nous traitons votre paiement",
         "pending_body": "Cela ne devrait prendre qu'un instant. Vous recevrez un e-mail de confirmation dès que le paiement sera validé — inutile de rester sur cette page.",
         "back_link": "Retour aux chatons disponibles"
@@ -187,12 +189,25 @@
     },
     "deposit": {
         "reserve_button": "Réserver avec un acompte de {amount}",
-        "stripe_notice": "Vous allez être redirigé vers notre partenaire de paiement Stripe (carte ou TWINT).",
+        "stripe_notice": "Paiement sécurisé par carte ou TWINT via notre partenaire Stripe, sans quitter cette page.",
         "label_full_name": "Nom complet",
         "label_email": "E-mail",
         "label_phone": "Téléphone (facultatif)",
         "continue_button": "Continuer vers le paiement",
-        "cancel": "Annuler"
+        "cancel": "Annuler",
+        "cat_unavailable_error": "Ce chaton vient d'être réservé, veuillez rafraîchir la page."
+    },
+    "depositPay": {
+        "meta_title": "Paiement de votre acompte — Geneva Bengal",
+        "heading": "Paiement de votre acompte",
+        "summary_for_cat": "Acompte de {amount} pour la réservation de {name}.",
+        "summary_waiting_list": "Acompte de {amount} pour votre inscription en liste d'attente.",
+        "loading": "Chargement du formulaire de paiement…",
+        "load_error": "Le formulaire de paiement n'a pas pu se charger. Vérifiez votre connexion et rechargez la page.",
+        "generic_error": "Une erreur est survenue pendant le paiement. Veuillez réessayer.",
+        "pay_button": "Payer",
+        "paying_button": "Paiement en cours…",
+        "cancel_link": "Annuler et revenir en arrière"
     },
     "hero": {
         "tagline_script": "Éleveur de chats",

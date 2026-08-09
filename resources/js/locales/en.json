@@ -151,6 +151,8 @@
         "paid_body": "A confirmation email has just been sent to you. We'll get back to you very soon.",
         "cancelled_heading": "Payment not completed",
         "cancelled_body": "You cancelled the payment, no amount was charged. You can try again at any time from the kitten's page.",
+        "unavailable_heading": "This kitten was just reserved",
+        "unavailable_body": "Someone else finished their reservation moments before you. Don't worry — you were not charged, the payment authorization was cancelled. Feel free to take a look at our other available kittens.",
         "pending_heading": "We're processing your payment",
         "pending_body": "This should only take a moment. You'll receive a confirmation email as soon as the payment is validated — no need to stay on this page.",
         "back_link": "Back to available kittens"
@@ -187,12 +189,25 @@
     },
     "deposit": {
         "reserve_button": "Reserve with a deposit of {amount}",
-        "stripe_notice": "You will be redirected to our payment partner Stripe (card or TWINT).",
+        "stripe_notice": "Secure payment by card or TWINT via our partner Stripe, without leaving this page.",
         "label_full_name": "Full name",
         "label_email": "Email",
         "label_phone": "Phone (optional)",
         "continue_button": "Continue to payment",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "cat_unavailable_error": "This kitten has just been reserved — please refresh the page."
+    },
+    "depositPay": {
+        "meta_title": "Pay your deposit — Geneva Bengal",
+        "heading": "Pay your deposit",
+        "summary_for_cat": "Deposit of {amount} to reserve {name}.",
+        "summary_waiting_list": "Deposit of {amount} for your waiting list registration.",
+        "loading": "Loading payment form…",
+        "load_error": "The payment form could not load. Check your connection and reload the page.",
+        "generic_error": "Something went wrong during payment. Please try again.",
+        "pay_button": "Pay",
+        "paying_button": "Processing payment…",
+        "cancel_link": "Cancel and go back"
     },
     "hero": {
         "tagline_script": "Cat breeder",

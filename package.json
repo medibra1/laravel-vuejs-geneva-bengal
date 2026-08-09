@@ -26,6 +26,7 @@
     },
     "dependencies": {
         "@primeuix/themes": "^1.2.5",
+        "@stripe/stripe-js": "^9.13.0",
         "@tiptap/extension-image": "^3.0.0",
         "@tiptap/extension-placeholder": "^3.0.0",
         "@tiptap/pm": "^3.0.0",
