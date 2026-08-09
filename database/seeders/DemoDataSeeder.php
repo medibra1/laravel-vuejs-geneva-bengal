@@ -7,22 +7,22 @@ use App\Enums\CatType;
 use App\Models\Cat;
 use App\Models\Color;
 use App\Models\ContactRequest;
-use App\Models\FaqItem;
 use App\Models\Gallery;
 use App\Models\Litter;
 use App\Models\Owner;
-use App\Models\Page;
-use App\Models\SiteSetting;
 use App\Models\Testimonial;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
 
 /**
- * Faker-driven demo content so the site actually has something to look at
- * in local dev — without this, every CMS-backed public page 404s (no Page
- * rows at all, including "a-propos"/"contact", which routes/web.php
- * depends on existing) and every admin list is empty. Never run in
- * production — see DatabaseSeeder.
+ * Faker-driven demo content so admin lists (cats, litters, owners,
+ * galleries, contact requests, testimonials) actually have something to
+ * look at in local dev. Never run in production — see DatabaseSeeder.
+ *
+ * Real CMS content (pages, FAQ) moved to ContentPagesSeeder, and real
+ * site settings (social links, address, deposit/price/SEO defaults)
+ * moved to SiteSettingsSeeder — both always run, this one is demo/test
+ * data only.
  */
 class DemoDataSeeder extends Seeder
 {
@@ -42,9 +42,6 @@ class DemoDataSeeder extends Seeder
 
     public function run(): void
     {
-        $this->seedSiteSettings();
-        $this->seedPages();
-        $this->seedFaqItems();
         $this->seedTestimonials();
 
         $cats = $this->seedCats();
@@ -52,133 +49,6 @@ class DemoDataSeeder extends Seeder
         $this->seedOwners($cats);
         $this->seedGalleries();
         $this->seedContactRequests($cats);
-    }
-
-    private function seedSiteSettings(): void
-    {
-        SiteSetting::set('social_facebook', 'https://facebook.com/genevabengal');
-        SiteSetting::set('social_instagram', 'https://instagram.com/genevabengal');
-        SiteSetting::set('social_youtube', 'https://youtube.com/@genevabengal');
-        SiteSetting::set('social_pinterest', 'https://pinterest.com/genevabengal');
-        SiteSetting::set('address', '1209 Genève, Suisse');
-        SiteSetting::set('deposit_amount', 50000);
-        SiteSetting::set('price_range_min', 150000);
-        SiteSetting::set('price_range_max', 350000);
-        SiteSetting::set('default_seo_title', 'Geneva Bengal | Éleveur de chats Bengal à Genève');
-        SiteSetting::set(
-            'default_seo_description',
-            "Élevage de chats Bengal à Genève, Suisse. Chatons en parfaite santé, élevés avec amour, disponibles à l'adoption.",
-        );
-    }
-
-    /**
-     * "a-propos" and "contact" are load-bearing — routes/web.php's
-     * literal routes resolve them by that exact slug, so without these
-     * two rows those two routes 404 outright. The rest populate
-     * PublicLayout.vue's two CMS-driven dropdown menus (menu_group
-     * race_info / adoption).
-     */
-    private function seedPages(): void
-    {
-        Page::create([
-            'title' => ['fr' => 'À propos', 'en' => 'About'],
-            'body' => [
-                'fr' => 'Geneva Bengal est un élevage familial de chats Bengal basé à Genève, en Suisse. Depuis 2020, nous élevons des chatons en parfaite santé, avec une apparence et un comportement à vous faire rêver.',
-                'en' => 'Geneva Bengal is a family-run Bengal cattery based in Geneva, Switzerland. Since 2020, we have been breeding kittens in perfect health, with a look and temperament to dream of.',
-            ],
-            'meta_title' => ['fr' => 'À propos — Geneva Bengal', 'en' => 'About — Geneva Bengal'],
-            'meta_description' => [
-                'fr' => 'Découvrez notre élevage de chats Bengal à Genève : notre histoire, notre passion, et les témoignages de familles qui nous ont fait confiance.',
-                'en' => 'Discover our Bengal cattery in Geneva: our story, our passion, and testimonials from families who trusted us.',
-            ],
-            'is_published' => true,
-        ]);
-
-        Page::create([
-            'title' => ['fr' => 'Contact', 'en' => 'Contact'],
-            'body' => [
-                'fr' => "Une question sur nos chatons disponibles, une envie d'adopter ou de vous inscrire sur notre liste d'attente ? Écrivez-nous, nous vous répondrons rapidement.",
-                'en' => 'A question about our available kittens, or would you like to adopt or join our waiting list? Write to us, we will get back to you quickly.',
-            ],
-            'meta_title' => ['fr' => 'Contact — Geneva Bengal', 'en' => 'Contact — Geneva Bengal'],
-            'meta_description' => [
-                'fr' => "Contactez notre élevage Geneva Bengal pour toute question sur l'adoption d'un chaton Bengal à Genève.",
-                'en' => 'Contact our Geneva Bengal cattery for any question about adopting a Bengal kitten in Geneva.',
-            ],
-            'is_published' => true,
-        ]);
-
-        $raceInfoPages = [
-            ['fr' => 'Caractéristiques de la race', 'en' => 'Breed characteristics'],
-            ['fr' => 'Motifs et couleurs', 'en' => 'Patterns and colors'],
-            ['fr' => 'Personnalité du chat Bengal', 'en' => 'Bengal cat personality'],
-            ['fr' => 'Alimentation du chat Bengal', 'en' => 'Bengal cat diet'],
-            ['fr' => 'Santé du chat Bengal', 'en' => 'Bengal cat health'],
-        ];
-
-        foreach ($raceInfoPages as $order => $title) {
-            Page::create([
-                'menu_group' => 'race_info',
-                'order' => $order,
-                'title' => $title,
-                'body' => ['fr' => fake()->paragraphs(3, true), 'en' => fake()->paragraphs(3, true)],
-                'meta_title' => ['fr' => $title['fr'].' — Geneva Bengal', 'en' => $title['en'].' — Geneva Bengal'],
-                'meta_description' => ['fr' => fake()->sentence(15), 'en' => fake()->sentence(15)],
-                'is_published' => true,
-            ]);
-        }
-
-        $adoptionPages = [
-            ['fr' => 'Étapes pour adopter un chaton Bengal', 'en' => 'Steps to adopt a Bengal kitten'],
-            ['fr' => "Introduction d'un nouveau chaton à la maison", 'en' => 'Introducing a new kitten at home'],
-            ['fr' => 'Prix de nos chats Bengal', 'en' => 'Prices of our Bengal cats'],
-        ];
-
-        foreach ($adoptionPages as $order => $title) {
-            Page::create([
-                'menu_group' => 'adoption',
-                'order' => $order,
-                'title' => $title,
-                'body' => ['fr' => fake()->paragraphs(3, true), 'en' => fake()->paragraphs(3, true)],
-                'meta_title' => ['fr' => $title['fr'].' — Geneva Bengal', 'en' => $title['en'].' — Geneva Bengal'],
-                'meta_description' => ['fr' => fake()->sentence(15), 'en' => fake()->sentence(15)],
-                'is_published' => true,
-            ]);
-        }
-
-        // Its own page (not a section on another one) so it shows up
-        // alongside the other adoption-group pages in that nav dropdown —
-        // Public\PageController::show() attaches faq_items to it by slug.
-        Page::create([
-            'menu_group' => 'adoption',
-            'order' => count($adoptionPages),
-            'title' => ['fr' => 'FAQ', 'en' => 'FAQ'],
-            'body' => [
-                'fr' => '<p>Vous avez une question sur nos chatons ou le processus d\'adoption ? Vous trouverez peut-être déjà la réponse ci-dessous.</p>',
-                'en' => '<p>Have a question about our kittens or the adoption process? You might already find the answer below.</p>',
-            ],
-            'meta_title' => ['fr' => 'FAQ — Geneva Bengal', 'en' => 'FAQ — Geneva Bengal'],
-            'meta_description' => ['fr' => fake()->sentence(15), 'en' => fake()->sentence(15)],
-            'is_published' => true,
-        ]);
-    }
-
-    private function seedFaqItems(): void
-    {
-        $faqs = [
-            ['fr' => 'Quel est le prix d\'un chaton Bengal ?', 'en' => 'What is the price of a Bengal kitten?'],
-            ['fr' => 'Livrez-vous à l\'international ?', 'en' => 'Do you ship internationally?'],
-            ['fr' => 'Quel est le délai d\'attente pour adopter ?', 'en' => 'What is the waiting time to adopt?'],
-            ['fr' => 'Les chatons sont-ils vaccinés et vermifugés ?', 'en' => 'Are the kittens vaccinated and dewormed?'],
-        ];
-
-        foreach ($faqs as $order => $question) {
-            FaqItem::create([
-                'question' => $question,
-                'answer' => ['fr' => fake()->paragraph(), 'en' => fake()->paragraph()],
-                'order' => $order,
-            ]);
-        }
     }
 
     private function seedTestimonials(): void

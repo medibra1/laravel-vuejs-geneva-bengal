@@ -46,7 +46,7 @@ it('creates an admin with a random password and sends a reset link, not a plaint
     $superAdmin = User::factory()->create(['email_verified_at' => now()]);
     $superAdmin->assignRole('super_admin');
 
-    $response = $this->actingAs($superAdmin)->post(route('admin.users.store'), [
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.users.store'), [
         'name' => 'New Admin',
         'email' => 'new-admin@example.com',
         'role' => 'admin',
@@ -66,7 +66,7 @@ it('lets a super_admin change another admin role', function () {
     $target = User::factory()->create(['email_verified_at' => now()]);
     $target->assignRole('admin');
 
-    $response = $this->actingAs($superAdmin)->put(route('admin.users.update', $target), [
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->put(route('admin.users.update', $target), [
         'role' => 'super_admin',
     ]);
 
@@ -78,7 +78,7 @@ it('prevents demoting the last active super_admin', function () {
     $superAdmin = User::factory()->create(['email_verified_at' => now()]);
     $superAdmin->assignRole('super_admin');
 
-    $response = $this->actingAs($superAdmin)->put(route('admin.users.update', $superAdmin), [
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->put(route('admin.users.update', $superAdmin), [
         'role' => 'admin',
     ]);
 
@@ -90,7 +90,7 @@ it('prevents deactivating the last active super_admin', function () {
     $superAdmin = User::factory()->create(['email_verified_at' => now()]);
     $superAdmin->assignRole('super_admin');
 
-    $response = $this->actingAs($superAdmin)->patch(route('admin.users.toggle-active', $superAdmin));
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->patch(route('admin.users.toggle-active', $superAdmin));
 
     $response->assertRedirect();
     expect($superAdmin->fresh()->is_active)->toBeTrue();
@@ -102,7 +102,7 @@ it('lets a super_admin deactivate another admin', function () {
     $target = User::factory()->create(['email_verified_at' => now(), 'is_active' => true]);
     $target->assignRole('admin');
 
-    $response = $this->actingAs($superAdmin)->patch(route('admin.users.toggle-active', $target));
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->patch(route('admin.users.toggle-active', $target));
 
     $response->assertRedirect();
     expect($target->fresh()->is_active)->toBeFalse();
@@ -112,7 +112,7 @@ it('prevents deleting the last active super_admin', function () {
     $superAdmin = User::factory()->create(['email_verified_at' => now()]);
     $superAdmin->assignRole('super_admin');
 
-    $response = $this->actingAs($superAdmin)->delete(route('admin.users.destroy', $superAdmin));
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->delete(route('admin.users.destroy', $superAdmin));
 
     $response->assertRedirect();
     expect(User::find($superAdmin->id))->not->toBeNull();
@@ -124,7 +124,7 @@ it('deletes an admin account that never acted on anything', function () {
     $target = User::factory()->create(['email_verified_at' => now()]);
     $target->assignRole('admin');
 
-    $response = $this->actingAs($superAdmin)->delete(route('admin.users.destroy', $target));
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->delete(route('admin.users.destroy', $target));
 
     $response->assertRedirect(route('admin.users.index'));
     expect(User::find($target->id))->toBeNull();
@@ -146,13 +146,95 @@ it('refuses to delete an admin account with logged activity, suggesting deactiva
     // unlike a role change, which lives in spatie/permission's own pivot
     // table and isn't observed by LogsActivity. This makes $target the
     // causer of a real activity log entry.
-    $this->actingAs($target)->patch(route('admin.users.toggle-active', $thirdAdmin));
+    $this->actingAs($target)->withSession(['auth.password_confirmed_at' => time()])->patch(route('admin.users.toggle-active', $thirdAdmin));
     expect(Activity::where('causer_id', $target->id)->exists())->toBeTrue();
 
     $target->syncRoles(['admin']);
 
-    $response = $this->actingAs($superAdmin)->delete(route('admin.users.destroy', $target));
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->delete(route('admin.users.destroy', $target));
 
     $response->assertRedirect();
     expect(User::find($target->id))->not->toBeNull();
+});
+
+// --- password.confirm: creating/changing/removing an admin account, or
+// resending a reset link, all require a fresh password confirmation —
+// see routes/admin.php and resources/js/Composables/useConfirmsPassword.ts.
+
+it('redirects to password.confirm instead of creating an admin without a recent confirmation', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+
+    $response = $this->actingAs($superAdmin)->post(route('admin.users.store'), [
+        'name' => 'New Admin',
+        'email' => 'new-admin@example.com',
+        'role' => 'admin',
+    ]);
+
+    $response->assertRedirect(route('password.confirm'));
+    expect(User::firstWhere('email', 'new-admin@example.com'))->toBeNull();
+});
+
+it('redirects to password.confirm instead of updating an admin role without a recent confirmation', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $target = User::factory()->create(['email_verified_at' => now()]);
+    $target->assignRole('admin');
+
+    $response = $this->actingAs($superAdmin)->put(route('admin.users.update', $target), [
+        'role' => 'super_admin',
+    ]);
+
+    $response->assertRedirect(route('password.confirm'));
+    expect($target->fresh()->hasRole('admin'))->toBeTrue();
+});
+
+it('redirects to password.confirm instead of toggling an admin\'s active status without a recent confirmation', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $target = User::factory()->create(['email_verified_at' => now(), 'is_active' => true]);
+    $target->assignRole('admin');
+
+    $response = $this->actingAs($superAdmin)->patch(route('admin.users.toggle-active', $target));
+
+    $response->assertRedirect(route('password.confirm'));
+    expect($target->fresh()->is_active)->toBeTrue();
+});
+
+it('redirects to password.confirm instead of deleting an admin without a recent confirmation', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $target = User::factory()->create(['email_verified_at' => now()]);
+    $target->assignRole('admin');
+
+    $response = $this->actingAs($superAdmin)->delete(route('admin.users.destroy', $target));
+
+    $response->assertRedirect(route('password.confirm'));
+    expect(User::find($target->id))->not->toBeNull();
+});
+
+it('redirects to password.confirm instead of resending a reset link without a recent confirmation', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $target = User::factory()->create(['email_verified_at' => now()]);
+    $target->assignRole('admin');
+
+    $response = $this->actingAs($superAdmin)->post(route('admin.users.resend-reset-link', $target));
+
+    $response->assertRedirect(route('password.confirm'));
+});
+
+it('lets a super_admin resend a reset link with a recent confirmation', function () {
+    Notification::fake();
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $target = User::factory()->create(['email_verified_at' => now()]);
+    $target->assignRole('admin');
+
+    $response = $this->actingAs($superAdmin)
+        ->withSession(['auth.password_confirmed_at' => time()])
+        ->post(route('admin.users.resend-reset-link', $target));
+
+    $response->assertRedirect();
+    Notification::assertSentTo($target, ResetPassword::class);
 });

@@ -6,6 +6,8 @@ use App\Models\Cat;
 use App\Models\Deposit;
 use App\Models\Owner;
 use App\Models\User;
+use App\Notifications\DepositConfirmedNotification;
+use App\Notifications\NewDepositCreatedNotification;
 use App\Services\Payments\PaymentGateway;
 use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Role;
@@ -42,7 +44,7 @@ it('denies a plain admin from refunding a deposit — super_admin only', functio
     $admin->assignRole('admin');
     $deposit = Deposit::factory()->paid()->create();
 
-    $response = $this->actingAs($admin)->post(route('admin.deposits.refund', $deposit));
+    $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.refund', $deposit));
 
     $response->assertForbidden();
     expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
@@ -53,7 +55,7 @@ it('lets a super_admin refund a paid deposit', function () {
     $superAdmin->assignRole('super_admin');
     $deposit = Deposit::factory()->paid()->create();
 
-    $response = $this->actingAs($superAdmin)->post(route('admin.deposits.refund', $deposit));
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.refund', $deposit));
 
     $response->assertRedirect();
     expect($deposit->fresh()->status)->toBe(DepositStatus::Refunded);
@@ -64,7 +66,7 @@ it('refuses to refund a deposit that was never paid', function () {
     $superAdmin->assignRole('super_admin');
     $deposit = Deposit::factory()->create(['status' => DepositStatus::Pending]);
 
-    $response = $this->actingAs($superAdmin)->post(route('admin.deposits.refund', $deposit));
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.refund', $deposit));
 
     $response->assertRedirect();
     expect($deposit->fresh()->status)->toBe(DepositStatus::Pending);
@@ -78,7 +80,7 @@ it('surfaces a gateway-level refund failure instead of marking the deposit refun
     $superAdmin->assignRole('super_admin');
     $deposit = Deposit::factory()->paid()->create();
 
-    $response = $this->actingAs($superAdmin)->post(route('admin.deposits.refund', $deposit));
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.refund', $deposit));
 
     $response->assertRedirect();
     expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
@@ -107,6 +109,25 @@ it('lets a plain admin create a cash deposit with no owner yet', function () {
     expect($deposit->status)->toBe(DepositStatus::Pending);
     expect($deposit->owner_id)->toBeNull();
     expect($deposit->created_by)->toBe($admin->id);
+});
+
+it('does not notify the admin who just created the reservation themselves, but does notify other active staff', function () {
+    Notification::fake();
+    $creator = User::factory()->create(['email_verified_at' => now(), 'is_active' => true]);
+    $creator->assignRole('admin');
+    $otherAdmin = User::factory()->create(['is_active' => true]);
+    $otherAdmin->assignRole('admin');
+    $cat = Cat::factory()->create();
+
+    $this->actingAs($creator)->post(route('admin.deposits.store'), [
+        'cat_id' => $cat->id,
+        'name' => 'Jeanne Dupont',
+        'email' => 'jeanne@example.com',
+        'payment_method' => 'cash',
+    ]);
+
+    Notification::assertNotSentTo($creator, NewDepositCreatedNotification::class);
+    Notification::assertSentTo($otherAdmin, NewDepositCreatedNotification::class);
 });
 
 it('holds the cat (en_attente) as soon as an admin creates a deposit for it', function () {
@@ -302,6 +323,72 @@ it('refuses to mark an already-paid deposit as paid again', function () {
     expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
 });
 
+// --- verify-stripe: on-demand check against Stripe, in place of waiting
+// for the webhook or the daily reconciliation job -----------------------
+
+it('marks a pending stripe deposit as paid when Stripe confirms the checkout is paid', function () {
+    Notification::fake();
+    $gateway = new FakePaymentGateway;
+    $gateway->checkoutPaidResult = true;
+    $this->app->instance(PaymentGateway::class, $gateway);
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create();
+    $deposit = Deposit::factory()->create([
+        'cat_id' => $cat->id,
+        'payment_method' => 'stripe',
+        'status' => DepositStatus::Pending,
+        'provider_reference' => 'cs_test_123',
+    ]);
+
+    $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.verify-stripe', $deposit));
+
+    $response->assertRedirect();
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
+    expect($deposit->fresh()->paid_at)->not->toBeNull();
+    expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
+    Notification::assertSentOnDemand(DepositConfirmedNotification::class);
+});
+
+it('leaves a pending stripe deposit untouched when Stripe reports it as unpaid', function () {
+    $gateway = new FakePaymentGateway;
+    $gateway->checkoutPaidResult = false;
+    $this->app->instance(PaymentGateway::class, $gateway);
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $deposit = Deposit::factory()->create(['payment_method' => 'stripe', 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.verify-stripe', $deposit));
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Pending);
+});
+
+it('refuses to verify a non-stripe deposit against Stripe', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $deposit = Deposit::factory()->create(['payment_method' => 'cash', 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.verify-stripe', $deposit));
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Pending);
+});
+
+it('refuses to verify a stripe deposit that is not pending', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $deposit = Deposit::factory()->paid()->create(['payment_method' => 'stripe']);
+
+    $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.verify-stripe', $deposit));
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
+});
+
 // --- finalize: link/create the owner, mark the cat adopted ------------
 
 it('finalizes a paid deposit with an existing owner already linked', function () {
@@ -311,7 +398,7 @@ it('finalizes a paid deposit with an existing owner already linked', function ()
     $owner = Owner::factory()->create();
     $deposit = Deposit::factory()->paid()->create(['cat_id' => $cat->id, 'owner_id' => $owner->id]);
 
-    $response = $this->actingAs($admin)->post(route('admin.deposits.finalize', $deposit));
+    $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.finalize', $deposit));
 
     $response->assertRedirect();
     expect($deposit->fresh()->finalized_at)->not->toBeNull();
@@ -324,7 +411,7 @@ it('finalizes a paid deposit by linking an existing owner supplied in the reques
     $owner = Owner::factory()->create();
     $deposit = Deposit::factory()->paid()->create(['owner_id' => null]);
 
-    $response = $this->actingAs($admin)->post(route('admin.deposits.finalize', $deposit), [
+    $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.finalize', $deposit), [
         'owner_id' => $owner->id,
     ]);
 
@@ -338,7 +425,7 @@ it('finalizes a paid deposit by creating a new owner inline', function () {
     $admin->assignRole('admin');
     $deposit = Deposit::factory()->paid()->create(['owner_id' => null]);
 
-    $response = $this->actingAs($admin)->post(route('admin.deposits.finalize', $deposit), [
+    $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.finalize', $deposit), [
         'new_owner' => [
             'first_name' => 'Jeanne',
             'last_name' => 'Dupont',
@@ -358,7 +445,7 @@ it('refuses to finalize a deposit that is not paid', function () {
     $owner = Owner::factory()->create();
     $deposit = Deposit::factory()->create(['status' => DepositStatus::Pending, 'owner_id' => $owner->id]);
 
-    $response = $this->actingAs($admin)->post(route('admin.deposits.finalize', $deposit));
+    $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.finalize', $deposit));
 
     $response->assertRedirect();
     expect($deposit->fresh()->finalized_at)->toBeNull();
@@ -370,7 +457,7 @@ it('refuses to finalize an already-finalized deposit', function () {
     $owner = Owner::factory()->create();
     $deposit = Deposit::factory()->paid()->create(['owner_id' => $owner->id, 'finalized_at' => now()]);
 
-    $response = $this->actingAs($admin)->post(route('admin.deposits.finalize', $deposit));
+    $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.finalize', $deposit));
 
     $response->assertRedirect();
     expect($deposit->fresh()->owner_id)->toBe($owner->id);
@@ -381,7 +468,7 @@ it('refuses to finalize a paid deposit with no owner and none supplied', functio
     $admin->assignRole('admin');
     $deposit = Deposit::factory()->paid()->create(['owner_id' => null]);
 
-    $response = $this->actingAs($admin)->post(route('admin.deposits.finalize', $deposit));
+    $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.finalize', $deposit));
 
     $response->assertRedirect();
     expect($deposit->fresh()->finalized_at)->toBeNull();
@@ -393,10 +480,103 @@ it('finalizing a waiting-list deposit (no cat) does not touch any cat status', f
     $owner = Owner::factory()->create();
     $deposit = Deposit::factory()->paid()->create(['cat_id' => null, 'owner_id' => $owner->id]);
 
-    $response = $this->actingAs($admin)->post(route('admin.deposits.finalize', $deposit));
+    $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.finalize', $deposit));
 
     $response->assertRedirect();
     expect($deposit->fresh()->finalized_at)->not->toBeNull();
+});
+
+// --- assign-cat: turning a waiting-list entry into a reservation -------
+
+it('assigns a cat to a pending waiting-list deposit and holds it', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create(['type' => 'chaton']);
+    $cat->setStatus(CatStatus::Available->value);
+    $deposit = Deposit::factory()->create(['cat_id' => null, 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.assign-cat', $deposit), [
+        'cat_id' => $cat->id,
+    ]);
+
+    $response->assertRedirect();
+    expect($deposit->fresh()->cat_id)->toBe($cat->id);
+    expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
+});
+
+it('does not re-send the new-reservation notification when assigning a cat to an existing waiting-list deposit', function () {
+    Notification::fake();
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $otherAdmin = User::factory()->create(['is_active' => true]);
+    $otherAdmin->assignRole('admin');
+    $cat = Cat::factory()->create(['type' => 'chaton']);
+    $cat->setStatus(CatStatus::Available->value);
+    $deposit = Deposit::factory()->create(['cat_id' => null, 'status' => DepositStatus::Pending]);
+
+    $this->actingAs($admin)->post(route('admin.deposits.assign-cat', $deposit), [
+        'cat_id' => $cat->id,
+    ]);
+
+    Notification::assertNothingSent();
+});
+
+it('refuses to assign a cat to a deposit that already has one', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $existingCat = Cat::factory()->create();
+    $newCat = Cat::factory()->create(['type' => 'chaton']);
+    $deposit = Deposit::factory()->create(['cat_id' => $existingCat->id, 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.assign-cat', $deposit), [
+        'cat_id' => $newCat->id,
+    ]);
+
+    $response->assertRedirect();
+    expect($deposit->fresh()->cat_id)->toBe($existingCat->id);
+});
+
+it('refuses to assign a cat once the waiting-list deposit is no longer pending', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create(['type' => 'chaton']);
+    $deposit = Deposit::factory()->paid()->create(['cat_id' => null]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.assign-cat', $deposit), [
+        'cat_id' => $cat->id,
+    ]);
+
+    $response->assertRedirect();
+    expect($deposit->fresh()->cat_id)->toBeNull();
+});
+
+it('refuses to assign a breeder cat to a waiting-list deposit', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $breeder = Cat::factory()->create(['type' => 'reproducteur']);
+    $deposit = Deposit::factory()->create(['cat_id' => null, 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.assign-cat', $deposit), [
+        'cat_id' => $breeder->id,
+    ]);
+
+    $response->assertSessionHasErrors('cat_id');
+    expect($deposit->fresh()->cat_id)->toBeNull();
+});
+
+it('refuses to assign a cat that already has an active reservation elsewhere', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create(['type' => 'chaton']);
+    Deposit::factory()->create(['cat_id' => $cat->id, 'status' => DepositStatus::Pending]);
+    $waitingListDeposit = Deposit::factory()->create(['cat_id' => null, 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.assign-cat', $waitingListDeposit), [
+        'cat_id' => $cat->id,
+    ]);
+
+    $response->assertSessionHasErrors('cat_id');
+    expect($waitingListDeposit->fresh()->cat_id)->toBeNull();
 });
 
 // --- index filters ------------------------------------------------------
@@ -426,6 +606,22 @@ it('filters the deposits list by cat', function () {
     $response->assertInertia(fn ($page) => $page->has('deposits.data', 1));
 });
 
+it('filters the deposits list to waiting-list entries only (no cat attached)', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create();
+    Deposit::factory()->create(['cat_id' => $cat->id]);
+    Deposit::factory()->create(['cat_id' => null]);
+
+    $response = $this->actingAs($admin)->get(route('admin.deposits.index', ['filter' => ['waiting_list' => 1]]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->has('deposits.data', 1)
+        ->where('deposits.data.0.cat_id', null)
+    );
+});
+
 it('filters the deposits list by period', function () {
     $admin = User::factory()->create(['email_verified_at' => now()]);
     $admin->assignRole('admin');
@@ -438,4 +634,58 @@ it('filters the deposits list by period', function () {
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page->has('deposits.data', 1));
+});
+
+// --- password.confirm: refund/finalize/verify-stripe all touch money or
+// ownership and require a fresh password confirmation — see routes/admin.php
+// and resources/js/Composables/useConfirmsPassword.ts. -------------------
+
+it('redirects to password.confirm instead of refunding without a recent confirmation', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $deposit = Deposit::factory()->paid()->create();
+
+    $response = $this->actingAs($superAdmin)->post(route('admin.deposits.refund', $deposit));
+
+    $response->assertRedirect(route('password.confirm'));
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
+});
+
+it('redirects to password.confirm instead of finalizing without a recent confirmation', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $owner = Owner::factory()->create();
+    $deposit = Deposit::factory()->paid()->create(['owner_id' => $owner->id]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.finalize', $deposit));
+
+    $response->assertRedirect(route('password.confirm'));
+    expect($deposit->fresh()->finalized_at)->toBeNull();
+});
+
+it('redirects to password.confirm instead of verifying against Stripe without a recent confirmation', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $deposit = Deposit::factory()->create(['payment_method' => 'stripe', 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.verify-stripe', $deposit));
+
+    $response->assertRedirect(route('password.confirm'));
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Pending);
+});
+
+it('does not require a fresh confirmation for mark-paid or assign-cat — those stay behind role middleware only', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create(['type' => 'chaton']);
+    $deposit = Deposit::factory()->create(['payment_method' => 'cash', 'status' => DepositStatus::Pending, 'cat_id' => null]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.mark-paid', $deposit));
+    $response->assertRedirect();
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
+
+    $waitingListDeposit = Deposit::factory()->create(['cat_id' => null, 'status' => DepositStatus::Pending]);
+    $response = $this->actingAs($admin)->post(route('admin.deposits.assign-cat', $waitingListDeposit), ['cat_id' => $cat->id]);
+    $response->assertRedirect();
+    expect($waitingListDeposit->fresh()->cat_id)->toBe($cat->id);
 });

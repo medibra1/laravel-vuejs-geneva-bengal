@@ -9,6 +9,18 @@ export interface CatPhoto {
     url: string;
 }
 
+export interface CatDeposit {
+    id: number;
+    status: 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled';
+    amount: number;
+    currency: string;
+    payment_method: 'stripe' | 'cash' | 'bank_transfer' | 'twint_manual';
+    payment_link_url: string | null;
+    paid_at: string | null;
+    finalized_at: string | null;
+    owner: { id: number; first_name: string; last_name: string; email: string; phone: string | null } | null;
+}
+
 export interface Cat {
     id: number;
     slug: string;
@@ -32,6 +44,9 @@ export interface Cat {
     // BreederCatController::index() -> CatResource::whenCounted()).
     sire_litters_count?: number;
     dam_litters_count?: number;
+    // Only set on Admin/Cats/Adoption/Form.vue's edit data (see
+    // AdoptionCatController::edit() -> CatResource::whenLoaded()).
+    deposits?: CatDeposit[];
     photos: CatPhoto[];
 }
 
@@ -116,7 +131,7 @@ export interface SiteSettings {
     social_facebook: string | null;
     social_instagram: string | null;
     social_youtube: string | null;
-    social_pinterest: string | null;
+    social_tiktok: string | null;
     address: string | null;
     deposit_amount: number | null;
     price_range_min: number | null;
@@ -217,6 +232,24 @@ export interface AdminUser {
     role: string;
     is_active: boolean;
     last_login_at: string | null;
+}
+
+// `type`/`reason` mirror the `data` payload each App\Notifications\*
+// class writes via toDatabase() — see HandleInertiaRequests::notifications().
+export interface AppNotification {
+    id: string;
+    type: 'contact_request' | 'deposit_created' | 'stripe_issue' | 'newsletter_subscriber' | null;
+    title: string | null;
+    message: string | null;
+    url: string | null;
+    reason: 'error' | 'expired' | null;
+    read_at: string | null;
+    created_at: string;
+}
+
+export interface AppNotifications {
+    unread_count: number;
+    recent: AppNotification[];
 }
 
 export interface Paginated<T> {

@@ -16,19 +16,19 @@ const openIndex = ref<number | null>(null);
 </script>
 
 <template>
-    <Head title="Galerie photo">
+    <Head :title="$t('gallery.meta_title')">
         <meta
             head-key="description"
             name="description"
-            content="Découvrez nos plus belles photos de chats et chatons Bengal en galerie."
+            :content="$t('gallery.meta_description')"
         />
     </Head>
 
     <PublicLayout>
-        <PageBanner script="Galerie photo" subtitle="Nos plus belles photos" />
+        <PageBanner :script="$t('gallery.banner_script')" :subtitle="$t('gallery.banner_subtitle')" />
 
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
-            <SectionHeading script="Nos plus belles photos" title="Galerie mise à jour régulièrement" center />
+            <SectionHeading :script="$t('gallery.heading_script')" :title="$t('gallery.heading_title')" center />
 
             <div v-if="galleries.length" class="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                 <button
@@ -48,8 +48,8 @@ const openIndex = ref<number | null>(null);
             </div>
 
             <div v-else class="mt-12 py-16 text-center">
-                <h2 class="text-xl font-semibold text-neutral-900">Aucune photo pour le moment</h2>
-                <p class="mt-2 text-neutral-600">La galerie sera mise à jour prochainement.</p>
+                <h2 class="text-xl font-semibold text-neutral-900">{{ $t('gallery.empty_heading') }}</h2>
+                <p class="mt-2 text-neutral-600">{{ $t('gallery.empty_body') }}</p>
             </div>
         </section>
 
@@ -60,7 +60,7 @@ const openIndex = ref<number | null>(null);
 
         <section class="bg-brand-canvas border-t border-gray-200 py-16 sm:py-24">
             <div class="mx-auto max-w-3xl px-6 text-center">
-                <SectionHeading script="Soyez les premiers au courant" title="Abonnez-vous à notre infolettre !" center />
+                <SectionHeading :script="$t('newsletter.section_script')" :title="$t('newsletter.section_title')" center />
                 <div class="mt-6 flex justify-center">
                     <NewsletterForm class="w-full max-w-md" />
                 </div>

@@ -6,10 +6,12 @@ import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import Dialog from 'primevue/dialog';
-import InputText from 'primevue/inputtext';
-import RadioButton from 'primevue/radiobutton';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
+import ConfirmPasswordModal from '@/Components/ConfirmPasswordModal.vue';
+import FinalizeOwnerDialog from '@/Components/Admin/FinalizeOwnerDialog.vue';
+import { useConfirmsPassword } from '@/Composables/useConfirmsPassword';
+import { formatAmount, formatDate, paymentMethodLabels, statusSeverity, useDepositActions } from '@/Composables/useDepositActions';
 import type { PageProps } from '@/types';
 import type { Deposit, OwnerCatOption, OwnerOption, Paginated } from '@/types/models';
 
@@ -17,6 +19,7 @@ const props = defineProps<{
     deposits: Paginated<Deposit>;
     cats: OwnerCatOption[];
     owners: OwnerOption[];
+    reservableCats: OwnerCatOption[];
 }>();
 
 const page = usePage<PageProps>();
@@ -30,29 +33,48 @@ const statusOptions = [
     { label: 'Annulé', value: 'cancelled' },
 ];
 
-const paymentMethodLabels: Record<string, string> = {
-    stripe: 'Stripe',
-    cash: 'Espèces',
-    bank_transfer: 'Virement',
-    twint_manual: 'TWINT (manuel)',
-};
+const {
+    copiedId,
+    copyPaymentLink,
+    markPaid,
+    verifyStripe,
+    refund,
+    finalize,
+    submitFinalize,
+    finalizeDialogVisible,
+    ownerMode,
+    finalizeForm,
+} = useDepositActions();
 
-function statusSeverity(status: string): 'success' | 'warn' | 'danger' | 'secondary' {
-    if (status === 'paid') return 'success';
-    if (status === 'pending') return 'warn';
-    if (status === 'failed') return 'danger';
+// Refund, finalize and verify-stripe all touch money or ownership and sit
+// behind password.confirm server-side (see routes/admin.php) — this is
+// the client-side half, see useConfirmsPassword.ts.
+const { confirmingPassword, form: confirmPasswordForm, confirmPassword, submitPassword: submitConfirmPassword } = useConfirmsPassword();
 
-    return 'secondary';
+// Turns a waiting-list entry into a reservation for a specific kitten —
+// see Admin\DepositController::assignCat(). Local to this page (unlike the
+// composable's actions above): not something CatAdoptionPanel.vue needs,
+// since a cat's own edit page already knows which cat it is.
+const assignCatDialogVisible = ref(false);
+const assigningDepositId = ref<number | null>(null);
+const assignCatForm = useForm({ cat_id: null as number | null });
+
+function openAssignCat(deposit: Deposit): void {
+    assigningDepositId.value = deposit.id;
+    assignCatForm.reset();
+    assignCatForm.clearErrors();
+    assignCatDialogVisible.value = true;
 }
 
-function formatAmount(cents: number, currency: string): string {
-    return new Intl.NumberFormat('fr-CH', { style: 'currency', currency }).format(cents / 100);
-}
+function submitAssignCat(): void {
+    if (!assigningDepositId.value) return;
 
-function formatDate(date: string | null): string {
-    if (!date) return '—';
-
-    return new Intl.DateTimeFormat('fr-CH', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(date));
+    assignCatForm.post(route('admin.deposits.assign-cat', assigningDepositId.value), {
+        preserveScroll: true,
+        onSuccess: () => {
+            assignCatDialogVisible.value = false;
+        },
+    });
 }
 
 // Filters — read from the URL once (spatie/laravel-query-builder's
@@ -65,6 +87,14 @@ const filters = reactive({
     to: initialParams.get('filter[to]') ?? '',
 });
 
+// Set from the nav's "Liste d'attente" link (AdminLayout.vue) — kept as-is
+// across filter changes/pagination below rather than as its own filter
+// control, since it's a separate nav destination, not something the admin
+// toggles from this page.
+const isWaitingList = initialParams.get('filter[waiting_list]') === '1';
+const pageTitle = isWaitingList ? "Liste d'attente" : 'Réservations';
+const createLabel = isWaitingList ? 'Nouvelle inscription' : 'Nouvelle réservation';
+
 function applyFilters(): void {
     router.get(
         route('admin.deposits.index'),
@@ -74,6 +104,7 @@ function applyFilters(): void {
                 cat_id: filters.cat_id ?? undefined,
                 from: filters.from || undefined,
                 to: filters.to || undefined,
+                waiting_list: isWaitingList ? 1 : undefined,
             },
         },
         { preserveState: true, preserveScroll: true, replace: true },
@@ -81,88 +112,32 @@ function applyFilters(): void {
 }
 
 function goToPage(pageNumber: number): void {
-    router.get(route('admin.deposits.index'), { page: pageNumber }, { preserveState: true, preserveScroll: true });
-}
-
-function refund(deposit: Deposit): void {
-    if (confirm(`Rembourser l'acompte de ${formatAmount(deposit.amount, deposit.currency)} de ${deposit.name} ?`)) {
-        router.post(route('admin.deposits.refund', deposit.id), {}, { preserveScroll: true });
-    }
-}
-
-function markPaid(deposit: Deposit): void {
-    if (confirm(`Marquer l'acompte de ${deposit.name} comme payé (${paymentMethodLabels[deposit.payment_method]}) ?`)) {
-        router.post(route('admin.deposits.mark-paid', deposit.id), {}, { preserveScroll: true });
-    }
-}
-
-const copiedId = ref<number | null>(null);
-
-async function copyPaymentLink(deposit: Deposit): Promise<void> {
-    if (!deposit.payment_link_url) return;
-
-    await navigator.clipboard.writeText(deposit.payment_link_url);
-    copiedId.value = deposit.id;
-    setTimeout(() => {
-        if (copiedId.value === deposit.id) copiedId.value = null;
-    }, 2000);
-}
-
-// Finalizing: skips the dialog entirely when the deposit already has an
-// owner (set back at creation) — nothing left to ask.
-const finalizeDialogVisible = ref(false);
-const finalizingDeposit = ref<Deposit | null>(null);
-const ownerMode = ref<'existing' | 'new'>('existing');
-
-const finalizeForm = useForm({
-    owner_id: null as number | null,
-    new_owner: {
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        city: '',
-    },
-});
-
-function finalize(deposit: Deposit): void {
-    if (deposit.owner_id) {
-        if (confirm(`Finaliser l'adoption pour ${deposit.name} ?`)) {
-            router.post(route('admin.deposits.finalize', deposit.id), {}, { preserveScroll: true });
-        }
-        return;
-    }
-
-    finalizingDeposit.value = deposit;
-    ownerMode.value = 'existing';
-    finalizeForm.reset();
-    finalizeForm.clearErrors();
-    finalizeDialogVisible.value = true;
-}
-
-function submitFinalize(): void {
-    if (!finalizingDeposit.value) return;
-
-    finalizeForm
-        .transform((data) => (ownerMode.value === 'existing' ? { owner_id: data.owner_id } : { new_owner: data.new_owner }))
-        .post(route('admin.deposits.finalize', finalizingDeposit.value.id), {
-            preserveScroll: true,
-            onSuccess: () => {
-                finalizeDialogVisible.value = false;
+    router.get(
+        route('admin.deposits.index'),
+        {
+            filter: {
+                status: filters.status ?? undefined,
+                cat_id: filters.cat_id ?? undefined,
+                from: filters.from || undefined,
+                to: filters.to || undefined,
+                waiting_list: isWaitingList ? 1 : undefined,
             },
-        });
+            page: pageNumber,
+        },
+        { preserveState: true, preserveScroll: true },
+    );
 }
 </script>
 
 <template>
-    <Head title="Réservations" />
+    <Head :title="pageTitle" />
 
     <AdminLayout>
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">Réservations</h2>
-                <Link :href="route('admin.deposits.create')">
-                    <Button label="Nouvelle réservation" icon="pi pi-plus" />
+                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">{{ pageTitle }}</h2>
+                <Link :href="route('admin.deposits.create', isWaitingList ? { waiting_list: 1 } : {})">
+                    <Button :label="createLabel" icon="pi pi-plus" />
                 </Link>
             </div>
         </template>
@@ -219,7 +194,7 @@ function submitFinalize(): void {
                 <div class="overflow-hidden bg-white dark:bg-neutral-800 p-6 shadow-sm sm:rounded-lg">
                     <DataTable :value="deposits.data" data-key="id">
                         <Column field="name" header="Nom" />
-                        <Column header="Chat">
+                        <Column v-if="!isWaitingList" header="Chat">
                             <template #body="{ data }">{{ data.cat?.name ?? "Liste d'attente" }}</template>
                         </Column>
                         <Column header="Adoptant">
@@ -248,13 +223,22 @@ function submitFinalize(): void {
                             <template #body="{ data }">
                                 <div class="flex flex-wrap gap-2">
                                     <Button
+                                        v-if="!data.cat && data.status === 'pending'"
+                                        label="Assigner un chat"
+                                        icon="pi pi-tag"
+                                        severity="contrast"
+                                        size="small"
+                                        text
+                                        @click="openAssignCat(data)"
+                                    />
+                                    <Button
                                         v-if="data.payment_method !== 'stripe' && data.status === 'pending'"
                                         label="Marquer payé"
                                         icon="pi pi-check"
                                         severity="success"
                                         size="small"
                                         text
-                                        @click="markPaid(data)"
+                                        @click="markPaid(data, data.name)"
                                     />
                                     <Button
                                         v-if="data.payment_method === 'stripe' && data.status === 'pending' && data.payment_link_url"
@@ -266,13 +250,22 @@ function submitFinalize(): void {
                                         @click="copyPaymentLink(data)"
                                     />
                                     <Button
+                                        v-if="data.payment_method === 'stripe' && data.status === 'pending'"
+                                        label="Vérifier sur Stripe"
+                                        icon="pi pi-refresh"
+                                        severity="info"
+                                        size="small"
+                                        text
+                                        @click="confirmPassword(() => verifyStripe(data))"
+                                    />
+                                    <Button
                                         v-if="data.status === 'paid' && !data.finalized_at"
                                         label="Finaliser"
                                         icon="pi pi-heart-fill"
                                         severity="info"
                                         size="small"
                                         text
-                                        @click="finalize(data)"
+                                        @click="confirmPassword(() => finalize(data, data.name))"
                                     />
                                     <Button
                                         v-if="isSuperAdmin && data.status === 'paid'"
@@ -281,7 +274,7 @@ function submitFinalize(): void {
                                         severity="danger"
                                         size="small"
                                         text
-                                        @click="refund(data)"
+                                        @click="confirmPassword(() => refund(data, data.name))"
                                     />
                                 </div>
                             </template>
@@ -303,61 +296,39 @@ function submitFinalize(): void {
             </div>
         </div>
 
-        <Dialog v-model:visible="finalizeDialogVisible" header="Finaliser l'adoption" modal class="w-full max-w-lg">
+        <FinalizeOwnerDialog
+            v-model:visible="finalizeDialogVisible"
+            v-model:owner-mode="ownerMode"
+            :owners="owners"
+            :form="finalizeForm"
+            @submit="submitFinalize()"
+        />
+
+        <Dialog v-model:visible="assignCatDialogVisible" header="Assigner un chat" modal class="w-full max-w-md">
             <p class="mb-4 text-sm text-neutral-500">
-                Cette réservation n'a pas encore d'adoptant lié — choisissez-en un existant ou créez-le.
+                Cette entrée passera en réservation pour le chat choisi, qui sera mis en attente.
             </p>
 
-            <div class="mb-4 flex gap-6">
-                <label class="flex items-center gap-2 text-sm">
-                    <RadioButton v-model="ownerMode" value="existing" />
-                    Adoptant existant
-                </label>
-                <label class="flex items-center gap-2 text-sm">
-                    <RadioButton v-model="ownerMode" value="new" />
-                    Nouvel adoptant
-                </label>
-            </div>
-
-            <div v-if="ownerMode === 'existing'">
-                <Select
-                    v-model="finalizeForm.owner_id"
-                    :options="owners"
-                    :option-label="(owner: OwnerOption) => `${owner.first_name} ${owner.last_name} (${owner.email})`"
-                    option-value="id"
-                    placeholder="Choisir un adoptant"
-                    class="w-full"
-                />
-                <p v-if="finalizeForm.errors.owner_id" class="mt-1 text-sm text-red-600">{{ finalizeForm.errors.owner_id }}</p>
-            </div>
-
-            <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                    <label class="mb-1 block text-xs font-medium text-neutral-500">Prénom</label>
-                    <InputText v-model="finalizeForm.new_owner.first_name" class="w-full" />
-                </div>
-                <div>
-                    <label class="mb-1 block text-xs font-medium text-neutral-500">Nom</label>
-                    <InputText v-model="finalizeForm.new_owner.last_name" class="w-full" />
-                </div>
-                <div>
-                    <label class="mb-1 block text-xs font-medium text-neutral-500">E-mail</label>
-                    <InputText v-model="finalizeForm.new_owner.email" type="email" class="w-full" />
-                </div>
-                <div>
-                    <label class="mb-1 block text-xs font-medium text-neutral-500">Téléphone</label>
-                    <InputText v-model="finalizeForm.new_owner.phone" class="w-full" />
-                </div>
-                <div class="sm:col-span-2">
-                    <label class="mb-1 block text-xs font-medium text-neutral-500">Ville</label>
-                    <InputText v-model="finalizeForm.new_owner.city" class="w-full" />
-                </div>
-            </div>
+            <Select
+                v-model="assignCatForm.cat_id"
+                :options="reservableCats"
+                option-label="name"
+                option-value="id"
+                placeholder="Choisir un chat"
+                class="w-full"
+            />
+            <p v-if="assignCatForm.errors.cat_id" class="mt-1 text-sm text-red-600">{{ assignCatForm.errors.cat_id }}</p>
 
             <template #footer>
-                <Button label="Annuler" severity="secondary" text @click="finalizeDialogVisible = false" />
-                <Button label="Finaliser" :disabled="finalizeForm.processing" @click="submitFinalize" />
+                <Button label="Annuler" severity="secondary" text @click="assignCatDialogVisible = false" />
+                <Button label="Assigner" :disabled="assignCatForm.processing || !assignCatForm.cat_id" @click="submitAssignCat()" />
             </template>
         </Dialog>
+
+        <ConfirmPasswordModal
+            v-model:visible="confirmingPassword"
+            :form="confirmPasswordForm"
+            @submit="submitConfirmPassword()"
+        />
     </AdminLayout>
 </template>

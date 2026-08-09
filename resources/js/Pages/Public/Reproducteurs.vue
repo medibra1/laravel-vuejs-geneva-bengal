@@ -18,19 +18,19 @@ function description(cat: Cat): string {
 </script>
 
 <template>
-    <Head title="Nos chats Bengal reproducteurs">
+    <Head :title="$t('breeders.meta_title')">
         <meta
             head-key="description"
             name="description"
-            content="Découvrez nos chats Bengal reproducteurs, sélectionnés pour leur santé, leur tempérament et la beauté de leur robe."
+            :content="$t('breeders.meta_description')"
         />
     </Head>
 
     <PublicLayout>
-        <PageBanner script="Nos reproducteurs" subtitle="La base de nos portées" />
+        <PageBanner :script="$t('breeders.banner_script')" :subtitle="$t('breeders.banner_subtitle')" />
 
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
-            <SectionHeading script="Nos chats Bengal reproducteurs" title="Sélectionnés pour leur santé et leur tempérament" center />
+            <SectionHeading :script="$t('breeders.heading_script')" :title="$t('breeders.heading_title')" center />
 
             <div v-if="cats.length" class="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
                 <Link
@@ -46,28 +46,28 @@ function description(cat: Cat): string {
                             :alt="cat.name"
                             class="h-full w-full object-cover transition group-hover:scale-105"
                         />
-                        <div v-else class="flex h-full items-center justify-center text-gray-400">Pas de photo</div>
+                        <div v-else class="flex h-full items-center justify-center text-gray-400">{{ $t('common.no_photo') }}</div>
                     </div>
                     <div class="p-5">
                         <h3 class="font-heading text-brand-gray text-base font-bold uppercase tracking-wide">
                             {{ cat.name }}
                         </h3>
                         <p class="text-brand-tan mt-1 text-sm">
-                            Bengal {{ cat.color?.name }} {{ cat.sex === 'male' ? 'mâle' : 'femelle' }}
+                            Bengal {{ cat.color?.name }} {{ cat.sex === 'male' ? $t('common.male_lower') : $t('common.female_lower') }}
                         </p>
                         <p v-if="description(cat)" class="mt-3 line-clamp-3 text-sm text-neutral-600">
                             {{ description(cat) }}
                         </p>
                         <span class="text-brand-green mt-3 inline-block text-sm font-semibold uppercase tracking-wide">
-                            En savoir plus →
+                            {{ $t('common.learn_more') }} →
                         </span>
                     </div>
                 </Link>
             </div>
 
             <div v-else class="mt-12 py-16 text-center">
-                <h2 class="text-xl font-semibold text-neutral-900">Aucun reproducteur pour le moment</h2>
-                <p class="mt-2 text-neutral-600">Revenez bientôt pour découvrir nos chats reproducteurs.</p>
+                <h2 class="text-xl font-semibold text-neutral-900">{{ $t('breeders.empty_heading') }}</h2>
+                <p class="mt-2 text-neutral-600">{{ $t('breeders.empty_body') }}</p>
             </div>
         </section>
     </PublicLayout>

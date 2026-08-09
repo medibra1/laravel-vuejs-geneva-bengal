@@ -48,6 +48,25 @@ class CatResource extends JsonResource
                 'id' => $media->id,
                 'url' => $media->getUrl(),
             ])->all(),
+            // Only present on Admin\Cats\AdoptionCatController::edit() —
+            // powers CatAdoptionPanel.vue's reservation status view.
+            'deposits' => $this->whenLoaded('deposits', fn () => $cat->deposits->map(fn ($deposit) => [
+                'id' => $deposit->id,
+                'status' => $deposit->status,
+                'amount' => $deposit->amount,
+                'currency' => $deposit->currency,
+                'payment_method' => $deposit->payment_method,
+                'payment_link_url' => $deposit->payment_link_url,
+                'paid_at' => $deposit->paid_at?->toIso8601String(),
+                'finalized_at' => $deposit->finalized_at?->toIso8601String(),
+                'owner' => $deposit->owner ? [
+                    'id' => $deposit->owner->id,
+                    'first_name' => $deposit->owner->first_name,
+                    'last_name' => $deposit->owner->last_name,
+                    'email' => $deposit->owner->email,
+                    'phone' => $deposit->owner->phone,
+                ] : null,
+            ])),
         ];
     }
 }

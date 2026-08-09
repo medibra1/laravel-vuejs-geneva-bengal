@@ -4,13 +4,13 @@ withDefaults(
         facebook?: string | null;
         instagram?: string | null;
         youtube?: string | null;
-        pinterest?: string | null;
+        tiktok?: string | null;
     }>(),
     {
         facebook: null,
         instagram: null,
         youtube: null,
-        pinterest: null,
+        tiktok: null,
     },
 );
 </script>
@@ -18,14 +18,14 @@ withDefaults(
 <template>
     <ul class="flex items-center gap-4">
         <li v-if="facebook">
-            <a :href="facebook" target="_blank" rel="noopener" title="Suivez-nous sur Facebook" aria-label="Facebook">
+            <a :href="facebook" target="_blank" rel="noopener" :title="$t('social.facebook_title')" aria-label="Facebook">
                 <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor">
                     <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
                 </svg>
             </a>
         </li>
         <li v-if="instagram">
-            <a :href="instagram" target="_blank" rel="noopener" title="Suivez-nous sur Instagram" aria-label="Instagram">
+            <a :href="instagram" target="_blank" rel="noopener" :title="$t('social.instagram_title')" aria-label="Instagram">
                 <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="3" width="18" height="18" rx="5" ry="5" />
                     <circle cx="12" cy="12" r="4" />
@@ -34,12 +34,21 @@ withDefaults(
             </a>
         </li>
         <li v-if="youtube">
-            <a :href="youtube" target="_blank" rel="noopener" title="Suivez-nous sur YouTube" aria-label="YouTube">
+            <a :href="youtube" target="_blank" rel="noopener" :title="$t('social.youtube_title')" aria-label="YouTube">
                 <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path
                         d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"
                     />
                     <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor" stroke="none" />
+                </svg>
+            </a>
+        </li>
+        <li v-if="tiktok">
+            <a :href="tiktok" target="_blank" rel="noopener" :title="$t('social.tiktok_title')" aria-label="TikTok">
+                <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor">
+                    <path
+                        d="M16.6 5.82c-.94-.83-1.5-2.02-1.5-3.32h-3.14v13.3a3.09 3.09 0 0 1-5.53 1.9 3.08 3.08 0 0 1 3.4-4.9v-3.2a6.22 6.22 0 0 0-5.24 10.35 6.22 6.22 0 0 0 10.62-4.4V9.4a8.3 8.3 0 0 0 4.85 1.55V7.8a4.85 4.85 0 0 1-3.46-1.98z"
+                    />
                 </svg>
             </a>
         </li>

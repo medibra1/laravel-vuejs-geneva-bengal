@@ -1,4 +1,4 @@
-import type { Color, Honeypot, MenuPage } from "./models";
+import type { AppNotifications, Color, Honeypot, MenuPage } from "./models";
 
 export interface User {
     id: number;
@@ -15,13 +15,16 @@ export type PageProps<
         roles: string[];
     };
     locale: string;
+    // null on any page with no authenticated user — see
+    // HandleInertiaRequests::notifications().
+    notifications: AppNotifications | null;
     menuPages: MenuPage[];
     colors: Color[];
     socialLinks: {
         facebook: string | null;
         instagram: string | null;
         youtube: string | null;
-        pinterest: string | null;
+        tiktok: string | null;
     };
     address: string | null;
     honeypot: Honeypot;

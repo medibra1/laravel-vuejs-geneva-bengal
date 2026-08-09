@@ -40,7 +40,7 @@ function submit(): void {
         <input
             v-model="form.email"
             type="email"
-            placeholder="E-mail"
+            :placeholder="$t('newsletter.email_placeholder')"
             required
             class="flex-1 rounded-md border-gray-300"
         />
@@ -49,10 +49,10 @@ function submit(): void {
             :disabled="form.processing"
             class="rounded-md bg-emerald-700 px-6 py-2 font-medium text-white hover:bg-emerald-800"
         >
-            S'inscrire
+            {{ $t('newsletter.submit') }}
         </button>
     </form>
     <p v-if="form.recentlySuccessful" class="mt-2 text-sm text-emerald-700">
-        Merci de votre inscription !
+        {{ $t('newsletter.success') }}
     </p>
 </template>

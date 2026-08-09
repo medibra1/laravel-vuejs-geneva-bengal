@@ -112,4 +112,12 @@ class Cat extends Model implements HasMedia
     {
         return $this->hasMany(Litter::class, 'dam_cat_id');
     }
+
+    /**
+     * @return HasMany<Deposit, $this>
+     */
+    public function deposits(): HasMany
+    {
+        return $this->hasMany(Deposit::class);
+    }
 }

@@ -112,6 +112,9 @@ return [
     |
     */
 
-    'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+    // Shorter than Laravel's 3h default — this app's admin panel gates
+    // real financial/account actions behind password.confirm (refunds,
+    // Stripe verification, admin account management), see CLAUDE.md.
+    'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 1800),
 
 ];

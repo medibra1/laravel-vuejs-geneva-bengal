@@ -52,7 +52,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
             <button
                 type="button"
                 class="absolute top-6 right-6 flex h-10 w-10 items-center justify-center text-white/80 hover:text-white"
-                aria-label="Fermer"
+                :aria-label="$t('lightbox.close')"
                 @click="close"
             >
                 <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -65,7 +65,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                 v-if="photos.length > 1"
                 type="button"
                 class="absolute left-2 flex h-12 w-12 items-center justify-center text-white/80 hover:text-white sm:left-6"
-                aria-label="Photo précédente"
+                :aria-label="$t('common.prev_photo')"
                 @click="prev"
             >
                 <svg viewBox="0 0 24 24" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -76,7 +76,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                 v-if="photos.length > 1"
                 type="button"
                 class="absolute right-2 flex h-12 w-12 items-center justify-center text-white/80 hover:text-white sm:right-6"
-                aria-label="Photo suivante"
+                :aria-label="$t('common.next_photo')"
                 @click="next"
             >
                 <svg viewBox="0 0 24 24" class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">

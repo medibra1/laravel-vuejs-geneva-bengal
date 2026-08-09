@@ -17,7 +17,7 @@ class SiteSettingController extends Controller
      * @var list<string>
      */
     private const KEYS = [
-        'social_facebook', 'social_instagram', 'social_youtube', 'social_pinterest',
+        'social_facebook', 'social_instagram', 'social_youtube', 'social_tiktok',
         'address', 'deposit_amount', 'price_range_min', 'price_range_max',
         'default_seo_title', 'default_seo_description',
     ];

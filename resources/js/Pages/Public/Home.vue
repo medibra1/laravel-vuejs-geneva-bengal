@@ -27,9 +27,8 @@ defineProps<{
 const socialTiles = [social1, social2, social3, social4, social5, social6];
 const socialLinks = usePage<PageProps>().props.socialLinks;
 
-// No dedicated pages/routes yet for these (international shipping info,
-// the real social feeds) — placeholders, same convention as
-// PublicLayout.vue's own `placeholderHref`.
+// No dedicated page/route yet for international shipping info — placeholder.
+// The social feed tiles/CTA below use the real socialLinks.facebook URL.
 const placeholderHref = '#';
 
 const slides = [
@@ -50,43 +49,38 @@ const slides = [
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
             <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
                 <div>
-                    <SectionHeading script="Faits avec amour" title="Nous avons des chatons !" />
+                    <SectionHeading :script="$t('home.intro_script')" :title="$t('home.intro_title')" />
                     <p class="mt-4 text-neutral-600">
-                        Découvrez les irrésistibles chatons de notre élevage Geneva Bengal et voyez pourquoi ils sont
-                        si exceptionnels. Vous verrez ces jolis petits félins dans toutes sortes de couleurs rares et
-                        spectaculaires. Qui sait ? Peut-être que vous trouverez ici le chaton Bengal de vos rêves !
+                        {{ $t('home.intro_body') }}
                     </p>
                     <Link :href="route('cats.index')" class="btn-outline-brand mt-6">
-                        Chatons Bengal disponibles
+                        {{ $t('home.intro_cta') }}
                         <span aria-hidden="true">→</span>
                     </Link>
 
                     <div class="mt-10 space-y-6">
                         <div>
-                            <h4 class="font-heading text-brand-green text-sm font-light">Qualité exceptionnelle</h4>
+                            <h4 class="font-heading text-brand-green text-sm font-light">{{ $t('home.quality_title') }}</h4>
                             <p class="mt-1 text-neutral-600">
-                                Des chats et chatons Bengal de toutes les couleurs et d'une beauté incomparable,
-                                reconnus à travers le monde.
+                                {{ $t('home.quality_body') }}
                             </p>
                         </div>
                         <div>
-                            <h4 class="font-heading text-brand-green text-sm font-light">Santé</h4>
+                            <h4 class="font-heading text-brand-green text-sm font-light">{{ $t('home.health_title') }}</h4>
                             <p class="mt-1 text-neutral-600">
-                                Des chats Bengal reproducteurs qui passent par un processus complet de tests pour
-                                assurer leur bonne santé et celle de leurs chatons.
+                                {{ $t('home.health_body') }}
                             </p>
                         </div>
                         <div>
-                            <h4 class="font-heading text-brand-green text-sm font-light">Tempérament</h4>
+                            <h4 class="font-heading text-brand-green text-sm font-light">{{ $t('home.temperament_title') }}</h4>
                             <p class="mt-1 text-neutral-600">
-                                Des chatons Bengal faits avec amour qui vous séduiront tant par leur charmante
-                                personnalité que par leur comportement attachant.
+                                {{ $t('home.temperament_body') }}
                             </p>
                         </div>
                     </div>
                 </div>
                 <div>
-                    <img :src="kittensMontage" alt="Chatons Bengal de l'élevage Geneva Bengal"
+                    <img :src="kittensMontage" :alt="$t('home.montage_alt')"
                         class="w-full rounded-lg" />
                 </div>
             </div>
@@ -94,16 +88,13 @@ const slides = [
 
         <section class="bg-brand-ink py-16 text-white sm:py-24">
             <div class="mx-auto max-w-3xl px-6 text-center">
-                <SectionHeading script="Témoignages" title="Un petit mot provenant de nos familles" inverted center />
+                <SectionHeading :script="$t('home.testimonials_script')" :title="$t('home.testimonials_title')" inverted center />
                 <p class="mt-4 text-neutral-300">
-                    Nous sommes extrêmement ravis d'avoir fait autant de familles heureuses avec leurs nouveaux
-                    chatons. Savoir que nous réussissons à créer du bonheur chez tant de personnes nous touche droit
-                    au cœur. Voici les témoignages provenant des familles et éleveurs qui ont adopté un ou même deux
-                    chats chez Geneva Bengal.
+                    {{ $t('home.testimonials_body') }}
                 </p>
                 <Link :href="`${route('pages.a-propos')}#temoignages`"
                     class="btn-outline-brand mt-6 !border-white !text-white hover:!border-brand-green">
-                    Voir tous les témoignages
+                    {{ $t('home.testimonials_cta') }}
                     <span aria-hidden="true">→</span>
                 </Link>
             </div>
@@ -112,10 +103,9 @@ const slides = [
         <section class="bg-brand-canvas border-b border-gray-200 py-16 sm:py-24">
             <div class="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-6 lg:grid-cols-2">
                 <div>
-                    <SectionHeading script="Soyez les premiers au courant" title="Abonnez-vous à notre infolettre !" />
+                    <SectionHeading :script="$t('newsletter.section_script')" :title="$t('newsletter.section_title')" />
                     <p class="mt-4 text-neutral-600">
-                        Notre infolettre est la meilleure façon d'être informé dès qu'il y a de nouveaux chatons
-                        disponibles sur notre site Web.
+                        {{ $t('newsletter.home_body') }}
                     </p>
                     <NewsletterForm class="mt-6 max-w-md" />
                 </div>
@@ -128,17 +118,13 @@ const slides = [
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
             <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
                 <div>
-                    <SectionHeading script="Nos chatons partout dans le monde"
-                        title="Nos chatons Bengal ont conquis le monde !" />
+                    <SectionHeading :script="$t('home.shipping_script')"
+                        :title="$t('home.shipping_title')" />
                     <p class="mt-4 text-neutral-600">
-                        Nos magnifiques petites bêtes vivent maintenant chez des familles ou des éleveurs de chats
-                        Bengal situés un peu partout sur la planète. Nous nous occupons de toutes les démarches
-                        concernant la livraison internationale ; vous n'aurez qu'à aller chercher votre nouveau
-                        compagnon à l'aéroport le plus près de chez vous. Nous nous assurons que votre chaton Bengal
-                        voyage confortablement de notre élevage jusqu'à vous et qu'il arrive en toute sécurité.
+                        {{ $t('home.shipping_body') }}
                     </p>
                     <a :href="placeholderHref" class="btn-outline-brand mt-6">
-                        À propos de l'expédition internationale
+                        {{ $t('home.shipping_cta') }}
                         <span aria-hidden="true">→</span>
                     </a>
                 </div>
@@ -152,8 +138,8 @@ const slides = [
             <div
                 class="mx-auto flex max-w-7xl flex-col items-center justify-center gap-4 px-6 text-center sm:flex-row sm:justify-between sm:text-left">
                 <div>
-                    <h2 class="font-script text-3xl">Nous sommes social</h2>
-                    <h3 class="font-heading text-lg font-semibold tracking-wide uppercase">Suivez-nous !</h3>
+                    <h2 class="font-script text-3xl">{{ $t('home.social_script') }}</h2>
+                    <h3 class="font-heading text-lg font-semibold tracking-wide uppercase">{{ $t('home.social_title') }}</h3>
                 </div>
                 <SocialLinks v-bind="socialLinks" class="text-2xl [&_svg]:h-7 [&_svg]:w-7" />
             </div>
@@ -162,19 +148,19 @@ const slides = [
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
             <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
                 <div class="grid grid-cols-3 gap-2">
-                    <a v-for="(tile, index) in socialTiles" :key="index" :href="placeholderHref"
-                        class="aspect-square overflow-hidden rounded">
+                    <a v-for="(tile, index) in socialTiles" :key="index" :href="socialLinks.facebook ?? placeholderHref"
+                        target="_blank" rel="noopener" class="aspect-square overflow-hidden rounded">
                         <img :src="tile" alt="" class="h-full w-full object-cover transition hover:scale-105" />
                     </a>
                 </div>
                 <div>
-                    <SectionHeading script="Suivez nos aventures" title="Notre page Facebook" />
+                    <SectionHeading :script="$t('home.facebook_script')" :title="$t('home.facebook_title')" />
                     <p class="mt-4 text-neutral-600">
-                        Suivez les aventures de nos spectaculaires chats et chatons Bengal. Soyez prêts pour des
-                        moments éblouissants et vraiment mignons.
+                        {{ $t('home.facebook_body') }}
                     </p>
-                    <a :href="placeholderHref" class="btn-outline-brand mt-6">
-                        Suivez-nous sur Facebook
+                    <a v-if="socialLinks.facebook" :href="socialLinks.facebook" target="_blank" rel="noopener"
+                        class="btn-outline-brand mt-6">
+                        {{ $t('home.facebook_cta') }}
                         <span aria-hidden="true">→</span>
                     </a>
                 </div>

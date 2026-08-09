@@ -7,6 +7,7 @@ use App\Enums\CatType;
 use App\Enums\DepositStatus;
 use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AssignCatToDepositRequest;
 use App\Http\Requests\Admin\FinalizeDepositRequest;
 use App\Http\Requests\Admin\StoreDepositRequest;
 use App\Models\Cat;
@@ -41,6 +42,13 @@ class DepositController extends Controller
                     'to',
                     fn ($query, $value) => $query->where('created_at', '<=', Carbon::parse($value)->endOfDay()),
                 ),
+                // Waiting-list entries are deposits with no cat attached
+                // (see CLAUDE.md: cat_id nullable = generic reservation) —
+                // surfaced as its own nav destination, see AdminLayout.vue.
+                AllowedFilter::callback(
+                    'waiting_list',
+                    fn ($query, $value) => $value ? $query->whereNull('cat_id') : $query,
+                ),
             )
             ->with(['cat:id,name', 'owner:id,first_name,last_name'])
             ->latest()
@@ -53,6 +61,11 @@ class DepositController extends Controller
             // For the "finalize" dialog's existing-owner picker — only
             // needed when a deposit has no owner_id yet.
             'owners' => Owner::query()->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email', 'phone']),
+            // For the "assign a cat" dialog on a waiting-list entry — unlike
+            // `cats` above (a plain filter, any cat is a valid choice
+            // there), this excludes breeders and already-reserved/adopted
+            // cats, same as the create() form's own cat picker.
+            'reservableCats' => $this->reservableCatOptions(),
         ]);
     }
 
@@ -130,6 +143,32 @@ class DepositController extends Controller
     }
 
     /**
+     * On-demand counterpart to the webhook and ReconcilePendingDeposits'
+     * daily poll — lets an admin check right now instead of waiting for
+     * either, e.g. when a client says they paid but the webhook seems
+     * stuck. Only meaningful for a still-pending Stripe deposit: any other
+     * combination is already resolved one way or another.
+     */
+    public function verifyStripe(Deposit $deposit, PaymentGateway $gateway, DepositPaymentProcessor $processor): RedirectResponse
+    {
+        if ($deposit->payment_method !== PaymentMethod::Stripe) {
+            return back()->with('error', __('Only a Stripe deposit can be verified against Stripe.'));
+        }
+
+        if ($deposit->status !== DepositStatus::Pending) {
+            return back()->with('error', __('Only a pending deposit can be verified.'));
+        }
+
+        if (! $gateway->isCheckoutPaid($deposit)) {
+            return back()->with('error', __('Stripe reports this payment is not confirmed yet.'));
+        }
+
+        $processor->markPaid($deposit, $deposit->provider_reference);
+
+        return back()->with('success', __('Payment confirmed on Stripe — deposit marked as paid.'));
+    }
+
+    /**
      * "Finalize the adoption": requires a paid deposit, links/creates the
      * Owner (skipped if the deposit already has one — e.g. set back at
      * creation), and moves the reserved cat, if any, to `adopte`.
@@ -153,6 +192,33 @@ class DepositController extends Controller
         $processor->finalize($deposit, $owner);
 
         return back()->with('success', __('Adoption finalized.'));
+    }
+
+    /**
+     * Turns a waiting-list entry (cat_id null) into a reservation for a
+     * specific kitten once one becomes available. Restricted to a still-
+     * pending deposit: once it's paid, the deposit is tied to whatever the
+     * family already paid a deposit for — reassigning the cat under it
+     * afterwards would misrepresent what they actually paid for.
+     */
+    public function assignCat(AssignCatToDepositRequest $request, Deposit $deposit, DepositPaymentProcessor $processor): RedirectResponse
+    {
+        if ($deposit->cat_id !== null) {
+            return back()->with('error', __('This reservation is already tied to a cat.'));
+        }
+
+        if ($deposit->status !== DepositStatus::Pending) {
+            return back()->with('error', __('A cat can only be assigned to a still-pending waiting-list entry.'));
+        }
+
+        $deposit->update(['cat_id' => $request->validated('cat_id')]);
+        // false: reserve() only needs to run here for its cat-status side
+        // effect — the deposit itself isn't new, so it shouldn't re-fire
+        // the "new reservation" staff notification. See
+        // DepositPaymentProcessor::reserve().
+        $processor->reserve($deposit, notifyStaff: false);
+
+        return back()->with('success', __('Cat assigned to the reservation.'));
     }
 
     /**

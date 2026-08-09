@@ -4,7 +4,6 @@ namespace App\Http\Requests\Admin\Cats;
 
 use App\Enums\CatSex;
 use App\Enums\CatStatus;
-use App\Enums\CatType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,8 +24,11 @@ class StoreAdoptionCatRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * type is restricted to Kitten/Cat — this endpoint is the adoption
-     * section, Breeder cats go through StoreBreederCatRequest instead.
+     * No `type` field — AdoptionCatController::store() always forces
+     * CatType::Kitten server-side, same as BreederCatController does for
+     * CatType::Breeder. A cat created here is always a "chaton"; an
+     * existing "chat"-type record (legacy data) stays manageable through
+     * this section but its type can no longer be set from this form.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -34,7 +36,6 @@ class StoreAdoptionCatRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', Rule::in([CatType::Kitten->value, CatType::Cat->value])],
             'sex' => ['required', Rule::enum(CatSex::class)],
             'color_id' => ['required', 'exists:colors,id'],
             'second_color_id' => ['nullable', 'different:color_id', 'exists:colors,id'],

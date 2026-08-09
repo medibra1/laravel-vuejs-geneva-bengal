@@ -1,1 +1,216 @@
-{}
+{
+    "common": {
+        "no_photo": "Pas de photo",
+        "male": "Mâle",
+        "female": "Femelle",
+        "male_lower": "mâle",
+        "female_lower": "femelle",
+        "yes": "Oui",
+        "no": "Non",
+        "status_available": "Disponible",
+        "status_waiting": "En attente",
+        "prev_photo": "Photo précédente",
+        "next_photo": "Photo suivante",
+        "read_more": "Lire plus",
+        "learn_more": "En savoir plus",
+        "not_available": "—"
+    },
+    "nav": {
+        "about": "À propos",
+        "gallery": "Galerie photo",
+        "contact": "Contact",
+        "contact_us": "Contactez-nous",
+        "home": "Accueil",
+        "race_info": "Information sur le bengal",
+        "breeders": "Nos chats reproducteurs",
+        "litters": "Portées prévues",
+        "adoption": "Adoption et prix",
+        "kittens_cta": "Chaton Bengal Disponible",
+        "open_menu": "Ouvrir le menu",
+        "close_menu": "Fermer le menu",
+        "filter_by_color": "Filtrer par couleur"
+    },
+    "footer": {
+        "about_heading": "À propos de nous",
+        "our_story": "Notre histoire",
+        "testimonials": "Témoignages",
+        "race_info_heading": "Information sur le chat Bengal",
+        "adoption_heading": "Guide d'adoption",
+        "rights_reserved": "Tous droits réservés."
+    },
+    "home": {
+        "intro_script": "Faits avec amour",
+        "intro_title": "Nous avons des chatons !",
+        "intro_body": "Découvrez les irrésistibles chatons de notre élevage Geneva Bengal et voyez pourquoi ils sont si exceptionnels. Vous verrez ces jolis petits félins dans toutes sortes de couleurs rares et spectaculaires. Qui sait ? Peut-être que vous trouverez ici le chaton Bengal de vos rêves !",
+        "intro_cta": "Chatons Bengal disponibles",
+        "quality_title": "Qualité exceptionnelle",
+        "quality_body": "Des chats et chatons Bengal de toutes les couleurs et d'une beauté incomparable, reconnus à travers le monde.",
+        "health_title": "Santé",
+        "health_body": "Des chats Bengal reproducteurs qui passent par un processus complet de tests pour assurer leur bonne santé et celle de leurs chatons.",
+        "temperament_title": "Tempérament",
+        "temperament_body": "Des chatons Bengal faits avec amour qui vous séduiront tant par leur charmante personnalité que par leur comportement attachant.",
+        "montage_alt": "Chatons Bengal de l'élevage Geneva Bengal",
+        "testimonials_script": "Témoignages",
+        "testimonials_title": "Un petit mot provenant de nos familles",
+        "testimonials_body": "Nous sommes extrêmement ravis d'avoir fait autant de familles heureuses avec leurs nouveaux chatons. Savoir que nous réussissons à créer du bonheur chez tant de personnes nous touche droit au cœur. Voici les témoignages provenant des familles et éleveurs qui ont adopté un ou même deux chats chez Geneva Bengal.",
+        "testimonials_cta": "Voir tous les témoignages",
+        "shipping_script": "Nos chatons partout dans le monde",
+        "shipping_title": "Nos chatons Bengal ont conquis le monde !",
+        "shipping_body": "Nos magnifiques petites bêtes vivent maintenant chez des familles ou des éleveurs de chats Bengal situés un peu partout sur la planète. Nous nous occupons de toutes les démarches concernant la livraison internationale ; vous n'aurez qu'à aller chercher votre nouveau compagnon à l'aéroport le plus près de chez vous. Nous nous assurons que votre chaton Bengal voyage confortablement de notre élevage jusqu'à vous et qu'il arrive en toute sécurité.",
+        "shipping_cta": "À propos de l'expédition internationale",
+        "social_script": "Nous sommes social",
+        "social_title": "Suivez-nous !",
+        "facebook_script": "Suivez nos aventures",
+        "facebook_title": "Notre page Facebook",
+        "facebook_body": "Suivez les aventures de nos spectaculaires chats et chatons Bengal. Soyez prêts pour des moments éblouissants et vraiment mignons.",
+        "facebook_cta": "Suivez-nous sur Facebook"
+    },
+    "newsletter": {
+        "section_script": "Soyez les premiers au courant",
+        "section_title": "Abonnez-vous à notre infolettre !",
+        "home_body": "Notre infolettre est la meilleure façon d'être informé dès qu'il y a de nouveaux chatons disponibles sur notre site Web.",
+        "email_placeholder": "E-mail",
+        "submit": "S'inscrire",
+        "success": "Merci de votre inscription !"
+    },
+    "catsList": {
+        "meta_title": "Chatons Bengal disponibles",
+        "meta_description": "Découvrez nos chatons Bengal actuellement disponibles à l'adoption à Genève — mise à jour dès qu'un chaton est réservé.",
+        "banner_script": "Chatons Bengal",
+        "banner_subtitle": "Faits avec amour",
+        "heading_script": "Chatons Bengal disponibles",
+        "heading_title": "Mis à jour à chaque fois qu'un chaton est nouvellement réservé",
+        "filtered_by_color": "Filtré par couleur :",
+        "reset": "Réinitialiser",
+        "no_results_heading": "Aucun résultat",
+        "no_results_color": "Pas de chaton {color} disponible pour le moment.",
+        "no_results_generic": "Pas de chatons disponibles pour le moment. La liste sera mise à jour dès que possible."
+    },
+    "catDetail": {
+        "meta_title_kitten": "{name} — Chaton Bengal disponible",
+        "meta_title_breeder": "{name} — Chat Bengal reproducteur",
+        "banner_script_kitten": "Chaton Bengal",
+        "banner_script_breeder": "Chat Bengal",
+        "heading_kitten": "À propos de ce chaton bengal à vendre",
+        "heading_breeder": "À propos de ce chat Bengal reproducteur",
+        "enlarge_photo": "Agrandir la photo",
+        "label_kitten_name": "Nom du chaton",
+        "label_name": "Nom",
+        "species_label": "Chat Bengal {color}",
+        "label_sex": "Sexe :",
+        "label_birth_date": "Date de naissance :",
+        "label_eye_color": "Couleur des yeux :",
+        "label_available_from": "Disponible à partir de :",
+        "label_diet": "Régime :",
+        "label_litter_trained": "Formé à la litière :",
+        "adopt_me": "Adopte moi",
+        "contact_about": "Nous contacter à son sujet",
+        "cta_script": "Chaton bengal à vendre",
+        "cta_title": "Voulez-vous adopter un chaton bengal ?",
+        "price_label": "Prix :",
+        "price_on_request": "Nous contacter",
+        "cta_button": "Faire une demande pour {name}"
+    },
+    "gallery": {
+        "meta_title": "Galerie photo",
+        "meta_description": "Découvrez nos plus belles photos de chats et chatons Bengal en galerie.",
+        "banner_script": "Galerie photo",
+        "banner_subtitle": "Nos plus belles photos",
+        "heading_script": "Nos plus belles photos",
+        "heading_title": "Galerie mise à jour régulièrement",
+        "empty_heading": "Aucune photo pour le moment",
+        "empty_body": "La galerie sera mise à jour prochainement."
+    },
+    "breeders": {
+        "meta_title": "Nos chats Bengal reproducteurs",
+        "meta_description": "Découvrez nos chats Bengal reproducteurs, sélectionnés pour leur santé, leur tempérament et la beauté de leur robe.",
+        "banner_script": "Nos reproducteurs",
+        "banner_subtitle": "La base de nos portées",
+        "heading_script": "Nos chats Bengal reproducteurs",
+        "heading_title": "Sélectionnés pour leur santé et leur tempérament",
+        "empty_heading": "Aucun reproducteur pour le moment",
+        "empty_body": "Revenez bientôt pour découvrir nos chats reproducteurs."
+    },
+    "litters": {
+        "meta_title": "Portées prévues",
+        "meta_description": "Les prochaines portées de chatons Bengal prévues chez Geneva Bengal, avec leurs parents.",
+        "banner_script": "Portées prévues",
+        "banner_subtitle": "Les prochaines naissances",
+        "heading_script": "Portées prévues",
+        "heading_title": "Les prochaines naissances chez Geneva Bengal",
+        "date_tbc": "Date à confirmer",
+        "parent_tbc": "À confirmer",
+        "sire_tbc": "Père à confirmer",
+        "dam_tbc": "Mère à confirmer",
+        "empty_heading": "Aucune portée prévue pour le moment",
+        "empty_body": "Revenez bientôt pour découvrir nos prochaines naissances."
+    },
+    "depositReturn": {
+        "meta_title": "Votre acompte — Geneva Bengal",
+        "paid_heading": "Merci, votre acompte a bien été reçu !",
+        "paid_body": "Un e-mail de confirmation vient de vous être envoyé. Nous reviendrons vers vous très prochainement.",
+        "cancelled_heading": "Paiement non finalisé",
+        "cancelled_body": "Vous avez annulé le paiement, aucun montant n'a été débité. Vous pouvez réessayer à tout moment depuis la fiche du chaton.",
+        "pending_heading": "Nous traitons votre paiement",
+        "pending_body": "Cela ne devrait prendre qu'un instant. Vous recevrez un e-mail de confirmation dès que le paiement sera validé — inutile de rester sur cette page.",
+        "back_link": "Retour aux chatons disponibles"
+    },
+    "newsletterUnsubscribed": {
+        "meta_title": "Désabonnement — Geneva Bengal",
+        "found_heading": "Vous avez été désabonné",
+        "found_body": "Vous ne recevrez plus nos e-mails. Vous pouvez vous réinscrire à tout moment depuis le bas de n'importe quelle page du site.",
+        "invalid_heading": "Lien invalide",
+        "invalid_body": "Ce lien de désabonnement n'est plus valide, peut-être parce que vous êtes déjà désabonné.",
+        "back_link": "Retour à l'accueil"
+    },
+    "faq": {
+        "empty": "Aucune question pour le moment."
+    },
+    "testimonials": {
+        "section_script": "Témoignages",
+        "empty": "Aucun témoignage pour le moment."
+    },
+    "contact": {
+        "heading": "Nous contacter",
+        "about_cat": "À propos de :",
+        "label_name": "Nom",
+        "label_email": "E-mail",
+        "label_reason": "Motif",
+        "label_city": "Ville (optionnel)",
+        "label_message": "Message",
+        "reason_adopt": "Adopter un chaton",
+        "reason_waiting_list": "S'inscrire en liste d'attente",
+        "reason_question": "Question",
+        "submit": "Envoyer",
+        "success": "Votre message a bien été envoyé.",
+        "prefilled_message": "Je suis intéressé(e) par {name}."
+    },
+    "deposit": {
+        "reserve_button": "Réserver avec un acompte de {amount}",
+        "stripe_notice": "Vous allez être redirigé vers notre partenaire de paiement Stripe (carte ou TWINT).",
+        "label_full_name": "Nom complet",
+        "label_email": "E-mail",
+        "label_phone": "Téléphone (facultatif)",
+        "continue_button": "Continuer vers le paiement",
+        "cancel": "Annuler"
+    },
+    "hero": {
+        "tagline_script": "Éleveur de chats",
+        "tagline_title": "Bengal",
+        "tagline_subtitle": "Créateur de bonheur depuis 2020",
+        "tagline_body": "Nous élevons des chatons Bengal en parfaite santé, avec une apparence et un comportement à vous faire rêver.",
+        "go_to_photo": "Aller à la photo {n}"
+    },
+    "lightbox": {
+        "close": "Fermer"
+    },
+    "social": {
+        "facebook_title": "Suivez-nous sur Facebook",
+        "instagram_title": "Suivez-nous sur Instagram",
+        "youtube_title": "Suivez-nous sur YouTube",
+        "tiktok_title": "Suivez-nous sur TikTok"
+    },
+    "scrollTop": {
+        "aria_label": "Retour en haut de la page"
+    }
+}

@@ -37,7 +37,7 @@ function submit(): void {
             class="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-6 py-3 font-medium text-white hover:bg-emerald-800"
             @click="open = true"
         >
-            Réserver avec un acompte de {{ amountLabel }}
+            {{ $t('deposit.reserve_button', { amount: amountLabel }) }}
         </button>
 
         <form v-else class="max-w-md space-y-4 rounded-lg border border-gray-200 p-6" @submit.prevent="submit">
@@ -57,15 +57,15 @@ function submit(): void {
                 />
             </div>
 
-            <h3 class="font-semibold text-neutral-900">Réserver avec un acompte de {{ amountLabel }}</h3>
+            <h3 class="font-semibold text-neutral-900">{{ $t('deposit.reserve_button', { amount: amountLabel }) }}</h3>
             <p class="text-sm text-neutral-600">
-                Vous allez être redirigé vers notre partenaire de paiement Stripe (carte ou TWINT).
+                {{ $t('deposit.stripe_notice') }}
             </p>
 
             <p v-if="form.errors.cat_id" class="text-sm text-red-600">{{ form.errors.cat_id }}</p>
 
             <div>
-                <label for="deposit-name" class="block text-sm font-medium text-neutral-700">Nom complet</label>
+                <label for="deposit-name" class="block text-sm font-medium text-neutral-700">{{ $t('deposit.label_full_name') }}</label>
                 <input
                     id="deposit-name"
                     v-model="form.name"
@@ -77,7 +77,7 @@ function submit(): void {
             </div>
 
             <div>
-                <label for="deposit-email" class="block text-sm font-medium text-neutral-700">E-mail</label>
+                <label for="deposit-email" class="block text-sm font-medium text-neutral-700">{{ $t('deposit.label_email') }}</label>
                 <input
                     id="deposit-email"
                     v-model="form.email"
@@ -90,7 +90,7 @@ function submit(): void {
 
             <div>
                 <label for="deposit-phone" class="block text-sm font-medium text-neutral-700">
-                    Téléphone (facultatif)
+                    {{ $t('deposit.label_phone') }}
                 </label>
                 <input
                     id="deposit-phone"
@@ -107,10 +107,10 @@ function submit(): void {
                     :disabled="form.processing"
                     class="rounded-md bg-emerald-700 px-6 py-2 font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
                 >
-                    Continuer vers le paiement
+                    {{ $t('deposit.continue_button') }}
                 </button>
                 <button type="button" class="text-sm text-neutral-500 hover:text-neutral-700" @click="open = false">
-                    Annuler
+                    {{ $t('deposit.cancel') }}
                 </button>
             </div>
         </form>

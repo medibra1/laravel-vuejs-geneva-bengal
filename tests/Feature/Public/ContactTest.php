@@ -38,6 +38,24 @@ it('creates a contact request and notifies active admin staff', function () {
     Notification::assertNotSentTo($regularUser, NewContactRequestNotification::class);
 });
 
+it('stores the contact notification in the database channel, for the bell', function () {
+    refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
+
+    $activeAdmin = User::factory()->create(['is_active' => true]);
+    $activeAdmin->assignRole('admin');
+
+    $this->post('/fr/contact', [
+        'name' => 'Marie Dupont',
+        'email' => 'marie@example.com',
+        'reason' => ContactReason::Adopt->value,
+        'message' => 'Je souhaite adopter un chaton.',
+    ]);
+
+    expect($activeAdmin->notifications()->count())->toBe(1);
+    expect($activeAdmin->unreadNotifications()->count())->toBe(1);
+});
+
 it('validates required fields', function () {
     refreshApplicationWithLocale('fr');
     config(['honeypot.enabled' => false]);

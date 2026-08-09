@@ -6,7 +6,9 @@ use App\Enums\CatStatus;
 use App\Enums\DepositStatus;
 use App\Models\Deposit;
 use App\Models\Owner;
+use App\Notifications\Concerns\NotifiesStaff;
 use App\Notifications\DepositConfirmedNotification;
+use App\Notifications\NewDepositCreatedNotification;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -17,6 +19,8 @@ use Illuminate\Support\Facades\Notification;
  */
 class DepositPaymentProcessor
 {
+    use NotifiesStaff;
+
     /**
      * Holds the cat as soon as a deposit is created (status `pending`), not
      * only once payment is confirmed — otherwise a second visitor could
@@ -24,12 +28,28 @@ class DepositPaymentProcessor
      * payment is confirmed. See CatIsAvailableForDeposit for the matching
      * server-side guard against creating that second deposit in the first
      * place.
+     *
+     * $notifyStaff is false when called from
+     * Admin\DepositController::assignCat() — that call re-uses reserve()
+     * for its cat-status side effect on an *existing* deposit, not a new
+     * one, so "Nouvelle réservation" would misrepresent what happened
+     * (and duplicate the notification already sent when the deposit
+     * itself was created).
      */
-    public function reserve(Deposit $deposit): void
+    public function reserve(Deposit $deposit, bool $notifyStaff = true): void
     {
         if ($deposit->cat_id !== null) {
             $deposit->cat->setStatus(CatStatus::Pending->value);
         }
+
+        if (! $notifyStaff) {
+            return;
+        }
+
+        // created_by is only set for a deposit an admin recorded themselves
+        // (see Admin\DepositController::store()) — excluded so they don't
+        // get notified of their own action.
+        Notification::send($this->activeStaff($deposit->created_by), new NewDepositCreatedNotification($deposit));
     }
 
     /**
