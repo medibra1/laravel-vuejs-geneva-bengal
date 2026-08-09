@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreDepositRequest;
 use App\Models\Deposit;
 use App\Models\SiteSetting;
-use App\Services\Payments\DepositPaymentProcessor;
 use App\Services\Payments\PaymentGateway;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -26,8 +25,23 @@ class DepositController extends Controller
      * Stripe.js Payment Element on this same page and confirms the
      * payment client-side; no more cross-origin redirect to a
      * Stripe-hosted page, so no more Inertia::location() workaround.
+     *
+     * Deliberately does *not* call DepositPaymentProcessor::reserve() —
+     * that would hold the cat (`en_attente`) the instant a visitor merely
+     * lands on the payment page, before any money has moved. That made
+     * sense back when a pending deposit itself blocked a second one (see
+     * Deposit::blocksNewReservation()'s old behavior); now that blocking
+     * only happens once a deposit is actually `paid`, holding the cat
+     * this early no longer protects anything — it would just show the
+     * cat as unavailable to every other visitor while this one is still
+     * mid-checkout, possibly never finishing. confirmPaid() (called from
+     * DepositPaymentProcessor::markPaid()) is what actually reserves the
+     * cat, exactly once payment is confirmed. Admin\DepositController's
+     * own flows still call reserve() immediately — a staff-recorded
+     * reservation is trusted the moment it's entered, unlike a public
+     * visitor who has not yet paid anything.
      */
-    public function store(StoreDepositRequest $request, PaymentGateway $gateway, DepositPaymentProcessor $processor): Response
+    public function store(StoreDepositRequest $request, PaymentGateway $gateway): Response
     {
         $catId = $request->validated('cat_id');
 
@@ -57,8 +71,6 @@ class DepositController extends Controller
             'status' => DepositStatus::Pending,
             'provider' => 'stripe',
         ]);
-
-        $processor->reserve($deposit);
 
         $intent = $gateway->createPaymentIntent($deposit);
 

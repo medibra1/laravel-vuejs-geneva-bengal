@@ -157,7 +157,11 @@ it('covers the full public flow — deposit creation through webhook-confirmed c
     $deposit = Deposit::sole();
     expect($deposit->status)->toBe(DepositStatus::Pending);
     expect($deposit->provider_reference)->toBe('pi_test_fake_'.$deposit->id);
-    expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
+    // Public\DepositController::store() deliberately doesn't reserve the
+    // cat — see its own docblock and Public/DepositTest.php's "leaves the
+    // cat disponible..." test. Only the webhook below does, via
+    // confirmPaid().
+    expect($cat->fresh()->status)->toBe(CatStatus::Available->value);
 
     $payload = paymentIntentAmountCapturableUpdatedPayload($deposit->provider_reference, (string) $deposit->id);
     $header = signedStripeWebhookHeader($payload, 'whsec_test_secret');

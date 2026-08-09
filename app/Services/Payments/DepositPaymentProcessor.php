@@ -28,12 +28,13 @@ class DepositPaymentProcessor
     ) {}
 
     /**
-     * Holds the cat as soon as a deposit is created (status `pending`), not
-     * only once payment is confirmed — otherwise a second visitor could
-     * start (and even pay) a deposit for the same cat before the first
-     * payment is confirmed. See CatIsAvailableForDeposit for the matching
-     * server-side guard against creating that second deposit in the first
-     * place.
+     * Holds the cat (status `pending`) immediately, before any payment is
+     * confirmed — used by the admin-recorded reservation flows
+     * (Admin\DepositController::store()/assignCat()), which trust a
+     * staff-entered reservation the moment it's made. The public flow
+     * (Public\DepositController::store()) deliberately does *not* call
+     * this — see that method's own docblock — a public visitor's cat
+     * isn't held until confirmPaid() below actually confirms payment.
      *
      * $notifyStaff is false when called from
      * Admin\DepositController::assignCat() — that call re-uses reserve()

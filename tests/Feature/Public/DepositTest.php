@@ -19,11 +19,13 @@ use Tests\Doubles\FakePaymentGateway;
 // beforeEach().
 
 beforeEach(function () {
-    // reserve() (called by store()) now notifies active staff — see
-    // NotifiesStaff — which looks these roles up even when there's no
-    // staff to find.
+    // Only the "does not notify staff" test below actually needs this
+    // (assignRole('admin') requires the role to already exist in the
+    // database — spatie/laravel-permission doesn't create it on the
+    // fly), but every other test in this file tolerates it being here
+    // regardless, so it's kept file-wide for the same reason the other
+    // Deposit test files do this (see StripeWebhookTest.php).
     Role::findOrCreate('admin');
-    Role::findOrCreate('super_admin');
 });
 
 it('creates a pending deposit and renders the integrated checkout page with a PaymentIntent client secret', function () {
@@ -93,7 +95,7 @@ it('links a deposit to a specific cat when one is given', function () {
     expect(Deposit::sole()->cat_id)->toBe($cat->id);
 });
 
-it('holds the cat (en_attente) as soon as the deposit is created, before any payment is confirmed', function () {
+it('leaves the cat disponible when the deposit is created — it is only held once payment is actually confirmed', function () {
     refreshApplicationWithLocale('fr');
     config(['honeypot.enabled' => false]);
     $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
@@ -106,7 +108,15 @@ it('holds the cat (en_attente) as soon as the deposit is created, before any pay
         'cat_id' => $cat->id,
     ]);
 
-    expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
+    // A pending deposit no longer blocks another one anyway (see
+    // Deposit::blocksNewReservation()), so holding the cat this early no
+    // longer protects anything — it would just show the cat as
+    // unavailable to every other visitor while this one is still
+    // mid-checkout. DepositPaymentProcessor::confirmPaid() (via
+    // markPaid()) is what actually reserves it, exactly once paid — see
+    // the "moves the linked cat to en_attente" test in
+    // StripeWebhookTest.php for that half of the flow.
+    expect($cat->fresh()->status)->toBe(CatStatus::Available->value);
 });
 
 it('allows a new deposit for a cat that already has a pending (not yet paid) deposit — only a paid deposit blocks a reservation', function () {
@@ -172,7 +182,7 @@ it('silently discards spam submissions caught by the honeypot', function () {
     expect(Deposit::count())->toBe(0);
 });
 
-it('notifies active staff when a public visitor creates a reservation', function () {
+it('does not notify staff when a public visitor merely creates a deposit — nothing has been paid yet', function () {
     refreshApplicationWithLocale('fr');
     config(['honeypot.enabled' => false]);
     $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
@@ -185,7 +195,12 @@ it('notifies active staff when a public visitor creates a reservation', function
         'email' => 'marie@example.com',
     ]);
 
-    Notification::assertSentTo($activeAdmin, NewDepositCreatedNotification::class);
+    // store() deliberately doesn't call
+    // DepositPaymentProcessor::reserve() (see its own docblock) — unlike
+    // an admin-recorded reservation, a public deposit isn't trustworthy
+    // enough to alert staff about until it's actually paid, and nothing
+    // currently re-sends this notification once it is (see CLAUDE.md).
+    Notification::assertNotSentTo($activeAdmin, NewDepositCreatedNotification::class);
 });
 
 it('shows a waiting/status page without ever trusting the redirect alone', function () {
