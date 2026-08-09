@@ -26,17 +26,13 @@ beforeEach(function () {
     Role::findOrCreate('super_admin');
 });
 
-it('creates a pending deposit and redirects to the Stripe checkout URL', function () {
+it('creates a pending deposit and renders the integrated checkout page with a PaymentIntent client secret', function () {
     refreshApplicationWithLocale('fr');
     config(['honeypot.enabled' => false]);
     $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
     SiteSetting::set('deposit_amount', 50000);
 
-    // The real reservation button submits via Inertia's useForm(), which
-    // always sends this header — without it, Inertia::location() falls
-    // back to a plain 302 (see ResponseFactory::location()), which is
-    // only correct for a non-Inertia caller.
-    $response = $this->withHeader('X-Inertia', 'true')->post('/fr/deposits', [
+    $response = $this->post('/fr/deposits', [
         'name' => 'Marie Dupont',
         'email' => 'marie@example.com',
         'phone' => '+41 79 000 00 00',
@@ -46,13 +42,40 @@ it('creates a pending deposit and redirects to the Stripe checkout URL', functio
     expect($deposit->status)->toBe(DepositStatus::Pending);
     expect($deposit->amount)->toBe(50000);
     expect($deposit->currency)->toBe('CHF');
-    expect($deposit->provider_reference)->toBe('cs_test_fake_'.$deposit->id);
+    expect($deposit->provider_reference)->toBe('pi_test_fake_'.$deposit->id);
 
-    // Inertia::location() replies with a 409 + a header carrying the
-    // target URL — the client does a hard browser visit instead of
-    // trying to follow a cross-origin redirect as an XHR.
-    $response->assertStatus(409);
-    $response->assertHeader('X-Inertia-Location', 'https://checkout.stripe.com/fake/'.$deposit->id);
+    // No more cross-origin redirect to a Stripe-hosted page — the
+    // PaymentIntent is confirmed client-side, on this same response, via
+    // a Stripe.js Payment Element mounted with clientSecret (see CLAUDE.md).
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Public/DepositPay')
+        ->where('depositId', $deposit->id)
+        ->where('clientSecret', 'pi_test_fake_'.$deposit->id.'_secret_test')
+        // Forced to this fixed fake value in tests/bootstrap.php.
+        ->where('stripePublishableKey', 'pk_test_fake_key_for_test_suite')
+        ->where('catName', null)
+        ->where('amount', 50000)
+        ->where('currency', 'CHF')
+    );
+});
+
+it('includes the cat name in the checkout page props when the deposit is for a specific cat', function () {
+    refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
+    $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
+    $cat = Cat::factory()->create(['name' => 'Simba']);
+
+    $response = $this->post('/fr/deposits', [
+        'name' => 'Marie Dupont',
+        'email' => 'marie@example.com',
+        'cat_id' => $cat->id,
+    ]);
+
+    $response->assertInertia(fn ($page) => $page
+        ->component('Public/DepositPay')
+        ->where('catName', 'Simba')
+    );
 });
 
 it('links a deposit to a specific cat when one is given', function () {
@@ -86,7 +109,7 @@ it('holds the cat (en_attente) as soon as the deposit is created, before any pay
     expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
 });
 
-it('refuses a new deposit for a cat that already has one pending', function () {
+it('allows a new deposit for a cat that already has a pending (not yet paid) deposit — only a paid deposit blocks a reservation', function () {
     refreshApplicationWithLocale('fr');
     config(['honeypot.enabled' => false]);
     $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
@@ -99,14 +122,15 @@ it('refuses a new deposit for a cat that already has one pending', function () {
         'cat_id' => $cat->id,
     ]);
 
-    $response->assertSessionHasErrors(['cat_id']);
-    expect(Deposit::where('email', 'second@example.com')->exists())->toBeFalse();
+    $response->assertSessionDoesntHaveErrors(['cat_id']);
+    expect(Deposit::where('email', 'second@example.com')->exists())->toBeTrue();
 });
 
-it('refuses a new deposit for a cat that already has one paid', function () {
+it('refuses a new deposit for a cat that already has one paid, without ever creating a PaymentIntent for it', function () {
     refreshApplicationWithLocale('fr');
     config(['honeypot.enabled' => false]);
-    $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
+    $gateway = new FakePaymentGateway;
+    $this->app->instance(PaymentGateway::class, $gateway);
     $cat = Cat::factory()->create();
     Deposit::factory()->paid()->create(['cat_id' => $cat->id]);
 
@@ -117,26 +141,11 @@ it('refuses a new deposit for a cat that already has one paid', function () {
     ]);
 
     $response->assertSessionHasErrors(['cat_id']);
-});
-
-it('allows a new deposit for a cat whose only pending deposit is old enough to be considered abandoned', function () {
-    refreshApplicationWithLocale('fr');
-    config(['honeypot.enabled' => false]);
-    $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
-    $cat = Cat::factory()->create();
-    Deposit::factory()->create([
-        'cat_id' => $cat->id,
-        'status' => DepositStatus::Pending,
-        'created_at' => now()->subHours(25),
-    ]);
-
-    $response = $this->post('/fr/deposits', [
-        'name' => 'Second Visitor',
-        'email' => 'second@example.com',
-        'cat_id' => $cat->id,
-    ]);
-
-    $response->assertSessionDoesntHaveErrors(['cat_id']);
+    expect(Deposit::where('email', 'second@example.com')->exists())->toBeFalse();
+    // Public\DepositController::store()'s own re-check (see CLAUDE.md)
+    // rejects before ever calling the gateway — no PaymentIntent wasted on
+    // a reservation that was already doomed.
+    expect($gateway->createPaymentIntentDepositIds)->toBeEmpty();
 });
 
 it('validates required fields', function () {

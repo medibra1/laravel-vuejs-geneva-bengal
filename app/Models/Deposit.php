@@ -28,12 +28,12 @@ class Deposit extends Model
     use HasFactory;
 
     /**
-     * Matches Stripe Checkout's own default session lifetime (see
-     * StripeGateway::createCheckout(), which doesn't override expires_at) —
-     * a pending deposit older than this can only be an abandoned/expired
-     * checkout, never one still legitimately in progress. Shared by
-     * ReconcilePendingDeposits and blocksNewReservation() so both agree on
-     * what "still active" means.
+     * A pending deposit older than this is considered an abandoned
+     * checkout — its PaymentIntent authorization (card holds typically last
+     * up to 7 days on Stripe, TWINT much less) is assumed dead and the cat
+     * it was holding is released. Used by ReconcilePendingDeposits'
+     * expiry check only — no longer relevant to blocksNewReservation()
+     * below, which stopped caring about `pending` deposits entirely.
      */
     public const PENDING_EXPIRY_HOURS = 24;
 
@@ -74,22 +74,20 @@ class Deposit extends Model
     }
 
     /**
-     * True when this cat already has a deposit actively holding it — paid,
-     * or pending and not yet old enough to be considered an abandoned
-     * checkout (see PENDING_EXPIRY_HOURS). Used to refuse a second deposit
-     * (public or admin) for the same cat — see CatIsAvailableForDeposit.
+     * True when this cat already has a *paid* deposit. A merely `pending`
+     * deposit no longer blocks a new one: with Stripe PaymentIntents in
+     * capture_method: manual (see CLAUDE.md), several visitors can hold a
+     * parallel authorization for the same cat at once — only an actual
+     * payment locks it. DepositPaymentProcessor::markPaid() is what
+     * arbitrates between concurrent authorizations at the moment one of
+     * them is about to be captured. Used by CatIsAvailableForDeposit
+     * (public and admin StoreDepositRequest).
      */
     public static function blocksNewReservation(int $catId): bool
     {
         return static::query()
             ->where('cat_id', $catId)
-            ->where(function ($query): void {
-                $query->where('status', DepositStatus::Paid)
-                    ->orWhere(function ($query): void {
-                        $query->where('status', DepositStatus::Pending)
-                            ->where('created_at', '>', now()->subHours(self::PENDING_EXPIRY_HOURS));
-                    });
-            })
+            ->where('status', DepositStatus::Paid)
             ->exists();
     }
 }

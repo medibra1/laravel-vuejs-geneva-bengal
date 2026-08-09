@@ -19,10 +19,15 @@ use Throwable;
  * deposits at least an hour old so it never races the webhook for one
  * that's simply still being paid.
  *
- * Also releases the cat held by a deposit whose Checkout session was
- * abandoned/expired (see Deposit::PENDING_EXPIRY_HOURS) rather than paid —
- * otherwise a cat would stay stuck at `en_attente` forever once a visitor
- * walks away from checkout.
+ * Also releases the cat held by a deposit whose PaymentIntent authorization
+ * was abandoned/expired (see Deposit::PENDING_EXPIRY_HOURS) rather than
+ * paid — otherwise a cat would stay stuck at `en_attente` forever once a
+ * visitor walks away from checkout.
+ *
+ * isCheckoutPaid() reporting true here (authorized or already captured, see
+ * StripeGateway) still routes through DepositPaymentProcessor::markPaid() —
+ * same atomic win/lose-the-race re-check as the webhook, rather than
+ * duplicating that logic in this job.
  */
 class ReconcilePendingDeposits implements ShouldQueue
 {

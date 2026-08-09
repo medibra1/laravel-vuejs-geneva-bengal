@@ -111,11 +111,17 @@ class DepositController extends Controller
         $processor->reserve($deposit);
 
         if ($deposit->payment_method === PaymentMethod::Stripe) {
-            $checkout = $gateway->createCheckout($deposit);
+            // Minimal adaptation to the PaymentGateway interface's move to
+            // PaymentIntents (see CLAUDE.md) — this admin-created-deposit
+            // flow itself isn't redesigned here, so payment_link_url now
+            // holds the checkout page URL rather than a Stripe-hosted
+            // Checkout link; not meaningful to share with a client until
+            // the frontend prompt rebuilds this wizard against the new API.
+            $intent = $gateway->createPaymentIntent($deposit);
 
             $deposit->update([
-                'provider_reference' => $checkout->id,
-                'payment_link_url' => $checkout->url,
+                'provider_reference' => $intent->id,
+                'payment_link_url' => $intent->url,
             ]);
         }
 
