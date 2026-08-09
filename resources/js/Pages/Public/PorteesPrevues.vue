@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 import PageBanner from '@/Components/PageBanner.vue';
 import SectionHeading from '@/Components/SectionHeading.vue';
@@ -24,27 +25,29 @@ defineProps<{
     litters: PublicLitter[];
 }>();
 
-function formatDate(date: string | null): string {
-    if (!date) return 'Date à confirmer';
+const { t, locale } = useI18n();
 
-    return new Intl.DateTimeFormat('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(date));
+function formatDate(date: string | null): string {
+    if (!date) return t('litters.date_tbc');
+
+    return new Intl.DateTimeFormat(locale.value === 'fr' ? 'fr-CH' : 'en-CH', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(date));
 }
 </script>
 
 <template>
-    <Head title="Portées prévues">
+    <Head :title="$t('litters.meta_title')">
         <meta
             head-key="description"
             name="description"
-            content="Les prochaines portées de chatons Bengal prévues chez Geneva Bengal, avec leurs parents."
+            :content="$t('litters.meta_description')"
         />
     </Head>
 
     <PublicLayout>
-        <PageBanner script="Portées prévues" subtitle="Les prochaines naissances" />
+        <PageBanner :script="$t('litters.banner_script')" :subtitle="$t('litters.banner_subtitle')" />
 
         <section class="mx-auto max-w-5xl px-6 py-16 sm:py-24">
-            <SectionHeading script="Portées prévues" title="Les prochaines naissances chez Geneva Bengal" center />
+            <SectionHeading :script="$t('litters.heading_script')" :title="$t('litters.heading_title')" center />
 
             <div v-if="litters.length" class="mt-12 flex flex-col gap-6">
                 <div
@@ -58,7 +61,7 @@ function formatDate(date: string | null): string {
                                 <img v-if="parent?.photo_url" :src="parent.photo_url" :alt="parent.name" class="h-full w-full object-cover" />
                                 <div v-else class="flex h-full items-center justify-center text-xs text-gray-400">?</div>
                             </div>
-                            <p class="mt-1 text-xs font-semibold text-neutral-700">{{ parent?.name ?? 'À confirmer' }}</p>
+                            <p class="mt-1 text-xs font-semibold text-neutral-700">{{ parent?.name ?? $t('litters.parent_tbc') }}</p>
                         </div>
                     </div>
 
@@ -68,7 +71,7 @@ function formatDate(date: string | null): string {
                         </p>
                         <p class="mt-1 text-neutral-700">
                             <span v-if="litter.sire || litter.dam">
-                                {{ litter.sire?.name ?? 'Père à confirmer' }} × {{ litter.dam?.name ?? 'Mère à confirmer' }}
+                                {{ litter.sire?.name ?? $t('litters.sire_tbc') }} × {{ litter.dam?.name ?? $t('litters.dam_tbc') }}
                             </span>
                         </p>
                         <p v-if="litter.notes" class="mt-2 text-sm text-neutral-600">{{ litter.notes }}</p>
@@ -77,8 +80,8 @@ function formatDate(date: string | null): string {
             </div>
 
             <div v-else class="mt-12 py-16 text-center">
-                <h2 class="text-xl font-semibold text-neutral-900">Aucune portée prévue pour le moment</h2>
-                <p class="mt-2 text-neutral-600">Revenez bientôt pour découvrir nos prochaines naissances.</p>
+                <h2 class="text-xl font-semibold text-neutral-900">{{ $t('litters.empty_heading') }}</h2>
+                <p class="mt-2 text-neutral-600">{{ $t('litters.empty_body') }}</p>
             </div>
         </section>
     </PublicLayout>

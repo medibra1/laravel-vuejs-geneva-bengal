@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 import PageBanner from '@/Components/PageBanner.vue';
 import SectionHeading from '@/Components/SectionHeading.vue';
@@ -16,6 +17,7 @@ const props = defineProps<{
 }>();
 
 const page = usePage<PageProps>();
+const { t, locale } = useI18n();
 
 const selectedPhotoIndex = ref(0);
 const selectedPhoto = computed(() => props.cat.photos[selectedPhotoIndex.value] ?? props.cat.photos[0]);
@@ -30,7 +32,7 @@ function nextPhoto(): void {
 }
 
 const depositAmountLabel = computed(() =>
-    new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(props.depositAmount / 100),
+    new Intl.NumberFormat(locale.value === 'fr' ? 'fr-CH' : 'en-CH', { style: 'currency', currency: 'CHF' }).format(props.depositAmount / 100),
 );
 
 const description = computed(() => props.cat.description[page.props.locale as 'fr' | 'en'] ?? '');
@@ -42,6 +44,14 @@ const description = computed(() => props.cat.description[page.props.locale as 'f
 // apply to a breeding cat.
 const isKitten = computed(() => props.cat.type === 'chaton');
 
+const metaTitle = computed(() =>
+    isKitten.value
+        ? t('catDetail.meta_title_kitten', { name: props.cat.name })
+        : t('catDetail.meta_title_breeder', { name: props.cat.name }),
+);
+
+const speciesLabel = computed(() => t('catDetail.species_label', { color: props.cat.color?.name ?? '' }));
+
 // Per-cat description, not a generic site-wide one — precisely the gap
 // CLAUDE.md flags on the production site (same meta on every page, bad
 // for indexing individual kitten listings).
@@ -52,30 +62,30 @@ const metaDescription = computed(() => {
 });
 
 function formatDate(date: string | null): string {
-    if (!date) return '—';
+    if (!date) return t('common.not_available');
 
-    return new Intl.DateTimeFormat('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' }).format(
+    return new Intl.DateTimeFormat(locale.value === 'fr' ? 'fr-CH' : 'en-CH', { day: 'numeric', month: 'long', year: 'numeric' }).format(
         new Date(date),
     );
 }
 
 function formatPrice(cents: number | null): string {
-    if (!cents) return 'Nous contacter';
+    if (!cents) return t('catDetail.price_on_request');
 
-    return new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(cents / 100);
+    return new Intl.NumberFormat(locale.value === 'fr' ? 'fr-CH' : 'en-CH', { style: 'currency', currency: 'CHF' }).format(cents / 100);
 }
 </script>
 
 <template>
-    <Head :title="isKitten ? `${cat.name} — Chaton Bengal disponible` : `${cat.name} — Chat Bengal reproducteur`">
+    <Head :title="metaTitle">
         <meta v-if="metaDescription" head-key="description" name="description" :content="metaDescription" />
     </Head>
 
     <PublicLayout>
-        <PageBanner :script="isKitten ? 'Chaton Bengal' : 'Chat Bengal'" :subtitle="cat.name" />
+        <PageBanner :script="isKitten ? $t('catDetail.banner_script_kitten') : $t('catDetail.banner_script_breeder')" :subtitle="cat.name" />
 
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
-            <SectionHeading :script="isKitten ? 'À propos de ce chaton bengal à vendre' : 'À propos de ce chat Bengal reproducteur'" />
+            <SectionHeading :script="isKitten ? $t('catDetail.heading_kitten') : $t('catDetail.heading_breeder')" />
 
             <div class="mt-12 grid grid-cols-1 gap-16 md:grid-cols-2">
                 <div>
@@ -86,14 +96,14 @@ function formatPrice(cents: number | null): string {
                                 :key="selectedPhoto.id"
                                 type="button"
                                 class="block h-full w-full cursor-zoom-in"
-                                aria-label="Agrandir la photo"
+                                :aria-label="$t('catDetail.enlarge_photo')"
                                 @click="lightboxIndex = selectedPhotoIndex"
                             >
                                 <img :src="selectedPhoto.url" :alt="cat.name" class="h-full w-full object-cover" />
                             </button>
                         </Transition>
                         <div v-if="!selectedPhoto" class="flex h-full items-center justify-center text-gray-400">
-                            Pas de photo
+                            {{ $t('common.no_photo') }}
                         </div>
 
                         <span
@@ -112,7 +122,7 @@ function formatPrice(cents: number | null): string {
                             <button
                                 type="button"
                                 class="absolute top-1/2 left-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-brand-gray opacity-0 shadow transition hover:bg-white group-hover:opacity-100"
-                                aria-label="Photo précédente"
+                                :aria-label="$t('common.prev_photo')"
                                 @click="prevPhoto"
                             >
                                 <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -122,7 +132,7 @@ function formatPrice(cents: number | null): string {
                             <button
                                 type="button"
                                 class="absolute top-1/2 right-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-brand-gray opacity-0 shadow transition hover:bg-white group-hover:opacity-100"
-                                aria-label="Photo suivante"
+                                :aria-label="$t('common.next_photo')"
                                 @click="nextPhoto"
                             >
                                 <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -152,33 +162,33 @@ function formatPrice(cents: number | null): string {
 
                 <div>
                     <h3 class="font-heading text-brand-gray text-xl font-bold">
-                        {{ isKitten ? 'Nom du chaton' : 'Nom' }} : {{ cat.name }}
+                        {{ isKitten ? $t('catDetail.label_kitten_name') : $t('catDetail.label_name') }} : {{ cat.name }}
                     </h3>
                     <p v-if="isKitten" class="text-brand-green mt-1 font-semibold uppercase tracking-wide">
-                        {{ cat.status === 'disponible' ? 'Disponible' : 'En attente' }}
+                        {{ cat.status === 'disponible' ? $t('common.status_available') : $t('common.status_waiting') }}
                     </p>
-                    <p class="text-brand-tan mt-1">{{ cat.color?.name }} Bengal cat</p>
+                    <p class="text-brand-tan mt-1">{{ speciesLabel }}</p>
 
                     <p v-if="description" class="mt-4 text-neutral-600">{{ description }}</p>
 
                     <ul class="mt-6 space-y-2 text-sm text-neutral-700">
-                        <li><strong>Sexe :</strong> {{ cat.sex === 'male' ? 'Mâle' : 'Femelle' }}</li>
-                        <li><strong>Date de naissance :</strong> {{ formatDate(cat.birth_date) }}</li>
-                        <li><strong>Couleur des yeux :</strong> {{ cat.eye_color ?? '—' }}</li>
-                        <li v-if="isKitten"><strong>Disponible à partir de :</strong> {{ formatDate(cat.available_at) }}</li>
-                        <li><strong>Régime :</strong> {{ cat.diet ?? '—' }}</li>
-                        <li v-if="isKitten"><strong>Formé à la litière :</strong> {{ cat.litter_trained ? 'Oui' : 'Non' }}</li>
+                        <li><strong>{{ $t('catDetail.label_sex') }}</strong> {{ cat.sex === 'male' ? $t('common.male') : $t('common.female') }}</li>
+                        <li><strong>{{ $t('catDetail.label_birth_date') }}</strong> {{ formatDate(cat.birth_date) }}</li>
+                        <li><strong>{{ $t('catDetail.label_eye_color') }}</strong> {{ cat.eye_color ?? $t('common.not_available') }}</li>
+                        <li v-if="isKitten"><strong>{{ $t('catDetail.label_available_from') }}</strong> {{ formatDate(cat.available_at) }}</li>
+                        <li><strong>{{ $t('catDetail.label_diet') }}</strong> {{ cat.diet ?? $t('common.not_available') }}</li>
+                        <li v-if="isKitten"><strong>{{ $t('catDetail.label_litter_trained') }}</strong> {{ cat.litter_trained ? $t('common.yes') : $t('common.no') }}</li>
                     </ul>
 
                     <div v-if="isKitten" class="mt-8 flex flex-wrap items-start gap-4">
                         <Link :href="route('pages.contact', { chaton: cat.slug })" class="btn-outline-brand">
-                            Adopte moi
+                            {{ $t('catDetail.adopt_me') }}
                         </Link>
                         <DepositForm v-if="cat.status === 'disponible'" :cat-id="cat.id" :amount-label="depositAmountLabel" />
                     </div>
                     <div v-else class="mt-8">
                         <Link :href="route('pages.contact')" class="btn-outline-brand">
-                            Nous contacter à son sujet
+                            {{ $t('catDetail.contact_about') }}
                         </Link>
                     </div>
                 </div>
@@ -189,17 +199,17 @@ function formatPrice(cents: number | null): string {
 
         <section v-if="isKitten" class="bg-brand-canvas border-t border-gray-200 py-16 sm:py-24">
             <div class="mx-auto max-w-3xl px-6 text-center">
-                <SectionHeading script="Chaton bengal à vendre" title="Voulez-vous adopter un chaton bengal ?" center />
-                <p class="mt-4 text-lg text-neutral-700">Prix : <span class="font-semibold">{{ formatPrice(cat.price) }}</span></p>
+                <SectionHeading :script="$t('catDetail.cta_script')" :title="$t('catDetail.cta_title')" center />
+                <p class="mt-4 text-lg text-neutral-700">{{ $t('catDetail.price_label') }} <span class="font-semibold">{{ formatPrice(cat.price) }}</span></p>
                 <Link :href="route('pages.contact', { chaton: cat.slug })" class="btn-outline-brand mt-6">
-                    Faire une demande pour {{ cat.name }}
+                    {{ $t('catDetail.cta_button', { name: cat.name }) }}
                 </Link>
             </div>
         </section>
 
         <section class="py-16 sm:py-24">
             <div class="mx-auto max-w-3xl px-6 text-center">
-                <SectionHeading script="Soyez les premiers au courant" title="Abonnez-vous à notre infolettre !" center />
+                <SectionHeading :script="$t('newsletter.section_script')" :title="$t('newsletter.section_title')" center />
                 <div class="mt-6 flex justify-center">
                     <NewsletterForm class="w-full max-w-md" />
                 </div>

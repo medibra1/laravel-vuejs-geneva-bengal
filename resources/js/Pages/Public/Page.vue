@@ -2,6 +2,7 @@
 import { Head, usePage } from '@inertiajs/vue3';
 import { useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 import NewsletterForm from '@/Components/NewsletterForm.vue';
 import SectionHeading from '@/Components/SectionHeading.vue';
@@ -46,6 +47,7 @@ const pageCtx = usePage<PageProps>();
 const honeypot = pageCtx.props.honeypot;
 const address = computed(() => pageCtx.props.address);
 const socialLinks = computed(() => pageCtx.props.socialLinks);
+const { t } = useI18n();
 
 // Single-open accordion, same on every breakpoint — the reference site
 // (genevabengals.ch/chaton-bengal-a-vendre) only does this toggle on
@@ -56,11 +58,11 @@ function toggleFaq(id: number): void {
     openFaqId.value = openFaqId.value === id ? null : id;
 }
 
-const reasonOptions = [
-    { label: 'Adopter un chaton', value: 'adopt' },
-    { label: "S'inscrire en liste d'attente", value: 'waiting_list' },
-    { label: 'Question', value: 'question' },
-];
+const reasonOptions = computed(() => [
+    { label: t('contact.reason_adopt'), value: 'adopt' },
+    { label: t('contact.reason_waiting_list'), value: 'waiting_list' },
+    { label: t('contact.reason_question'), value: 'question' },
+]);
 
 const contactForm = useForm({
     name: '',
@@ -68,7 +70,7 @@ const contactForm = useForm({
     reason: props.prefilledCat ? 'adopt' : 'question',
     cat_id: props.prefilledCat?.id ?? null,
     city: '',
-    message: props.prefilledCat ? `Je suis intéressé(e) par ${props.prefilledCat.name}.` : '',
+    message: props.prefilledCat ? t('contact.prefilled_message', { name: props.prefilledCat.name }) : '',
     [honeypot.nameFieldName]: '',
     [honeypot.validFromFieldName]: honeypot.encryptedValidFrom,
 });
@@ -108,7 +110,7 @@ function submitContact(): void {
                             >
                                 {{ item.question }}
                                 <span
-                                    class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-green text-white transition-transform duration-300 ease-in-out"
+                                    class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand-green text-white transition-transform duration-300 ease-in-out"
                                     :class="{ 'rotate-45': openFaqId === item.id }"
                                 >
                                     <i class="pi pi-plus text-xs" />
@@ -126,14 +128,14 @@ function submitContact(): void {
                             </div>
                         </div>
                     </div>
-                    <p v-else class="mt-4 text-neutral-500">Aucune question pour le moment.</p>
+                    <p v-else class="mt-4 text-neutral-500">{{ $t('faq.empty') }}</p>
                 </div>
             </div>
         </section>
 
         <section v-if="testimonials" id="temoignages" class="bg-brand-canvas border-t border-gray-200 py-16 sm:py-24">
             <div class="mx-auto max-w-4xl px-6 text-center">
-                <SectionHeading script="Témoignages" center />
+                <SectionHeading :script="$t('testimonials.section_script')" center />
                 <div v-if="testimonials.length" class="mt-8 space-y-8 text-left">
                     <blockquote v-for="testimonial in testimonials" :key="testimonial.id">
                         <p class="text-lg italic text-neutral-700">&ldquo;{{ testimonial.quote }}&rdquo;</p>
@@ -143,13 +145,13 @@ function submitContact(): void {
                         </footer>
                     </blockquote>
                 </div>
-                <p v-else class="mt-4 text-neutral-500">Aucun témoignage pour le moment.</p>
+                <p v-else class="mt-4 text-neutral-500">{{ $t('testimonials.empty') }}</p>
             </div>
         </section>
 
         <section v-if="testimonials" class="border-t border-gray-200 py-16 sm:py-24">
             <div class="mx-auto max-w-3xl px-6 text-center">
-                <SectionHeading script="Soyez les premiers au courant" title="Abonnez-vous à notre infolettre !" center />
+                <SectionHeading :script="$t('newsletter.section_script')" :title="$t('newsletter.section_title')" center />
                 <div class="mt-6 flex justify-center">
                     <NewsletterForm class="w-full max-w-md" />
                 </div>
@@ -159,7 +161,7 @@ function submitContact(): void {
         <section v-if="page.slug === 'contact'" class="bg-brand-canvas border-t border-gray-200 py-16 sm:py-24">
             <div class="mx-auto grid max-w-4xl gap-12 px-6 md:grid-cols-2">
                 <div>
-                    <h2 class="font-heading text-brand-gray text-2xl font-bold uppercase tracking-wide">Nous contacter</h2>
+                    <h2 class="font-heading text-brand-gray text-2xl font-bold uppercase tracking-wide">{{ $t('contact.heading') }}</h2>
                     <p v-if="address" class="mt-4 text-neutral-700">{{ address }}</p>
                     <SocialLinks class="[&_a]:hover:text-brand-green mt-4 text-brand-gray" v-bind="socialLinks" />
                 </div>
@@ -174,45 +176,45 @@ function submitContact(): void {
                     </div>
 
                     <div v-if="prefilledCat" class="rounded-md bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
-                        À propos de : <strong>{{ prefilledCat.name }}</strong>
+                        {{ $t('contact.about_cat') }} <strong>{{ prefilledCat.name }}</strong>
                     </div>
 
                     <div>
-                        <InputLabel for="name" value="Nom" />
+                        <InputLabel for="name" :value="$t('contact.label_name')" />
                         <input id="name" v-model="contactForm.name" class="mt-1 w-full rounded-md border-gray-300" />
                         <InputError :message="contactForm.errors.name" />
                     </div>
 
                     <div>
-                        <InputLabel for="email" value="E-mail" />
+                        <InputLabel for="email" :value="$t('contact.label_email')" />
                         <input id="email" v-model="contactForm.email" type="email"
                             class="mt-1 w-full rounded-md border-gray-300" />
                         <InputError :message="contactForm.errors.email" />
                     </div>
 
                     <div>
-                        <InputLabel for="reason" value="Motif" />
+                        <InputLabel for="reason" :value="$t('contact.label_reason')" />
                         <Select id="reason" v-model="contactForm.reason" :options="reasonOptions" option-label="label"
                             option-value="value" class="mt-1 w-full" />
                         <InputError :message="contactForm.errors.reason" />
                     </div>
 
                     <div>
-                        <InputLabel for="city" value="Ville (optionnel)" />
+                        <InputLabel for="city" :value="$t('contact.label_city')" />
                         <input id="city" v-model="contactForm.city" class="mt-1 w-full rounded-md border-gray-300" />
                         <InputError :message="contactForm.errors.city" />
                     </div>
 
                     <div>
-                        <InputLabel for="message" value="Message" />
+                        <InputLabel for="message" :value="$t('contact.label_message')" />
                         <textarea id="message" v-model="contactForm.message" rows="5"
                             class="mt-1 w-full rounded-md border-gray-300" />
                         <InputError :message="contactForm.errors.message" />
                     </div>
 
-                    <button type="submit" class="btn-outline-brand" :disabled="contactForm.processing">Envoyer</button>
+                    <button type="submit" class="btn-outline-brand" :disabled="contactForm.processing">{{ $t('contact.submit') }}</button>
                     <p v-if="contactForm.recentlySuccessful" class="text-brand-green text-sm">
-                        Votre message a bien été envoyé.
+                        {{ $t('contact.success') }}
                     </p>
                 </form>
             </div>

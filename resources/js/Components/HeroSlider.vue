@@ -53,12 +53,11 @@ onUnmounted(() => clearInterval(timer));
                 class="hero-cat-head relative flex min-h-[30rem] max-w-lg min-w-[22rem] flex-col items-center justify-center bg-contain bg-center bg-no-repeat px-12 pt-32 pb-16 text-center sm:min-h-[36rem] sm:min-w-[32rem] sm:px-16 sm:py-20"
                 :style="{ backgroundImage: `url(${catHead})` }"
             >
-                <p class="font-script text-4xl sm:text-6xl">Éleveur de chats</p>
-                <h1 class="font-round mt-2 text-2xl tracking-[0.1em] uppercase sm:text-5xl">Bengal</h1>
-                <p class="font-heading mt-5 text-lg font-semibold sm:text-xl">Créateur de bonheur depuis 2020</p>
+                <p class="font-script text-4xl sm:text-6xl">{{ $t('hero.tagline_script') }}</p>
+                <h1 class="font-round mt-2 text-2xl tracking-[0.1em] uppercase sm:text-5xl">{{ $t('hero.tagline_title') }}</h1>
+                <p class="font-heading mt-5 text-lg font-semibold sm:text-xl">{{ $t('hero.tagline_subtitle') }}</p>
                 <p class="mt-5 max-w-[15rem] text-xs font-semibold text-neutral-200 sm:max-w-[20rem] sm:text-base">
-                    Nous élevons des chatons Bengal en parfaite santé, avec une apparence et un comportement à vous
-                    faire rêver.
+                    {{ $t('hero.tagline_body') }}
                 </p>
             </div>
         </div>
@@ -67,7 +66,7 @@ onUnmounted(() => clearInterval(timer));
         <button
             type="button"
             class="absolute top-1/2 left-4 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 backdrop-blur transition hover:bg-white/25"
-            aria-label="Photo précédente"
+            :aria-label="$t('common.prev_photo')"
             @click="previous(); restart();"
         >
             <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -77,7 +76,7 @@ onUnmounted(() => clearInterval(timer));
         <button
             type="button"
             class="absolute top-1/2 right-4 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 backdrop-blur transition hover:bg-white/25"
-            aria-label="Photo suivante"
+            :aria-label="$t('common.next_photo')"
             @click="next(); restart();"
         >
             <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -93,7 +92,7 @@ onUnmounted(() => clearInterval(timer));
                 type="button"
                 class="h-2 rounded-full transition-all"
                 :class="index === currentSlide ? 'bg-brand-green w-8' : 'w-2 bg-white/50 hover:bg-white/80'"
-                :aria-label="`Aller à la photo ${index + 1}`"
+                :aria-label="$t('hero.go_to_photo', { n: index + 1 })"
                 @click="goTo(index)"
             />
         </div>

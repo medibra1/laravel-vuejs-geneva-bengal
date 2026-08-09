@@ -21,7 +21,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll));
             v-if="visible"
             type="button"
             class="bg-brand-ink hover:bg-brand-green fixed right-6 bottom-6 z-40 flex h-11 w-11 items-center justify-center rounded-full text-white shadow-lg transition-colors"
-            aria-label="Retour en haut de la page"
+            :aria-label="$t('scrollTop.aria_label')"
             @click="scrollToTop"
         >
             <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
