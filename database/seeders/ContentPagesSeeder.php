@@ -32,7 +32,7 @@ class ContentPagesSeeder extends Seeder
             'fr' => 'Geneva Bengal est un élevage familial de chats Bengal basé à Genève, en Suisse. Depuis 2020, nous élevons des chatons en parfaite santé, avec une apparence et un comportement à vous faire rêver.',
             'en' => 'Geneva Bengal is a family-run Bengal cattery based in Geneva, Switzerland. Since 2020, we have been breeding kittens in perfect health, with a look and temperament to dream of.',
         ], [
-            'fr' => "Découvrez notre élevage de chats Bengal à Genève : notre histoire, notre passion, et les témoignages de familles qui nous ont fait confiance.",
+            'fr' => 'Découvrez notre élevage de chats Bengal à Genève : notre histoire, notre passion, et les témoignages de familles qui nous ont fait confiance.',
             'en' => 'Discover our Bengal cattery in Geneva: our story, our passion, and testimonials from families who trusted us.',
         ]);
 
@@ -125,11 +125,11 @@ class ContentPagesSeeder extends Seeder
                 'title' => ['fr' => 'Alimentation du chat Bengal', 'en' => 'Bengal cat diet'],
                 'body' => [
                     'fr' => "<p>Comme tout chat de race, le Bengal a besoin d'une alimentation de qualité, riche en protéines animales, pour soutenir sa musculature athlétique et son niveau d'énergie élevé. Nous privilégions une alimentation premium, sans céréales ou à faible teneur en glucides, adaptée à son métabolisme de carnivore strict.</p><p>Chaque chaton quitte notre élevage avec un carnet expliquant précisément son alimentation actuelle (marque, quantités, fréquence des repas) — nous recommandons de conserver la même alimentation les premières semaines, puis d'effectuer toute transition progressivement sur 7 à 10 jours pour éviter les troubles digestifs.</p><p>L'eau fraîche doit être disponible en permanence ; certains Bengals préfèrent boire à une fontaine à eau plutôt qu'à une gamelle classique. Comme pour toute race, l'obésité doit être surveillée : mieux vaut des portions mesurées et quelques séances de jeu actif qu'une gamelle en libre-service.</p>",
-                    'en' => "<p>Like any pedigree cat, the Bengal needs a high-quality diet, rich in animal protein, to support its athletic build and high energy levels. We favour premium, grain-free or low-carbohydrate food suited to its strict-carnivore metabolism.</p><p>Every kitten leaves our cattery with a booklet detailing its current diet (brand, quantities, meal frequency) — we recommend keeping the same food for the first few weeks, then making any change gradually over 7 to 10 days to avoid digestive upset.</p><p>Fresh water should always be available; some Bengals actually prefer drinking from a water fountain rather than a regular bowl. As with any breed, weight should be monitored — measured portions and a few active play sessions are better than food left out at all times.</p>",
+                    'en' => '<p>Like any pedigree cat, the Bengal needs a high-quality diet, rich in animal protein, to support its athletic build and high energy levels. We favour premium, grain-free or low-carbohydrate food suited to its strict-carnivore metabolism.</p><p>Every kitten leaves our cattery with a booklet detailing its current diet (brand, quantities, meal frequency) — we recommend keeping the same food for the first few weeks, then making any change gradually over 7 to 10 days to avoid digestive upset.</p><p>Fresh water should always be available; some Bengals actually prefer drinking from a water fountain rather than a regular bowl. As with any breed, weight should be monitored — measured portions and a few active play sessions are better than food left out at all times.</p>',
                 ],
                 'meta' => [
                     'fr' => 'Nos conseils pour bien nourrir votre chat Bengal : alimentation adaptée, transition et bonnes pratiques.',
-                    'en' => "Our advice for feeding your Bengal cat well: a suitable diet, transitioning food, and best practices.",
+                    'en' => 'Our advice for feeding your Bengal cat well: a suitable diet, transitioning food, and best practices.',
                 ],
             ],
             [
@@ -164,10 +164,10 @@ class ContentPagesSeeder extends Seeder
                 ],
             ],
             [
-                'title' => ["fr" => "Introduction d'un nouveau chaton à la maison", 'en' => 'Introducing a new kitten at home'],
+                'title' => ['fr' => "Introduction d'un nouveau chaton à la maison", 'en' => 'Introducing a new kitten at home'],
                 'body' => [
                     'fr' => "<p>Les premiers jours sont déterminants pour que votre chaton se sente en confiance dans son nouvel environnement. Préparez une pièce calme avec sa litière, sa gamelle, son eau et un espace pour se cacher — laissez-le explorer à son rythme plutôt que de forcer le contact.</p><p>Si vous avez déjà un chat ou un chien à la maison, prévoyez une introduction progressive sur plusieurs jours : séparation initiale, échange d'odeurs (couvertures, jouets), puis rencontres courtes et supervisées. La patience est essentielle — une cohabitation réussie se construit rarement en un jour.</p><p>Gardez la même alimentation que celle donnée à l'élevage durant les premiers jours (voir notre page Alimentation), et prévoyez un rendez-vous chez votre vétérinaire dans les jours suivant l'adoption pour un premier contrôle et le suivi du protocole vaccinal.</p>",
-                    'en' => "<p>The first few days are crucial for your kitten to feel confident in its new environment. Prepare a quiet room with its litter box, food and water bowls, and a hiding spot — let it explore at its own pace rather than forcing contact.</p><p>If you already have a cat or dog at home, plan a gradual introduction over several days: initial separation, scent swapping (blankets, toys), then short, supervised meetings. Patience is essential — a successful cohabitation is rarely built in a single day.</p><p>Keep feeding the same food given at the cattery for the first few days (see our Diet page), and schedule a visit to your veterinarian in the days following the adoption for a first check-up and to continue the vaccination schedule.</p>",
+                    'en' => '<p>The first few days are crucial for your kitten to feel confident in its new environment. Prepare a quiet room with its litter box, food and water bowls, and a hiding spot — let it explore at its own pace rather than forcing contact.</p><p>If you already have a cat or dog at home, plan a gradual introduction over several days: initial separation, scent swapping (blankets, toys), then short, supervised meetings. Patience is essential — a successful cohabitation is rarely built in a single day.</p><p>Keep feeding the same food given at the cattery for the first few days (see our Diet page), and schedule a visit to your veterinarian in the days following the adoption for a first check-up and to continue the vaccination schedule.</p>',
                 ],
                 'meta' => [
                     'fr' => "Nos conseils pour bien accueillir votre nouveau chaton Bengal à la maison, seul ou avec d'autres animaux.",
@@ -198,12 +198,12 @@ class ContentPagesSeeder extends Seeder
             [
                 'question' => ['fr' => "Quel est le prix d'un chaton Bengal ?", 'en' => 'What is the price of a Bengal kitten?'],
                 'answer' => [
-                    'fr' => "Le prix varie selon la couleur, le motif, la lignée et la destination du chaton (compagnie ou reproduction). Retrouvez le détail sur notre page Prix, ou consultez directement la fiche du chaton qui vous intéresse pour son tarif exact.",
+                    'fr' => 'Le prix varie selon la couleur, le motif, la lignée et la destination du chaton (compagnie ou reproduction). Retrouvez le détail sur notre page Prix, ou consultez directement la fiche du chaton qui vous intéresse pour son tarif exact.',
                     'en' => "The price varies depending on the kitten's color, pattern, bloodline, and intended purpose (companion or breeding). See our Pricing page for details, or check the specific kitten's page for its exact price.",
                 ],
             ],
             [
-                'question' => ["fr" => "Livrez-vous à l'international ?", 'en' => 'Do you ship internationally?'],
+                'question' => ['fr' => "Livrez-vous à l'international ?", 'en' => 'Do you ship internationally?'],
                 'answer' => [
                     'fr' => "Nous privilégions une remise en main propre à l'élevage, à Genève, ou un point de rencontre à convenir en Suisse. Une livraison internationale peut être envisagée au cas par cas, avec les formalités sanitaires et administratives à la charge de l'adoptant — contactez-nous pour en discuter.",
                     'en' => 'We prefer handing the kitten over in person at our cattery in Geneva, or at an agreed meeting point in Switzerland. International delivery can be considered case by case, with health and administrative formalities to be handled by the adopter — contact us to discuss it.',

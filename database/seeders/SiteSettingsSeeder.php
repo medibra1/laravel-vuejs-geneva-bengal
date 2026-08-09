@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\SiteSetting;
 use Illuminate\Database\Seeder;
-use phpDocumentor\Reflection\Types\Null_;
 
 /**
  * Real site settings (social links, address, deposit/price defaults, SEO

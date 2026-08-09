@@ -108,7 +108,7 @@ const { confirmingPassword, form: confirmPasswordForm, confirmPassword, submitPa
                     icon="pi pi-refresh"
                     severity="info"
                     size="small"
-                    @click="confirmPassword(() => verifyStripe(deposit))"
+                    @click="confirmPassword(() => verifyStripe(deposit!))"
                 />
                 <Button
                     v-if="deposit.status === 'paid' && !deposit.finalized_at"
@@ -116,7 +116,7 @@ const { confirmingPassword, form: confirmPasswordForm, confirmPassword, submitPa
                     icon="pi pi-heart-fill"
                     severity="info"
                     size="small"
-                    @click="confirmPassword(() => finalize({ id: deposit.id, owner_id: deposit.owner?.id ?? null }, ownerLabel))"
+                    @click="confirmPassword(() => finalize({ id: deposit!.id, owner_id: deposit!.owner?.id ?? null }, ownerLabel))"
                 />
                 <Button
                     v-if="isSuperAdmin && deposit.status === 'paid'"
@@ -124,7 +124,7 @@ const { confirmingPassword, form: confirmPasswordForm, confirmPassword, submitPa
                     icon="pi pi-replay"
                     severity="danger"
                     size="small"
-                    @click="confirmPassword(() => refund(deposit, ownerLabel))"
+                    @click="confirmPassword(() => refund(deposit!, ownerLabel))"
                 />
             </div>
         </div>
