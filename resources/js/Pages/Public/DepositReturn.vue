@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { computed, onBeforeUnmount, onMounted, watch } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 
 const props = defineProps<{
@@ -14,7 +14,52 @@ const props = defineProps<{
 const checkoutOutcome = new URLSearchParams(window.location.search).get('status');
 
 const isPaid = computed(() => props.depositStatus === 'paid');
-const isCancelled = computed(() => checkoutOutcome === 'cancelled' && props.depositStatus !== 'paid');
+// Lost the atomic re-check in DepositPaymentProcessor::markPaid() — see
+// CLAUDE.md: another deposit for the same cat was captured first, this
+// one's PaymentIntent authorization was cancelled, never charged.
+const isUnavailable = computed(() => props.depositStatus === 'unavailable');
+const isCancelled = computed(() => checkoutOutcome === 'cancelled' && props.depositStatus !== 'paid' && !isUnavailable.value);
+
+// The webhook that actually captures the payment (see CLAUDE.md) runs
+// asynchronously, generally a couple of seconds after the visitor lands
+// here — poll lightly for it instead of making them refresh by hand.
+// Capped so an abandoned tab doesn't poll forever.
+const POLL_INTERVAL_MS = 3500;
+const MAX_POLL_ATTEMPTS = 20;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+let pollAttempts = 0;
+
+function stopPolling(): void {
+    if (pollTimer === null) return;
+
+    clearInterval(pollTimer);
+    pollTimer = null;
+}
+
+onMounted(() => {
+    if (props.depositStatus !== 'pending') return;
+
+    pollTimer = setInterval(() => {
+        if (pollAttempts >= MAX_POLL_ATTEMPTS) {
+            stopPolling();
+            return;
+        }
+
+        pollAttempts += 1;
+        router.reload({ only: ['depositStatus'] });
+    }, POLL_INTERVAL_MS);
+});
+
+// Catches every way the status can leave "pending" — paid, unavailable, or
+// anything else — rather than only the two currently shown in the template.
+watch(
+    () => props.depositStatus,
+    (status) => {
+        if (status !== 'pending') stopPolling();
+    },
+);
+
+onBeforeUnmount(stopPolling);
 </script>
 
 <template>
@@ -27,6 +72,14 @@ const isCancelled = computed(() => checkoutOutcome === 'cancelled' && props.depo
                 <h1 class="mt-6 text-2xl font-semibold text-neutral-900">{{ $t('depositReturn.paid_heading') }}</h1>
                 <p class="mt-4 text-neutral-600">
                     {{ $t('depositReturn.paid_body') }}
+                </p>
+            </template>
+
+            <template v-else-if="isUnavailable">
+                <i class="pi pi-times-circle text-5xl text-amber-500" />
+                <h1 class="mt-6 text-2xl font-semibold text-neutral-900">{{ $t('depositReturn.unavailable_heading') }}</h1>
+                <p class="mt-4 text-neutral-600">
+                    {{ $t('depositReturn.unavailable_body') }}
                 </p>
             </template>
 

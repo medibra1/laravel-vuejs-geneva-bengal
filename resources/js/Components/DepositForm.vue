@@ -22,9 +22,9 @@ const form = useForm({
 });
 
 function submit(): void {
-    // Inertia::location() replies with a 409 carrying the Stripe Checkout
-    // URL — useForm().post() follows it with a full-page browser visit
-    // automatically, same as any other Inertia redirect.
+    // A normal Inertia visit — the response renders Public/DepositPay.vue
+    // directly, with the PaymentIntent's client_secret as a prop (see
+    // CLAUDE.md), no full-page redirect involved.
     form.post(route('deposits.store'));
 }
 </script>
@@ -62,7 +62,12 @@ function submit(): void {
                 {{ $t('deposit.stripe_notice') }}
             </p>
 
-            <p v-if="form.errors.cat_id" class="text-sm text-red-600">{{ form.errors.cat_id }}</p>
+            <!-- cat_id only ever has one possible validation error (see
+                 CatIsAvailableForDeposit / Public\DepositController::store()'s
+                 own re-check) — shown as a friendly translated message
+                 rather than the raw backend string, which has no French
+                 translation (see CLAUDE.md on the three i18n layers). -->
+            <p v-if="form.errors.cat_id" class="text-sm text-red-600">{{ $t('deposit.cat_unavailable_error') }}</p>
 
             <div>
                 <label for="deposit-name" class="block text-sm font-medium text-neutral-700">{{ $t('deposit.label_full_name') }}</label>
