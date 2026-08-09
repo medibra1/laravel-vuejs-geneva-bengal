@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { PageProps } from '@/types';
 import SocialLinks from '@/Components/SocialLinks.vue';
 import ScrollToTop from '@/Components/ScrollToTop.vue';
@@ -9,6 +10,12 @@ import logoFooter from '../../images/shared/logo-footer.png';
 
 const page = usePage<PageProps>();
 const currentLocale = computed(() => page.props.locale);
+
+// Inertia visits swap page.props reactively without remounting app.ts, so
+// vue-i18n's active locale (fixed at mount time otherwise) needs to be kept
+// in sync here — this layout wraps every public page.
+const { locale: i18nLocale } = useI18n();
+watch(currentLocale, (value) => (i18nLocale.value = value), { immediate: true });
 const menuPages = computed(() => page.props.menuPages);
 const colors = computed(() => page.props.colors);
 const alternateUrls = computed(() => page.props.alternateUrls);
@@ -75,13 +82,22 @@ watch(
                 <ul class="flex items-center gap-4">
                     <!-- Duplicated in the mobile drawer already — hidden
                          below `sm` to stop this bar from wrapping. -->
-                    <li class="hidden sm:block"><Link :href="route('pages.a-propos')" class="hover:text-brand-green">À propos</Link></li>
-                    <li class="hidden sm:block"><Link :href="route('galleries.index')" class="hover:text-brand-green">Galerie photo</Link></li>
-                    <li class="hidden sm:block"><Link :href="route('pages.contact')" class="hover:text-brand-green">Contact</Link></li>
+                    <li class="hidden sm:block"><Link :href="route('pages.a-propos')" class="hover:text-brand-green">{{ $t('nav.about') }}</Link></li>
+                    <li class="hidden sm:block"><Link :href="route('galleries.index')" class="hover:text-brand-green">{{ $t('nav.gallery') }}</Link></li>
+                    <li class="hidden sm:block"><Link :href="route('pages.contact')" class="hover:text-brand-green">{{ $t('nav.contact') }}</Link></li>
                     <li>
-                        <Link :href="switchLocaleHref('fr')" :class="{ underline: currentLocale === 'fr' }">FR</Link>
+                        <!-- Plain <a>, not <Link>: switching locale must be a
+                             full browser navigation, not an Inertia SPA visit.
+                             window.Ziggy (Ziggy's route() table) is injected
+                             once by the `@routes` Blade directive and never
+                             refreshed on SPA visits, so every route()-built
+                             link on the page would keep resolving against
+                             whichever locale was active on the very first
+                             load — a hard reload is what actually gets a
+                             fresh, correctly-prefixed window.Ziggy. -->
+                        <a :href="switchLocaleHref('fr')" :class="{ underline: currentLocale === 'fr' }">FR</a>
                         /
-                        <Link :href="switchLocaleHref('en')" :class="{ underline: currentLocale === 'en' }">EN</Link>
+                        <a :href="switchLocaleHref('en')" :class="{ underline: currentLocale === 'en' }">EN</a>
                     </li>
                 </ul>
             </div>
@@ -95,7 +111,7 @@ watch(
                 <ul class="font-heading hidden items-center gap-8 text-sm font-semibold tracking-wide uppercase md:flex">
                     <li v-if="raceInfoPages.length" class="group relative py-3">
                         <span class="hover:text-brand-tan flex cursor-default items-center gap-1">
-                            Information sur le bengal
+                            {{ $t('nav.race_info') }}
                             <svg viewBox="0 0 24 24" class="h-3 w-3 transition group-hover:rotate-180" fill="none" stroke="currentColor" stroke-width="3">
                                 <polyline points="6 9 12 15 18 9" />
                             </svg>
@@ -110,11 +126,11 @@ watch(
                             </li>
                         </ul>
                     </li>
-                    <li><Link :href="route('cats.breeders')" class="hover:text-brand-tan">Nos chats reproducteurs</Link></li>
-                    <li><Link :href="route('litters.index')" class="hover:text-brand-tan">Portées prévues</Link></li>
+                    <li><Link :href="route('cats.breeders')" class="hover:text-brand-tan">{{ $t('nav.breeders') }}</Link></li>
+                    <li><Link :href="route('litters.index')" class="hover:text-brand-tan">{{ $t('nav.litters') }}</Link></li>
                     <li v-if="adoptionPages.length" class="group relative py-3">
                         <span class="hover:text-brand-tan flex cursor-default items-center gap-1">
-                            Adoption et prix
+                            {{ $t('nav.adoption') }}
                             <svg viewBox="0 0 24 24" class="h-3 w-3 transition group-hover:rotate-180" fill="none" stroke="currentColor" stroke-width="3">
                                 <polyline points="6 9 12 15 18 9" />
                             </svg>
@@ -131,7 +147,7 @@ watch(
                     </li>
                     <li v-if="colors.length" class="group relative py-3">
                         <Link :href="route('cats.index')" class="btn-outline-brand !px-5 !py-2 !text-xs">
-                            Chaton Bengal Disponible
+                            {{ $t('nav.kittens_cta') }}
                             <svg viewBox="0 0 24 24" class="h-3 w-3 transition group-hover:rotate-180" fill="none" stroke="currentColor" stroke-width="3">
                                 <polyline points="6 9 12 15 18 9" />
                             </svg>
@@ -152,7 +168,7 @@ watch(
                     </li>
                     <li v-else>
                         <Link :href="route('cats.index')" class="btn-outline-brand !px-5 !py-2 !text-xs">
-                            Chaton Bengal Disponible
+                            {{ $t('nav.kittens_cta') }}
                         </Link>
                     </li>
                 </ul>
@@ -160,7 +176,7 @@ watch(
                 <button
                     type="button"
                     class="text-brand-ink flex h-10 w-10 items-center justify-center md:hidden"
-                    aria-label="Ouvrir le menu"
+                    :aria-label="$t('nav.open_menu')"
                     @click="mobileMenuOpen = true"
                 >
                     <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -180,7 +196,7 @@ watch(
             <div v-if="mobileMenuOpen" class="bg-brand-ink fixed inset-y-0 left-0 z-50 w-[85vw] max-w-sm overflow-y-auto text-white md:hidden">
                 <div class="flex items-center justify-between px-6 py-4">
                     <img :src="logo" alt="Geneva Bengal" class="h-12 w-auto" />
-                    <button type="button" class="flex h-10 w-10 items-center justify-center" aria-label="Fermer le menu" @click="mobileMenuOpen = false">
+                    <button type="button" class="flex h-10 w-10 items-center justify-center" :aria-label="$t('nav.close_menu')" @click="mobileMenuOpen = false">
                         <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                             <line x1="6" y1="6" x2="18" y2="18" />
                             <line x1="18" y1="6" x2="6" y2="18" />
@@ -189,16 +205,16 @@ watch(
                 </div>
                 <ul class="font-heading px-6 pb-10 text-sm font-semibold tracking-wide uppercase">
                     <li class="border-b border-white/10">
-                        <Link href="/" class="block py-4">Accueil</Link>
+                        <Link href="/" class="block py-4">{{ $t('nav.home') }}</Link>
                     </li>
                     <li class="border-b border-white/10">
                         <div class="flex items-center justify-between">
-                            <Link :href="route('cats.index')" class="text-brand-green block py-4">Chaton Bengal Disponible</Link>
+                            <Link :href="route('cats.index')" class="text-brand-green block py-4">{{ $t('nav.kittens_cta') }}</Link>
                             <button
                                 v-if="colors.length"
                                 type="button"
                                 class="flex h-10 w-10 items-center justify-center"
-                                aria-label="Filtrer par couleur"
+                                :aria-label="$t('nav.filter_by_color')"
                                 @click="toggleMobileSection('colors')"
                             >
                                 <svg
@@ -224,7 +240,7 @@ watch(
                     </li>
                     <li v-if="raceInfoPages.length" class="border-b border-white/10">
                         <button type="button" class="flex w-full items-center justify-between py-4" @click="toggleMobileSection('race_info')">
-                            Information sur le bengal
+                            {{ $t('nav.race_info') }}
                             <svg
                                 viewBox="0 0 24 24"
                                 class="h-3 w-3 transition"
@@ -243,14 +259,14 @@ watch(
                         </ul>
                     </li>
                     <li class="border-b border-white/10">
-                        <Link :href="route('cats.breeders')" class="block py-4">Nos chats reproducteurs</Link>
+                        <Link :href="route('cats.breeders')" class="block py-4">{{ $t('nav.breeders') }}</Link>
                     </li>
                     <li class="border-b border-white/10">
-                        <Link :href="route('litters.index')" class="block py-4">Portées prévues</Link>
+                        <Link :href="route('litters.index')" class="block py-4">{{ $t('nav.litters') }}</Link>
                     </li>
                     <li v-if="adoptionPages.length" class="border-b border-white/10">
                         <button type="button" class="flex w-full items-center justify-between py-4" @click="toggleMobileSection('adoption')">
-                            Adoption et prix
+                            {{ $t('nav.adoption') }}
                             <svg
                                 viewBox="0 0 24 24"
                                 class="h-3 w-3 transition"
@@ -269,13 +285,13 @@ watch(
                         </ul>
                     </li>
                     <li class="border-b border-white/10">
-                        <Link :href="route('galleries.index')" class="block py-4">Galerie photo</Link>
+                        <Link :href="route('galleries.index')" class="block py-4">{{ $t('nav.gallery') }}</Link>
                     </li>
                     <li class="border-b border-white/10">
-                        <Link :href="route('pages.a-propos')" class="block py-4">À propos</Link>
+                        <Link :href="route('pages.a-propos')" class="block py-4">{{ $t('nav.about') }}</Link>
                     </li>
                     <li>
-                        <Link :href="route('pages.contact')" class="block py-4">Contactez-nous</Link>
+                        <Link :href="route('pages.contact')" class="block py-4">{{ $t('nav.contact_us') }}</Link>
                     </li>
                 </ul>
                 <div class="px-6 pb-10">
@@ -298,17 +314,17 @@ watch(
                     </div>
                     <div>
                         <h5 class="font-heading flex min-h-14 items-end justify-center text-sm font-bold tracking-wide text-white uppercase sm:justify-start">
-                            À propos de nous
+                            {{ $t('footer.about_heading') }}
                         </h5>
                         <ul class="mt-3 space-y-2 text-sm">
-                            <li><Link :href="route('pages.a-propos')" class="hover:text-brand-green">Notre histoire</Link></li>
-                            <li><Link :href="`${route('pages.a-propos')}#temoignages`" class="hover:text-brand-green">Témoignages</Link></li>
-                            <li><Link :href="route('pages.contact')" class="hover:text-brand-green">Contactez-nous</Link></li>
+                            <li><Link :href="route('pages.a-propos')" class="hover:text-brand-green">{{ $t('footer.our_story') }}</Link></li>
+                            <li><Link :href="`${route('pages.a-propos')}#temoignages`" class="hover:text-brand-green">{{ $t('footer.testimonials') }}</Link></li>
+                            <li><Link :href="route('pages.contact')" class="hover:text-brand-green">{{ $t('nav.contact_us') }}</Link></li>
                         </ul>
                     </div>
                     <div>
                         <h5 class="font-heading flex min-h-14 items-end justify-center text-sm font-bold tracking-wide text-white uppercase sm:justify-start">
-                            Information sur le chat Bengal
+                            {{ $t('footer.race_info_heading') }}
                         </h5>
                         <ul class="mt-3 space-y-2 text-sm">
                             <li v-for="item in raceInfoPages" :key="item.id">
@@ -318,7 +334,7 @@ watch(
                     </div>
                     <div>
                         <h5 class="font-heading flex min-h-14 items-end justify-center text-sm font-bold tracking-wide text-white uppercase sm:justify-start">
-                            Guide d'adoption
+                            {{ $t('footer.adoption_heading') }}
                         </h5>
                         <ul class="mt-3 space-y-2 text-sm">
                             <li v-for="item in adoptionPages" :key="item.id">
@@ -329,7 +345,7 @@ watch(
                 </div>
 
                 <p class="mt-12 border-t border-white/90 pt-6 text-center text-sm">
-                    © {{ new Date().getFullYear() }} Geneva Bengal — Tous droits réservés.
+                    © {{ new Date().getFullYear() }} Geneva Bengal — {{ $t('footer.rights_reserved') }}
                 </p>
             </div>
         </footer>
