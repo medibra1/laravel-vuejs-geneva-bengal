@@ -157,7 +157,7 @@ watch(
                         >
                             <li v-for="color in colors" :key="color.id">
                                 <Link
-                                    :href="route('cats.index', { color_id: color.id })"
+                                    :href="route('cats.index.color', color.slug)"
                                     class="hover:bg-brand-tan flex items-center gap-2 px-5 py-2.5 transition hover:text-white"
                                 >
                                     <span class="h-3 w-3 shrink-0 rounded-full ring-1 ring-black/10" :style="{ backgroundColor: color.hex_code }" />
@@ -231,7 +231,7 @@ watch(
                         </div>
                         <ul v-if="colors.length" v-show="mobileOpenSection === 'colors'" class="text-brand-tan space-y-3 pb-4 pl-4 text-xs normal-case">
                             <li v-for="color in colors" :key="color.id">
-                                <Link :href="route('cats.index', { color_id: color.id })" class="flex items-center gap-2">
+                                <Link :href="route('cats.index.color', color.slug)" class="flex items-center gap-2">
                                     <span class="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-white/30" :style="{ backgroundColor: color.hex_code }" />
                                     {{ color.name }}
                                 </Link>

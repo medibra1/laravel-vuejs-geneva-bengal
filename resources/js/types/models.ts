@@ -1,6 +1,7 @@
 export interface Color {
     id: number;
     name: string;
+    slug: string;
     hex_code: string;
 }
 
@@ -14,7 +15,7 @@ export interface CatDeposit {
     status: 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled';
     amount: number;
     currency: string;
-    payment_method: 'stripe' | 'cash' | 'bank_transfer' | 'twint_manual';
+    payment_method: 'stripe' | 'cash' | 'bank_transfer' | 'twint_manual' | null;
     payment_link_url: string | null;
     paid_at: string | null;
     finalized_at: string | null;
@@ -181,7 +182,7 @@ export interface Deposit {
     amount: number;
     currency: string;
     status: 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled';
-    payment_method: 'stripe' | 'cash' | 'bank_transfer' | 'twint_manual';
+    payment_method: 'stripe' | 'cash' | 'bank_transfer' | 'twint_manual' | null;
     payment_link_url: string | null;
     provider: string;
     provider_reference: string | null;

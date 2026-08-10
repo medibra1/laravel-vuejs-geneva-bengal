@@ -10,11 +10,11 @@ import type { Cat } from '@/types/models';
 
 const props = defineProps<{
     cats: Cat[];
-    colorId: number | null;
+    activeColorSlug: string | null;
 }>();
 
 const page = usePage<PageProps>();
-const activeColor = computed(() => page.props.colors.find((color) => color.id === props.colorId));
+const activeColor = computed(() => page.props.colors.find((color) => color.slug === props.activeColorSlug));
 </script>
 
 <template>
