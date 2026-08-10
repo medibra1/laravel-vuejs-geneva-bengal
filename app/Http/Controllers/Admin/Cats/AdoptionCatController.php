@@ -11,6 +11,8 @@ use App\Http\Resources\CatResource;
 use App\Models\Cat;
 use App\Models\Color;
 use App\Models\Owner;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -40,7 +42,7 @@ class AdoptionCatController extends Controller
                 // this filters on the model's *current* status via
                 // HasStatuses' own `currentStatus` scope rather than a
                 // plain `where()`.
-                AllowedFilter::callback('status', fn ($query, $value) => $query->currentStatus($value)),
+                AllowedFilter::callback('status', $this->filterByCurrentStatus(...)),
                 // Free-text admin search box, distinct from the exact
                 // `name` filter above: matches either the name or the eye
                 // color, the two free-text fields an admin is likely to
@@ -61,6 +63,33 @@ class AdoptionCatController extends Controller
             'cats' => $cats,
             'colors' => Color::orderBy('name')->get(['id', 'name', 'hex_code']),
         ]);
+    }
+
+    /**
+     * Named method rather than an inline closure: AllowedFilter::callback()
+     * declares its $callback param as `callable(Builder<Model>, ...)`
+     * (Spatie's own fixed signature, not templated per call site), so
+     * `$query` here is only known statically as `Builder<Model>` — too
+     * wide for Larastan to see `currentStatus()`, a scope contributed by
+     * Cat's HasStatuses trait, not a real column. Calling
+     * `$query->currentStatus(...)` directly relies on Eloquent's
+     * Builder::__call() -> forwardCallTo() magic, which Larastan checks
+     * against the builder's (here: too-wide) generic model type. Invoking
+     * the scope method directly on a Cat instance instead sidesteps that
+     * magic entirely — `scopeCurrentStatus(Builder $builder, ...$names)`
+     * itself only ever declares a bare, non-generic `Builder` parameter,
+     * so passing our wide `$query` into it type-checks cleanly. The scope
+     * mutates $builder in place and returns void, hence returning $query
+     * ourselves afterward.
+     *
+     * @param  Builder<Model>  $query
+     * @return Builder<Model>
+     */
+    private function filterByCurrentStatus(Builder $query, mixed $value): Builder
+    {
+        (new Cat)->scopeCurrentStatus($query, $value);
+
+        return $query;
     }
 
     public function create(): Response
