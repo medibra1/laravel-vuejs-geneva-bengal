@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { useImageSlider } from '@/Composables/useImageSlider';
-import banner1 from '../../images/shared/page-banner.jpg';
-import banner2 from '../../images/home/slider-1.jpg';
-import banner3 from '../../images/home/slider-2.jpg';
-import banner4 from '../../images/home/slider-3.jpg';
+import banner1 from '../../images/home/slider-1.jpg';
+import banner2 from '../../images/home/slider-2.jpg';
 
 withDefaults(
     defineProps<{
@@ -20,7 +18,7 @@ withDefaults(
 // Same curated 1920x1275 photo set as HeroSlider.vue's homepage hero — kept
 // local to this component (no `images` prop) since every page using
 // PageBanner wants the same ambient rotation, none pick their own image.
-const images = [banner1, banner2, banner3, banner4];
+const images = [banner1, banner2];
 
 const { currentSlide } = useImageSlider(() => images.length);
 </script>
