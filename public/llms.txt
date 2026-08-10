@@ -1,0 +1,44 @@
+# Geneva Bengal
+
+> Geneva Bengal is a family-run Bengal cattery based in Geneva, Switzerland
+> (postal code 1209), breeding Bengal kittens since 2020. This file
+> summarizes the site for AI assistants and crawlers; it is not shown to
+> human visitors.
+
+The site is bilingual (French/English); every page exists under both a
+`/fr/...` and an `/en/...` prefix. French links are listed below, with the
+English equivalent in parentheses. Kittens available for adoption are
+listed with photos, price and status on the site itself — prices roughly
+range from 1500 to 3500 CHF depending on the kitten, with a refundable
+deposit (currently 500 CHF) to reserve one. There is no public phone
+number or email; all enquiries (adoption interest, waiting list, general
+questions) go through the contact form linked below.
+
+## Adoption
+
+- [Chatons disponibles](https://genevabengals.ch/fr/chatons-disponibles) ([Available kittens](https://genevabengals.ch/en/chatons-disponibles)): current Bengal kittens available for adoption, filterable by color.
+- [Portées prévues](https://genevabengals.ch/fr/portees-prevues) ([Upcoming litters](https://genevabengals.ch/en/portees-prevues)): litters expected soon, for visitors who want to reserve ahead of a kitten being born.
+- [Nos chats reproducteurs](https://genevabengals.ch/fr/nos-chats-reproducteurs) ([Our breeding cats](https://genevabengals.ch/en/nos-chats-reproducteurs)): the cattery's own breeding sires and dams (not for adoption).
+- [Étapes pour adopter un chaton Bengal](https://genevabengals.ch/fr/pages/etapes-pour-adopter-un-chaton-bengal) ([Steps to adopt a Bengal kitten](https://genevabengals.ch/en/pages/etapes-pour-adopter-un-chaton-bengal)): how the adoption process works, from first contact to bringing the kitten home.
+- [Introduction d'un nouveau chaton à la maison](https://genevabengals.ch/fr/pages/introduction-dun-nouveau-chaton-a-la-maison) ([Introducing a new kitten at home](https://genevabengals.ch/en/pages/introduction-dun-nouveau-chaton-a-la-maison)): advice for the first days after adoption.
+- [Prix de nos chats Bengal](https://genevabengals.ch/fr/pages/prix-de-nos-chats-bengal) ([Prices of our Bengal cats](https://genevabengals.ch/en/pages/prix-de-nos-chats-bengal)): pricing details.
+- [FAQ](https://genevabengals.ch/fr/pages/faq) ([FAQ](https://genevabengals.ch/en/pages/faq)): answers to common questions about kittens and adoption.
+
+## À propos du Bengal
+
+- [Caractéristiques de la race](https://genevabengals.ch/fr/pages/caracteristiques-de-la-race) ([Breed characteristics](https://genevabengals.ch/en/pages/caracteristiques-de-la-race))
+- [Motifs et couleurs](https://genevabengals.ch/fr/pages/motifs-et-couleurs) ([Patterns and colors](https://genevabengals.ch/en/pages/motifs-et-couleurs))
+- [Personnalité du chat Bengal](https://genevabengals.ch/fr/pages/personnalite-du-chat-bengal) ([Bengal cat personality](https://genevabengals.ch/en/pages/personnalite-du-chat-bengal))
+- [Alimentation du chat Bengal](https://genevabengals.ch/fr/pages/alimentation-du-chat-bengal) ([Bengal cat diet](https://genevabengals.ch/en/pages/alimentation-du-chat-bengal))
+- [Santé du chat Bengal](https://genevabengals.ch/fr/pages/sante-du-chat-bengal) ([Bengal cat health](https://genevabengals.ch/en/pages/sante-du-chat-bengal))
+
+## L'élevage
+
+- [Accueil](https://genevabengals.ch/fr) ([Home](https://genevabengals.ch/en))
+- [À propos](https://genevabengals.ch/fr/a-propos) ([About](https://genevabengals.ch/en/a-propos)): the cattery's story and background.
+- [Galerie](https://genevabengals.ch/fr/galerie) ([Gallery](https://genevabengals.ch/en/galerie)): photos of the cattery's cats and kittens.
+- [Contact](https://genevabengals.ch/fr/contact) ([Contact](https://genevabengals.ch/en/contact)): contact form — the only way to reach the cattery.
+
+## Optional
+
+- [Sitemap XML](https://genevabengals.ch/sitemap.xml): full machine-readable list of every page in both locales.
