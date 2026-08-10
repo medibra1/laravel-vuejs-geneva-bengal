@@ -61,6 +61,50 @@ it('shows how many litters each breeder is linked to', function () {
     );
 });
 
+// --- index filters/sort ---
+
+it('filters the breeders list by color', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $silver = Color::factory()->create();
+    $brown = Color::factory()->create();
+    Cat::factory()->create(['type' => 'reproducteur', 'color_id' => $silver->id]);
+    Cat::factory()->create(['type' => 'reproducteur', 'color_id' => $brown->id]);
+
+    $response = $this->actingAs($admin)->get(route('admin.cats.breeders.index', ['filter' => ['color_id' => $silver->id]]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page->has('cats.data', 1));
+});
+
+it('searches the breeders list across both name and eye color', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    Cat::factory()->create(['type' => 'reproducteur', 'name' => 'Simba']);
+    Cat::factory()->create(['type' => 'reproducteur', 'name' => 'Nala', 'eye_color' => 'Vert Simba']);
+    Cat::factory()->create(['type' => 'reproducteur', 'name' => 'Rocky', 'eye_color' => 'Or']);
+
+    $response = $this->actingAs($admin)->get(route('admin.cats.breeders.index', ['filter' => ['search' => 'Simba']]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page->has('cats.data', 2));
+});
+
+it('sorts the breeders list by name', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    Cat::factory()->create(['type' => 'reproducteur', 'name' => 'Zorro']);
+    Cat::factory()->create(['type' => 'reproducteur', 'name' => 'Alfa']);
+
+    $response = $this->actingAs($admin)->get(route('admin.cats.breeders.index', ['sort' => 'name']));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('cats.data.0.name', 'Alfa')
+        ->where('cats.data.1.name', 'Zorro')
+    );
+});
+
 it('lets an admin create a breeder cat, always typed as reproducteur', function () {
     $admin = User::factory()->create(['email_verified_at' => now()]);
     $admin->assignRole('admin');

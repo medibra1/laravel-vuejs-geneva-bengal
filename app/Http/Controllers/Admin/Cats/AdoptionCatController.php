@@ -31,9 +31,27 @@ class AdoptionCatController extends Controller
     public function index(): Response
     {
         $cats = QueryBuilder::for(Cat::query()->whereIn('type', self::TYPES))
-            ->allowedFilters('name', 'type', AllowedFilter::exact('color_id'))
+            ->allowedFilters(
+                'name',
+                AllowedFilter::exact('type'),
+                AllowedFilter::exact('color_id'),
+                // `status` isn't a real column — spatie/laravel-model-status
+                // keeps it in a separate polymorphic `statuses` table — so
+                // this filters on the model's *current* status via
+                // HasStatuses' own `currentStatus` scope rather than a
+                // plain `where()`.
+                AllowedFilter::callback('status', fn ($query, $value) => $query->currentStatus($value)),
+                // Free-text admin search box, distinct from the exact
+                // `name` filter above: matches either the name or the eye
+                // color, the two free-text fields an admin is likely to
+                // remember/search by.
+                AllowedFilter::callback('search', fn ($query, $value) => $query->where(
+                    fn ($q) => $q->where('name', 'like', "%{$value}%")->orWhere('eye_color', 'like', "%{$value}%")
+                )),
+            )
+            ->allowedSorts('name', 'created_at', 'price', 'birth_date')
+            ->defaultSort('-created_at')
             ->with(['color', 'statuses', 'media'])
-            ->latest()
             ->paginate(20)
             ->withQueryString();
 
@@ -41,6 +59,7 @@ class AdoptionCatController extends Controller
 
         return Inertia::render('Admin/Cats/Adoption/Index', [
             'cats' => $cats,
+            'colors' => Color::orderBy('name')->get(['id', 'name', 'hex_code']),
         ]);
     }
 

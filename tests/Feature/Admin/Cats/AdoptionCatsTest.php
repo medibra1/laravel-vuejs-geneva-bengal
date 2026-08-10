@@ -44,6 +44,88 @@ it('lets an admin list only kitten/cat types, not breeders', function () {
     );
 });
 
+// --- index filters/sort ---
+
+it('filters the adoption list by exact type', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    Cat::factory()->count(2)->create(['type' => 'chaton']);
+    Cat::factory()->create(['type' => 'chat']);
+
+    $response = $this->actingAs($admin)->get(route('admin.cats.adoption.index', ['filter' => ['type' => 'chat']]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page->has('cats.data', 1));
+});
+
+it('filters the adoption list by color', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $silver = Color::factory()->create();
+    $brown = Color::factory()->create();
+    Cat::factory()->create(['type' => 'chaton', 'color_id' => $silver->id]);
+    Cat::factory()->create(['type' => 'chaton', 'color_id' => $brown->id]);
+
+    $response = $this->actingAs($admin)->get(route('admin.cats.adoption.index', ['filter' => ['color_id' => $silver->id]]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page->has('cats.data', 1));
+});
+
+it('filters the adoption list by current status, backed by the statuses table rather than a column', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $available = Cat::factory()->create(['type' => 'chaton']);
+    $available->setStatus('disponible');
+    $pending = Cat::factory()->create(['type' => 'chaton']);
+    $pending->setStatus('en_attente');
+
+    $response = $this->actingAs($admin)->get(route('admin.cats.adoption.index', ['filter' => ['status' => 'disponible']]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->has('cats.data', 1)
+        ->where('cats.data.0.id', $available->id)
+    );
+});
+
+it('searches the adoption list by name across both name and eye color', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    Cat::factory()->create(['type' => 'chaton', 'name' => 'Simba']);
+    Cat::factory()->create(['type' => 'chaton', 'name' => 'Nala', 'eye_color' => 'Vert Simba']);
+    Cat::factory()->create(['type' => 'chaton', 'name' => 'Rocky', 'eye_color' => 'Or']);
+
+    $response = $this->actingAs($admin)->get(route('admin.cats.adoption.index', ['filter' => ['search' => 'Simba']]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page->has('cats.data', 2));
+});
+
+it('sorts the adoption list by price', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $expensive = Cat::factory()->create(['type' => 'chaton', 'price' => 300000]);
+    $cheap = Cat::factory()->create(['type' => 'chaton', 'price' => 150000]);
+
+    $response = $this->actingAs($admin)->get(route('admin.cats.adoption.index', ['sort' => 'price']));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('cats.data.0.id', $cheap->id)
+        ->where('cats.data.1.id', $expensive->id)
+    );
+});
+
+it('rejects a sort field that is not explicitly allowed', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+
+    $response = $this->actingAs($admin)->get(route('admin.cats.adoption.index', ['sort' => 'description']));
+
+    $response->assertStatus(400);
+});
+
 it('lets an admin create a kitten, defaulting its status to available', function () {
     $admin = User::factory()->create(['email_verified_at' => now()]);
     $admin->assignRole('admin');

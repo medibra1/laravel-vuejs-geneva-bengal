@@ -25,11 +25,22 @@ class BreederCatController extends Controller
 {
     public function index(): Response
     {
+        // No `type`/`status` filters here, unlike AdoptionCatController:
+        // the base query already scopes to CatType::Breeder, and breeders
+        // never get a status (see CLAUDE.md — no price/status/availability
+        // for this section at all).
         $cats = QueryBuilder::for(Cat::query()->where('type', CatType::Breeder))
-            ->allowedFilters('name', AllowedFilter::exact('color_id'))
+            ->allowedFilters(
+                'name',
+                AllowedFilter::exact('color_id'),
+                AllowedFilter::callback('search', fn ($query, $value) => $query->where(
+                    fn ($q) => $q->where('name', 'like', "%{$value}%")->orWhere('eye_color', 'like', "%{$value}%")
+                )),
+            )
+            ->allowedSorts('name', 'created_at', 'birth_date')
+            ->defaultSort('-created_at')
             ->withCount(['sireLitters', 'damLitters'])
             ->with(['color', 'media'])
-            ->latest()
             ->paginate(20)
             ->withQueryString();
 
