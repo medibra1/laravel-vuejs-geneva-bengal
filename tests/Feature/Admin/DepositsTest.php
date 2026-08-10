@@ -112,7 +112,12 @@ it('cancels an already-finalized deposit, releasing an adopted cat back to dispo
     $cat = Cat::factory()->create();
     $cat->setStatus(CatStatus::Adopted->value);
     $owner = Owner::factory()->create();
-    $finalizedAt = now()->subDays(3);
+    // startOfSecond(): the `finalized_at` column is a plain `timestamp`
+    // (second precision, see the migration) — comparing against an
+    // in-memory value that still carries microseconds would fail after
+    // the DB round-trip strips them, regardless of whether cancel()
+    // actually left the column untouched.
+    $finalizedAt = now()->subDays(3)->startOfSecond();
     $deposit = Deposit::factory()->paid()->create([
         'cat_id' => $cat->id,
         'owner_id' => $owner->id,
@@ -229,11 +234,16 @@ it('holds the cat (en_attente) as soon as an admin creates a deposit for it', fu
     expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
 });
 
-it('refuses an admin deposit for a cat that already has one pending or paid', function () {
+it('refuses an admin deposit for a cat that already has one paid', function () {
+    // Not "pending or paid": CatIsAvailableForDeposit (see its own
+    // docblock) deliberately stopped blocking on a merely pending deposit
+    // once Stripe moved to capture_method: manual — several visitors can
+    // hold a parallel authorization for the same cat, arbitrated later at
+    // capture time. Only a *paid* deposit blocks a new one now.
     $admin = User::factory()->create(['email_verified_at' => now()]);
     $admin->assignRole('admin');
     $cat = Cat::factory()->create();
-    Deposit::factory()->create(['cat_id' => $cat->id, 'status' => DepositStatus::Pending]);
+    Deposit::factory()->paid()->create(['cat_id' => $cat->id]);
 
     $response = $this->actingAs($admin)->post(route('admin.deposits.store'), [
         'cat_id' => $cat->id,
@@ -735,10 +745,12 @@ it('refuses to assign a breeder cat to a waiting-list deposit', function () {
 });
 
 it('refuses to assign a cat that already has an active reservation elsewhere', function () {
+    // Same "paid, not pending, blocks" rule as the admin-deposit-creation
+    // test above — CatIsAvailableForDeposit governs both endpoints.
     $admin = User::factory()->create(['email_verified_at' => now()]);
     $admin->assignRole('admin');
     $cat = Cat::factory()->create(['type' => 'chaton']);
-    Deposit::factory()->create(['cat_id' => $cat->id, 'status' => DepositStatus::Pending]);
+    Deposit::factory()->paid()->create(['cat_id' => $cat->id]);
     $waitingListDeposit = Deposit::factory()->create(['cat_id' => null, 'status' => DepositStatus::Pending]);
 
     $response = $this->actingAs($admin)->post(route('admin.deposits.assign-cat', $waitingListDeposit), [
