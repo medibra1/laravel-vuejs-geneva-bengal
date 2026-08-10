@@ -10,6 +10,7 @@ import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import RadioButton from 'primevue/radiobutton';
 import Select from 'primevue/select';
+import { manualPaymentMethodOptions } from '@/Composables/useDepositActions';
 import type { OwnerCatOption, OwnerOption } from '@/types/models';
 
 const props = defineProps<{
@@ -18,12 +19,7 @@ const props = defineProps<{
     defaultAmount: number;
 }>();
 
-const paymentMethodOptions = [
-    { label: 'Stripe (lien de paiement)', value: 'stripe' },
-    { label: 'Espèces', value: 'cash' },
-    { label: 'Virement bancaire', value: 'bank_transfer' },
-    { label: 'TWINT (manuel)', value: 'twint_manual' },
-];
+const paymentMethodOptions = [{ label: 'À définir plus tard', value: null }, ...manualPaymentMethodOptions];
 
 const ownerMode = ref<'none' | 'existing' | 'new'>('none');
 
@@ -44,7 +40,7 @@ const form = useForm({
     email: '',
     phone: '',
     amount: props.defaultAmount,
-    payment_method: 'stripe',
+    payment_method: null as string | null,
     owner_id: null as number | null,
     new_owner: {
         first_name: '',
@@ -257,9 +253,8 @@ function submit(): void {
                             <Select id="payment_method" v-model="form.payment_method" :options="paymentMethodOptions"
                                 option-label="label" option-value="value" class="mt-1 w-full" />
                             <InputError :message="form.errors.payment_method" />
-                            <p v-if="form.payment_method === 'stripe'" class="mt-1 text-xs text-neutral-500">
-                                Un lien de paiement Stripe sera généré — à copier depuis la liste et envoyer au
-                                client, pas de saisie de carte ici.
+                            <p v-if="form.payment_method === null" class="mt-1 text-xs text-neutral-500">
+                                À choisir plus tard, au moment de marquer le dépôt payé.
                             </p>
                             <p v-else class="mt-1 text-xs text-neutral-500">
                                 À marquer "payé" manuellement une fois le paiement reçu.

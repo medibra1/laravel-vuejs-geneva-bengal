@@ -11,7 +11,7 @@ import Tag from 'primevue/tag';
 import ConfirmPasswordModal from '@/Components/ConfirmPasswordModal.vue';
 import FinalizeOwnerDialog from '@/Components/Admin/FinalizeOwnerDialog.vue';
 import { useConfirmsPassword } from '@/Composables/useConfirmsPassword';
-import { formatAmount, formatDate, paymentMethodLabels, statusSeverity, useDepositActions } from '@/Composables/useDepositActions';
+import { formatAmount, formatDate, manualPaymentMethodOptions, paymentMethodLabels, statusSeverity, useDepositActions } from '@/Composables/useDepositActions';
 import type { PageProps } from '@/types';
 import type { Deposit, OwnerCatOption, OwnerOption, Paginated } from '@/types/models';
 
@@ -33,12 +33,19 @@ const statusOptions = [
     { label: 'Annulé', value: 'cancelled' },
 ];
 
+// A deposit created with "à définir plus tard" (payment_method null, see
+// Admin/Deposits/Form.vue) needs the admin to pick one right here, at the
+// moment of marking it paid — see MarkDepositPaidRequest. Keyed by deposit
+// id since several such rows can be mid-choice on the page at once.
+const pendingMethodChoice = reactive<Record<number, string | null>>({});
+
 const {
     copiedId,
     copyPaymentLink,
     markPaid,
     verifyStripe,
     refund,
+    cancel,
     finalize,
     submitFinalize,
     finalizeDialogVisible,
@@ -46,9 +53,10 @@ const {
     finalizeForm,
 } = useDepositActions();
 
-// Refund, finalize and verify-stripe all touch money or ownership and sit
-// behind password.confirm server-side (see routes/admin.php) — this is
-// the client-side half, see useConfirmsPassword.ts.
+// Refund, cancel, finalize and verify-stripe all touch money or
+// ownership and sit behind password.confirm server-side (see
+// routes/admin.php) — this is the client-side half, see
+// useConfirmsPassword.ts.
 const { confirmingPassword, form: confirmPasswordForm, confirmPassword, submitPassword: submitConfirmPassword } = useConfirmsPassword();
 
 // Turns a waiting-list entry into a reservation for a specific kitten —
@@ -206,7 +214,7 @@ function goToPage(pageNumber: number): void {
                             <template #body="{ data }">{{ formatAmount(data.amount, data.currency) }}</template>
                         </Column>
                         <Column header="Méthode">
-                            <template #body="{ data }">{{ paymentMethodLabels[data.payment_method] }}</template>
+                            <template #body="{ data }">{{ data.payment_method ? paymentMethodLabels[data.payment_method] : 'À définir' }}</template>
                         </Column>
                         <Column header="Statut">
                             <template #body="{ data }">
@@ -232,7 +240,7 @@ function goToPage(pageNumber: number): void {
                                         @click="openAssignCat(data)"
                                     />
                                     <Button
-                                        v-if="data.payment_method !== 'stripe' && data.status === 'pending'"
+                                        v-if="data.payment_method !== 'stripe' && data.payment_method !== null && data.status === 'pending'"
                                         label="Marquer payé"
                                         icon="pi pi-check"
                                         severity="success"
@@ -240,6 +248,29 @@ function goToPage(pageNumber: number): void {
                                         text
                                         @click="markPaid(data, data.name)"
                                     />
+                                    <div
+                                        v-if="data.payment_method === null && data.status === 'pending'"
+                                        class="flex items-center gap-2"
+                                    >
+                                        <Select
+                                            v-model="pendingMethodChoice[data.id]"
+                                            :options="manualPaymentMethodOptions"
+                                            option-label="label"
+                                            option-value="value"
+                                            placeholder="Choisir la méthode"
+                                            class="w-44"
+                                            size="small"
+                                        />
+                                        <Button
+                                            label="Marquer payé"
+                                            icon="pi pi-check"
+                                            severity="success"
+                                            size="small"
+                                            text
+                                            :disabled="!pendingMethodChoice[data.id]"
+                                            @click="markPaid(data, data.name, pendingMethodChoice[data.id])"
+                                        />
+                                    </div>
                                     <Button
                                         v-if="data.payment_method === 'stripe' && data.status === 'pending' && data.payment_link_url"
                                         :label="copiedId === data.id ? 'Copié !' : 'Copier le lien'"
@@ -275,6 +306,15 @@ function goToPage(pageNumber: number): void {
                                         size="small"
                                         text
                                         @click="confirmPassword(() => refund(data, data.name))"
+                                    />
+                                    <Button
+                                        v-if="isSuperAdmin && data.status === 'paid'"
+                                        label="Annuler la réservation"
+                                        icon="pi pi-times-circle"
+                                        severity="danger"
+                                        size="small"
+                                        text
+                                        @click="confirmPassword(() => cancel(data, data.name))"
                                     />
                                 </div>
                             </template>

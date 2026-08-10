@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, reactive } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
+import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 import ConfirmPasswordModal from '@/Components/ConfirmPasswordModal.vue';
 import FinalizeOwnerDialog from '@/Components/Admin/FinalizeOwnerDialog.vue';
 import { useConfirmsPassword } from '@/Composables/useConfirmsPassword';
-import { formatAmount, formatDate, paymentMethodLabels, statusSeverity, useDepositActions } from '@/Composables/useDepositActions';
+import { formatAmount, formatDate, manualPaymentMethodOptions, paymentMethodLabels, statusSeverity, useDepositActions } from '@/Composables/useDepositActions';
 import type { PageProps } from '@/types';
 import type { Cat, OwnerOption } from '@/types/models';
 
@@ -32,17 +33,35 @@ const {
     markPaid,
     verifyStripe,
     refund,
+    cancel,
     finalize,
     submitFinalize,
     finalizeDialogVisible,
     ownerMode,
     finalizeForm,
+    finalizeDirectly,
+    submitFinalizeDirectly,
+    finalizeDirectlyDialogVisible,
+    finalizeDirectlyOwnerMode,
+    finalizeDirectlyForm,
 } = useDepositActions();
 
+// "Finaliser sans dépôt" (admin.cats.finalize-directly) — super_admin only,
+// independent of whether a deposit exists at all: covers a gift or an
+// in-person sale handled fully off-system. See DepositPaymentProcessor::
+// finalizeDirectly().
+const canFinalizeDirectly = computed(() => isSuperAdmin.value && props.cat.status !== 'adopte');
+
 // Same password-confirmation gate as Admin/Deposits/Index.vue's — refund,
-// finalize and verify-stripe are behind password.confirm server-side too
-// when reached from here.
+// cancel, finalize and verify-stripe are behind password.confirm
+// server-side too when reached from here.
 const { confirmingPassword, form: confirmPasswordForm, confirmPassword, submitPassword: submitConfirmPassword } = useConfirmsPassword();
+
+// A deposit created with "à définir plus tard" (payment_method null, see
+// Admin/Deposits/Form.vue) needs the admin to pick one right here, at the
+// moment of marking it paid — see MarkDepositPaidRequest and the same
+// selector in Admin/Deposits/Index.vue.
+const pendingMethodChoice = reactive<Record<number, string | null>>({});
 </script>
 
 <template>
@@ -66,7 +85,7 @@ const { confirmingPassword, form: confirmPasswordForm, confirmPassword, submitPa
             <dl class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                 <div>
                     <dt class="text-neutral-500">Méthode</dt>
-                    <dd>{{ paymentMethodLabels[deposit.payment_method] }}</dd>
+                    <dd>{{ deposit.payment_method ? paymentMethodLabels[deposit.payment_method] : 'À définir' }}</dd>
                 </div>
                 <div>
                     <dt class="text-neutral-500">Payé le</dt>
@@ -87,13 +106,32 @@ const { confirmingPassword, form: confirmPasswordForm, confirmPassword, submitPa
 
             <div class="flex flex-wrap gap-2 border-t border-gray-200 pt-4 dark:border-neutral-700">
                 <Button
-                    v-if="deposit.payment_method !== 'stripe' && deposit.status === 'pending'"
+                    v-if="deposit.payment_method !== 'stripe' && deposit.payment_method !== null && deposit.status === 'pending'"
                     label="Marquer payé"
                     icon="pi pi-check"
                     severity="success"
                     size="small"
                     @click="markPaid(deposit, ownerLabel)"
                 />
+                <div v-if="deposit.payment_method === null && deposit.status === 'pending'" class="flex items-center gap-2">
+                    <Select
+                        v-model="pendingMethodChoice[deposit.id]"
+                        :options="manualPaymentMethodOptions"
+                        option-label="label"
+                        option-value="value"
+                        placeholder="Choisir la méthode"
+                        class="w-44"
+                        size="small"
+                    />
+                    <Button
+                        label="Marquer payé"
+                        icon="pi pi-check"
+                        severity="success"
+                        size="small"
+                        :disabled="!pendingMethodChoice[deposit.id]"
+                        @click="markPaid(deposit, ownerLabel, pendingMethodChoice[deposit.id])"
+                    />
+                </div>
                 <Button
                     v-if="deposit.payment_method === 'stripe' && deposit.status === 'pending' && deposit.payment_link_url"
                     :label="copiedId === deposit.id ? 'Copié !' : 'Copier le lien'"
@@ -126,7 +164,28 @@ const { confirmingPassword, form: confirmPasswordForm, confirmPassword, submitPa
                     size="small"
                     @click="confirmPassword(() => refund(deposit!, ownerLabel))"
                 />
+                <Button
+                    v-if="isSuperAdmin && deposit.status === 'paid'"
+                    label="Annuler la réservation"
+                    icon="pi pi-times-circle"
+                    severity="danger"
+                    size="small"
+                    @click="confirmPassword(() => cancel(deposit!, ownerLabel))"
+                />
             </div>
+        </div>
+
+        <div v-if="canFinalizeDirectly" class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950">
+            <p class="text-sm text-amber-800 dark:text-amber-200">
+                Adoption gérée entièrement hors système (don, vente en personne) : crée l'adoption sans aucun paiement en ligne enregistré.
+            </p>
+            <Button
+                label="Finaliser sans dépôt"
+                icon="pi pi-heart"
+                severity="warning"
+                size="small"
+                @click="confirmPassword(() => finalizeDirectly(cat))"
+            />
         </div>
 
         <FinalizeOwnerDialog
@@ -135,6 +194,14 @@ const { confirmingPassword, form: confirmPasswordForm, confirmPassword, submitPa
             :owners="owners"
             :form="finalizeForm"
             @submit="submitFinalize()"
+        />
+
+        <FinalizeOwnerDialog
+            v-model:visible="finalizeDirectlyDialogVisible"
+            v-model:owner-mode="finalizeDirectlyOwnerMode"
+            :owners="owners"
+            :form="finalizeDirectlyForm"
+            @submit="submitFinalizeDirectly()"
         />
 
         <ConfirmPasswordModal
