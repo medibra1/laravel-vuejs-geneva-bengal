@@ -24,6 +24,10 @@ Route::group([
     Route::get('/', [HomeController::class, 'index'])->name('home');
 
     Route::get('/chatons-disponibles', [CatController::class, 'index'])->name('cats.index');
+    // Three URL segments vs. cats.show's two ({cat:slug}) — Laravel routes
+    // by segment count, so this never collides with a color slug that
+    // happens to also be a cat slug.
+    Route::get('/chatons-disponibles/couleur/{color:slug}', [CatController::class, 'filterByColor'])->name('cats.index.color');
     Route::get('/chatons-disponibles/{cat:slug}', [CatController::class, 'show'])->name('cats.show');
     Route::get('/nos-chats-reproducteurs', [CatController::class, 'breeders'])->name('cats.breeders');
 

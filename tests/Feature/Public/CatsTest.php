@@ -3,6 +3,7 @@
 use App\Enums\CatStatus;
 use App\Enums\CatType;
 use App\Models\Cat;
+use App\Models\Color;
 
 it('lists available kittens but excludes adopted ones', function () {
     refreshApplicationWithLocale('fr');
@@ -40,6 +41,39 @@ it('excludes a kitten that is en_attente (an active deposit already holds it)', 
         ->has('cats', 1)
         ->where('cats.0.id', $available->id)
     );
+});
+
+it('filters kittens by color slug, matching either the primary or secondary color', function () {
+    refreshApplicationWithLocale('fr');
+
+    $silver = Color::factory()->create(['name' => 'Silver']);
+    $brown = Color::factory()->create(['name' => 'Brown']);
+
+    $primaryMatch = Cat::factory()->create(['type' => CatType::Kitten, 'color_id' => $silver->id]);
+    $primaryMatch->setStatus(CatStatus::Available->value);
+
+    $secondaryMatch = Cat::factory()->create(['type' => CatType::Kitten, 'color_id' => $brown->id, 'second_color_id' => $silver->id]);
+    $secondaryMatch->setStatus(CatStatus::Available->value);
+
+    $noMatch = Cat::factory()->create(['type' => CatType::Kitten, 'color_id' => $brown->id]);
+    $noMatch->setStatus(CatStatus::Available->value);
+
+    $response = $this->get('/fr/chatons-disponibles/couleur/'.$silver->slug);
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Public/ChatonsDisponibles')
+        ->has('cats', 2)
+        ->where('activeColorSlug', $silver->slug)
+    );
+});
+
+it('returns a 404 for an unknown color slug', function () {
+    refreshApplicationWithLocale('fr');
+
+    $response = $this->get('/fr/chatons-disponibles/couleur/does-not-exist');
+
+    $response->assertNotFound();
 });
 
 it('shows a single cat by slug', function () {

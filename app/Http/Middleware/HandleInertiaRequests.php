@@ -73,7 +73,7 @@ class HandleInertiaRequests extends Middleware
             // Shared globally: the nav's "Chaton Bengal Disponible" dropdown
             // needs the color list on every public page, not just the
             // listing page itself.
-            'colors' => Color::query()->orderBy('name')->get(['id', 'name', 'hex_code']),
+            'colors' => Color::query()->orderBy('name')->get(['id', 'name', 'slug', 'hex_code']),
             // Shared globally rather than per-controller: the header,
             // footer and homepage "follow us" sections all need these
             // links too, not just the contact page.
