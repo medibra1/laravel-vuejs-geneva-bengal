@@ -1,35 +1,12 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
 import catHead from '../../images/home/cat-head.png';
+import { useImageSlider } from '@/Composables/useImageSlider';
 
 const props = defineProps<{
     slides: string[];
 }>();
 
-const currentSlide = ref(0);
-const intervalMs = 6500;
-let timer: ReturnType<typeof setInterval> | undefined;
-
-function restart(): void {
-    clearInterval(timer);
-    timer = setInterval(next, intervalMs);
-}
-
-function next(): void {
-    currentSlide.value = (currentSlide.value + 1) % props.slides.length;
-}
-
-function previous(): void {
-    currentSlide.value = (currentSlide.value - 1 + props.slides.length) % props.slides.length;
-}
-
-function goTo(index: number): void {
-    currentSlide.value = index;
-    restart();
-}
-
-onMounted(restart);
-onUnmounted(() => clearInterval(timer));
+const { currentSlide, next, previous, goTo, restart } = useImageSlider(() => props.slides.length);
 </script>
 
 <template>
