@@ -11,6 +11,8 @@ use App\Http\Controllers\Public\NewsletterController;
 use App\Http\Controllers\Public\PageController;
 use App\Http\Controllers\Public\SitemapController;
 use App\Http\Controllers\Public\StripeWebhookController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
 use Spatie\Honeypot\ProtectAgainstSpam;
@@ -68,6 +70,22 @@ Route::group([
 // isn't a page a browser ever visits — see bootstrap/app.php for the
 // matching CSRF exemption.
 Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle'])->name('webhooks.stripe');
+
+// Infomaniak's shared-hosting task scheduler only calls a URL (no real
+// crontab there, see DEPLOY.md #4) — this stands in for the classic
+// `* * * * * php artisan schedule:run` cron entry. Token-gated (not left
+// open) so a discovered URL can't be used to force-run due scheduled
+// tasks on demand; throttled on top as a second, cheap guard.
+Route::get('/cron/run-schedule', function (Request $request) {
+    abort_unless(
+        config('app.cron_secret') && hash_equals((string) config('app.cron_secret'), (string) $request->query('token')),
+        403
+    );
+
+    Artisan::call('schedule:run');
+
+    return response()->noContent();
+})->middleware('throttle:20,1')->name('cron.run-schedule');
 
 // One canonical sitemap listing every locale variant of every page (via
 // hreflang alternates) rather than a separate /fr/sitemap.xml, /en/sitemap.xml.

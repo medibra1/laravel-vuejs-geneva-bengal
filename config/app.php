@@ -86,6 +86,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Cron Endpoint Secret
+    |--------------------------------------------------------------------------
+    |
+    | Shared-hosting stand-in for `* * * * * php artisan schedule:run` — see
+    | routes/web.php's "cron.run-schedule" route and DEPLOY.md #4. Read
+    | from config rather than env() directly outside this file, so it still
+    | works once config:cache has run in production.
+    |
+    */
+
+    'cron_secret' => env('CRON_SECRET'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Encryption Key
     |--------------------------------------------------------------------------
     |

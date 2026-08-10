@@ -119,3 +119,51 @@ condition implicite : plus robuste si une règle future (redirection HTTPS
 forcée, etc.) est ajoutée dans ce fichier sans y repenser, et lisible
 immédiatement pour qui relit ce `.htaccess` sans avoir à dérouler la
 logique `!-f` de chaque règle en dessous.
+
+
+## 4. Tâche planifiée (job de réconciliation Stripe)
+
+`routes/console.php` : `Schedule::job(new ReconcilePendingDeposits)->daily();`
+— syntaxe Laravel 11+ (pas de `app/Console/Kernel.php` dans ce repo, ce
+projet est en Laravel 13). Le déclenchement lui-même est déjà correct,
+rien à changer côté code — mais **rien n'exécute jamais ce planificateur**
+sans une tâche externe qui appelle `schedule:run` régulièrement, et
+comment faire ça diffère radicalement entre les deux paliers Infomaniak :
+
+### Sur Cloud Server (VPS, crontab réel)
+
+Le classique :
+```
+* * * * * cd /var/www/geneva-bengal && php artisan schedule:run >> /dev/null 2>&1
+```
+
+### Sur Hébergement Web mutualisé — pas de vrai crontab
+
+Vérifié précisément (documentation Infomaniak) : le "Planificateur de
+tâches" de ce palier n'exécute **pas** une commande shell, il appelle une
+**URL en HTTP** à intervalle choisi, avec un minimum de **15 minutes**
+(contre 1 minute sur Cloud Server). Impossible donc d'y coller directement
+`php artisan schedule:run` en ligne de commande.
+
+Solution retenue : une route dédiée qui déclenche `schedule:run` en
+interne, protégée par un jeton (sinon n'importe qui trouvant l'URL pourrait
+forcer l'exécution des tâches planifiées à volonté) —
+[`routes/web.php`](routes/web.php), `GET /cron/run-schedule?token=...`,
+comparaison en `hash_equals()` contre `config('app.cron_secret')` (lu
+depuis `CRON_SECRET` en `.env`, voir §1). À configurer dans le
+Planificateur de tâches Infomaniak :
+```
+https://<domaine>/cron/run-schedule?token=<CRON_SECRET>
+```
+Intervalle 15 minutes, aligné sur la grille de l'heure (`:00`, `:15`,
+`:30`, `:45` — pas un décalage arbitraire type `:05`/`:20`) : `daily()`
+s'exécute par défaut à minuit pile, qui tombe justement sur cette grille —
+un décalage la manquerait le jour même (elle ne rattrape pas, la
+prochaine fenêtre due est le lendemain).
+
+Si l'offre Infomaniak permet en plus de protéger l'URL par mot de passe
+au niveau du Planificateur lui-même (vu dans leur documentation), l'activer
+en plus du jeton applicatif — défense en profondeur, pas une redondance
+inutile : le mot de passe Infomaniak protège contre la découverte de
+l'URL, le jeton applicatif reste valable même si ce mot de passe fuit
+autrement.
