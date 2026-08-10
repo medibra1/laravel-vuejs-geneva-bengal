@@ -2,7 +2,41 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 
-const routerVisit = vi.fn();
+// vi.mock(...) calls below are hoisted above this whole module, so their
+// factories can't close over plain top-level `const`s (still in their TDZ
+// at that point) — vi.hoisted() is the mocked-var equivalent that
+// survives the hoist. Everything the two mocks below need is declared in
+// one block since `mockStripe`'s chain depends on `mockPaymentElement`.
+const { routerVisit, mockPaymentElement, elementsCreate, stripeElements, confirmPayment, loadStripe, getReadyCallback, resetReadyCallback } = vi.hoisted(() => {
+    // Captured so the test can fire it itself, exactly like Stripe.js
+    // would once the real iframe finishes loading — the Payer button
+    // stays disabled until then (see DepositPay.vue's :disabled binding).
+    let readyCallback: (() => void) | null = null;
+    const mockPaymentElement = {
+        mount: vi.fn(),
+        destroy: vi.fn(),
+        on: vi.fn((event: string, callback: () => void) => {
+            if (event === 'ready') readyCallback = callback;
+        }),
+    };
+    const elementsCreate = vi.fn(() => mockPaymentElement);
+    const stripeElements = vi.fn(() => ({ create: elementsCreate }));
+    const confirmPayment = vi.fn();
+    const mockStripe = { elements: stripeElements, confirmPayment };
+
+    return {
+        routerVisit: vi.fn(),
+        mockPaymentElement,
+        elementsCreate,
+        stripeElements,
+        confirmPayment,
+        loadStripe: vi.fn(() => Promise.resolve(mockStripe)),
+        getReadyCallback: () => readyCallback,
+        resetReadyCallback: () => {
+            readyCallback = null;
+        },
+    };
+});
 
 vi.mock('@inertiajs/vue3', async () => {
     const actual = await vi.importActual<typeof import('@inertiajs/vue3')>('@inertiajs/vue3');
@@ -10,25 +44,15 @@ vi.mock('@inertiajs/vue3', async () => {
     return {
         ...actual,
         router: { visit: routerVisit },
+        // Real Head has no `name` (see @inertiajs/vue3/src/head.ts), so
+        // Vue Test Utils' `stubs: { Head: true }` can never match it by
+        // name — it renders for real and crashes reading
+        // `this.$headManager`, only ever set up by createInertiaApp().
+        // Mocking it away here is the actual fix; `Link` does have a
+        // `name` so its `stubs: { Link: true }` entry works as intended.
+        Head: { template: '<div><slot /></div>' },
     };
 });
-
-// Captured so the test can fire it itself, exactly like Stripe.js would
-// once the real iframe finishes loading — the Payer button stays disabled
-// until then (see DepositPay.vue's :disabled binding).
-let readyCallback: (() => void) | null = null;
-const mockPaymentElement = {
-    mount: vi.fn(),
-    destroy: vi.fn(),
-    on: vi.fn((event: string, callback: () => void) => {
-        if (event === 'ready') readyCallback = callback;
-    }),
-};
-const elementsCreate = vi.fn(() => mockPaymentElement);
-const stripeElements = vi.fn(() => ({ create: elementsCreate }));
-const confirmPayment = vi.fn();
-const mockStripe = { elements: stripeElements, confirmPayment };
-const loadStripe = vi.fn(() => Promise.resolve(mockStripe));
 
 vi.mock('@stripe/stripe-js', () => ({ loadStripe }));
 
@@ -59,7 +83,8 @@ function mountDepositPay() {
             plugins: [i18n],
             stubs: {
                 PublicLayout: { template: '<div><slot /></div>' },
-                Head: true,
+                // Head is mocked at the module level above, not stubbed
+                // here — see the vi.mock('@inertiajs/vue3', ...) comment.
                 Link: true,
             },
         },
@@ -77,7 +102,7 @@ function mountDepositPay() {
 async function mountReady() {
     const wrapper = mountDepositPay();
     await flushPromises();
-    readyCallback?.();
+    getReadyCallback()?.();
     await flushPromises();
 
     return wrapper;
@@ -85,7 +110,7 @@ async function mountReady() {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    readyCallback = null;
+    resetReadyCallback();
     globalThis.route = vi.fn((name: string, params?: Record<string, unknown>) => {
         const query = params
             ? '?'

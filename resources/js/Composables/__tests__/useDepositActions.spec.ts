@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const routerPost = vi.fn();
+// vi.mock(...) below is hoisted above this whole module, so the factory
+// can't close over a plain top-level `const` (still in its TDZ at that
+// point) — vi.hoisted() is the mocked-var equivalent that survives the
+// hoist.
+const { routerPost } = vi.hoisted(() => ({ routerPost: vi.fn() }));
 
 vi.mock('@inertiajs/vue3', async () => {
     const actual = await vi.importActual<typeof import('@inertiajs/vue3')>('@inertiajs/vue3');

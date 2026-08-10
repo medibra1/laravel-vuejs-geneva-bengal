@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import type { ComponentCustomProperties } from 'vue';
 import { createI18n } from 'vue-i18n';
 
-const routerReload = vi.fn();
+// vi.mock(...) below is hoisted above this whole module, so the factory
+// can't close over a plain top-level `const` (still in its TDZ at that
+// point) — vi.hoisted() is the mocked-var equivalent that survives the
+// hoist.
+const { routerReload } = vi.hoisted(() => ({ routerReload: vi.fn() }));
 
 vi.mock('@inertiajs/vue3', async () => {
     const actual = await vi.importActual<typeof import('@inertiajs/vue3')>('@inertiajs/vue3');
@@ -10,6 +15,13 @@ vi.mock('@inertiajs/vue3', async () => {
     return {
         ...actual,
         router: { reload: routerReload },
+        // Real Head has no `name` (see @inertiajs/vue3/src/head.ts), so
+        // Vue Test Utils' `stubs: { Head: true }` can never match it by
+        // name — it renders for real and crashes reading
+        // `this.$headManager`, only ever set up by createInertiaApp().
+        // Mocking it away here is the actual fix; `Link` does have a
+        // `name` so its `stubs: { Link: true }` entry works as intended.
+        Head: { template: '<div><slot /></div>' },
     };
 });
 
@@ -38,9 +50,20 @@ function mountReturn(depositStatus: string) {
     return mount(DepositReturn, {
         global: {
             plugins: [i18n],
+            // Unlike DepositPay.vue (calls route() only from <script
+            // setup>, where a plain global works), this component's
+            // template calls route('cats.index') directly, which compiles
+            // to _ctx.route(...) — that only resolves through the
+            // component's globalProperties chain, not globalThis, hence
+            // this on top of the globalThis.route set in beforeEach().
+            // The real shape (ComponentCustomProperties, augmented by
+            // Inertia with $inertia/$page/etc.) isn't needed for this
+            // test — only `route` is ever read from it.
+            config: { globalProperties: { route: globalThis.route } as unknown as ComponentCustomProperties },
             stubs: {
                 PublicLayout: { template: '<div><slot /></div>' },
-                Head: true,
+                // Head is mocked at the module level above, not stubbed
+                // here — see the vi.mock('@inertiajs/vue3', ...) comment.
                 Link: true,
             },
         },
@@ -51,6 +74,9 @@ function mountReturn(depositStatus: string) {
 beforeEach(() => {
     vi.useRealTimers();
     routerReload.mockClear();
+    // The "back to available kittens" link renders route('cats.index')
+    // on every mount — needed even for tests that never assert on it.
+    globalThis.route = vi.fn((name: string) => `https://geneva-bengal.test/fr/${name}`) as unknown as typeof route;
 });
 
 describe('DepositReturn polling', () => {

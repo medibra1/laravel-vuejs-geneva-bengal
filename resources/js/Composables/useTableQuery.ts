@@ -1,6 +1,8 @@
 import { computed, reactive } from 'vue';
 import { router } from '@inertiajs/vue3';
+import type { FormDataConvertible } from '@inertiajs/core';
 import { useDebounceFn } from '@vueuse/core';
+import type { DataTableSortEvent } from 'primevue/datatable';
 
 export type TableFilterValue = string | number | null;
 
@@ -19,7 +21,7 @@ export interface UseTableQueryOptions<F extends Record<string, TableFilterValue>
      * `waiting_list` nav toggle) — passed through unchanged on every
      * request this composable makes.
      */
-    extraParams?: Record<string, unknown>;
+    extraParams?: Record<string, FormDataConvertible>;
     /**
      * Filter keys whose value should be read back from the URL as a
      * number rather than a string — e.g. an id filter bound to a PrimeVue
@@ -30,12 +32,6 @@ export interface UseTableQueryOptions<F extends Record<string, TableFilterValue>
     numericFilterKeys?: Array<keyof F & string>;
     /** Debounce window for `applyFiltersDebounced`, in ms. */
     debounceMs?: number;
-}
-
-/** Mirrors the shape PrimeVue's DataTable `@sort` event emits in lazy mode. */
-export interface TableSortEvent {
-    sortField?: string | null;
-    sortOrder?: number | null;
 }
 
 /**
@@ -69,8 +65,8 @@ export function useTableQuery<F extends Record<string, TableFilterValue>>(option
         order: rawSort ? (rawSort.startsWith('-') ? -1 : 1) : null,
     });
 
-    function buildParams(page?: number): Record<string, unknown> {
-        const filterPayload: Record<string, unknown> = {};
+    function buildParams(page?: number): Record<string, FormDataConvertible> {
+        const filterPayload: Record<string, FormDataConvertible> = {};
         (Object.keys(filters) as Array<keyof F & string>).forEach((key) => {
             const value = filters[key];
             if (value !== null && value !== '') filterPayload[key] = value;
@@ -100,10 +96,16 @@ export function useTableQuery<F extends Record<string, TableFilterValue>>(option
     /** Bind to free-text search inputs so typing doesn't fire a request per keystroke. */
     const applyFiltersDebounced = useDebounceFn(() => visit(), debounceMs);
 
-    /** Bind to PrimeVue DataTable's `@sort` event (requires `lazy` + `sortable` columns). */
-    function onSort(event: TableSortEvent): void {
-        sort.field = event.sortField ?? null;
-        sort.order = (event.sortOrder as 1 | -1 | null) ?? null;
+    /**
+     * Bind to PrimeVue DataTable's `@sort` event (requires `lazy` +
+     * `sortable` columns). `event.sortField` can technically be a
+     * `(item) => string` accessor per PrimeVue's typing — never happens
+     * for our plain `field="..."` columns, so anything but a string is
+     * treated as "no sort".
+     */
+    function onSort(event: DataTableSortEvent): void {
+        sort.field = typeof event.sortField === 'string' ? event.sortField : null;
+        sort.order = event.sortOrder === 1 || event.sortOrder === -1 ? event.sortOrder : null;
         visit();
     }
 
@@ -113,8 +115,10 @@ export function useTableQuery<F extends Record<string, TableFilterValue>>(option
 
     return {
         filters,
-        sortField: computed(() => sort.field),
-        sortOrder: computed(() => sort.order),
+        // `undefined`, not `null`, to match DataTable's own `sortField`/
+        // `sortOrder` prop types (unset = undefined for those props).
+        sortField: computed(() => sort.field ?? undefined),
+        sortOrder: computed(() => sort.order ?? undefined),
         applyFilters,
         applyFiltersDebounced,
         onSort,
