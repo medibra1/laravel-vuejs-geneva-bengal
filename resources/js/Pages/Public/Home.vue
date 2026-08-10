@@ -6,10 +6,9 @@ import SectionHeading from '@/Components/SectionHeading.vue';
 import HeroSlider from '@/Components/HeroSlider.vue';
 import SocialLinks from '@/Components/SocialLinks.vue';
 import type { PageProps } from '@/types';
-// import slider1 from '../../../images/home/slider-1.jpg';
-// import slider2 from '../../../images/home/slider-2.jpg';
+import slider1 from '../../../images/home/slider-1.jpg';
+import slider2 from '../../../images/home/slider-2.jpg';
 import slider3 from '../../../images/home/slider-3.jpg';
-import slider4 from '../../../images/home/slider-4.jpg';
 import kittensMontage from '../../../images/home/kittens-montage.png';
 import newsletterKitten from '../../../images/home/newsletter-kitten.png';
 import internationalKitten from '../../../images/home/international-kitten.png';
@@ -32,9 +31,9 @@ const socialLinks = usePage<PageProps>().props.socialLinks;
 const placeholderHref = '#';
 
 const slides = [
-    // slider1,
-    // slider2,
-    slider3, slider4];
+    slider1,
+    slider2,
+    slider3];
 </script>
 
 <template>
