@@ -1,2 +1,79 @@
+# Public site: search engines and AI crawlers may index everything except
+# the back-office and admin-account auth pages (no SEO value, and nothing
+# there is meant to be publicly discoverable — see CLAUDE.md "Domain").
 User-agent: *
-Disallow:
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /confirm-password
+Disallow: /verify-email
+Disallow: /profile
+Disallow: /webhooks/
+Allow: /
+
+# AI crawlers, explicitly allowed (default policy — see CLAUDE.md if this
+# changes) to browse the same public content as search engines, subject to
+# the same back-office exclusions above.
+User-agent: GPTBot
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /confirm-password
+Disallow: /verify-email
+Disallow: /profile
+Disallow: /webhooks/
+Allow: /
+
+User-agent: ClaudeBot
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /confirm-password
+Disallow: /verify-email
+Disallow: /profile
+Disallow: /webhooks/
+Allow: /
+
+User-agent: CCBot
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /confirm-password
+Disallow: /verify-email
+Disallow: /profile
+Disallow: /webhooks/
+Allow: /
+
+User-agent: Google-Extended
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /confirm-password
+Disallow: /verify-email
+Disallow: /profile
+Disallow: /webhooks/
+Allow: /
+
+User-agent: PerplexityBot
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /confirm-password
+Disallow: /verify-email
+Disallow: /profile
+Disallow: /webhooks/
+Allow: /
+
+Sitemap: https://genevabengals.ch/sitemap.xml
