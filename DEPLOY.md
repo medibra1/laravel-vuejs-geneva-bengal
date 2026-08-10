@@ -167,3 +167,33 @@ en plus du jeton applicatif — défense en profondeur, pas une redondance
 inutile : le mot de passe Infomaniak protège contre la découverte de
 l'URL, le jeton applicatif reste valable même si ce mot de passe fuit
 autrement.
+
+## 5. Domaine : de `dev.genevabengals.ch` au domaine final
+
+**Vérifié par grep sur tout `app/`, `config/`, `routes/`,
+`resources/js/`** : aucun domaine n'est codé en dur dans le code applicatif
+(le seul résultat est un commentaire dans `resources/js/Pages/Public/Page.vue`
+qui *mentionne* `genevabengals.ch` à titre d'exemple, pas une valeur
+utilisée). Tout ce qui génère une URL — assets Vite, medialibrary
+(`config/filesystems.php`, disque `public`), sitemap (`SitemapController`
+utilise la façade `URL`), liens de partage sociaux — dérive de `APP_URL`
+au runtime, pas d'une constante. Seule exception, hors périmètre de ce
+document : `docker-compose.yml` a `MAIL_FROM_ADDRESS: no-reply@genevabengals.ch`
+en dur, mais c'est un fichier de dev, explicitement non touché ici.
+
+Donc : passer de `dev.genevabengals.ch` au domaine final ne demande **que**
+des changements de `.env`, aucun changement de code :
+
+- `APP_URL` → `https://<domaine final>`
+- `SESSION_DOMAIN` → host nu du domaine final (ex. `genevabengals.ch`, sans
+  `https://` ni chemin) — doit correspondre exactement au domaine servi,
+  sinon le navigateur refuse silencieusement le cookie de session (symptôme
+  classique : login admin qui semble réussir puis relogue aussitôt).
+- `SANCTUM_STATEFUL_DOMAINS` : **non applicable**, voir §1 — Sanctum n'est
+  pas câblé dans cette app, rien à définir ici tant que ça reste vrai.
+
+Après changement, invalider les caches de config sur le serveur
+(`php artisan config:clear` puis `config:cache`, voir §6) — `APP_URL`/
+`SESSION_DOMAIN` sont lus depuis un cache compilé une fois
+`config:cache` exécuté, un `.env` modifié seul ne suffit pas à les faire
+prendre effet immédiatement.
