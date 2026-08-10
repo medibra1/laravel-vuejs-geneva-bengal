@@ -197,3 +197,41 @@ Après changement, invalider les caches de config sur le serveur
 `SESSION_DOMAIN` sont lus depuis un cache compilé une fois
 `config:cache` exécuté, un `.env` modifié seul ne suffit pas à les faire
 prendre effet immédiatement.
+
+## 6. Script de déploiement
+
+[`deploy.sh`](deploy.sh) — à exécuter **sur le serveur**, en SSH, depuis
+la racine du projet (l'accès SSH est disponible sur l'offre Hébergement
+Web mutualisé d'Infomaniak, créé depuis la section FTP/SSH du Manager ;
+c'est ce qui permet de lancer `composer`/`npm`/`artisan` du tout). Il n'y
+a pas d'étape de déploiement continu dans `.github/workflows/*.yml` —
+ceux-ci ne font que tester/builder, pas déployer — donc ce script reste
+le mécanisme de déploiement réel, lancé à la main pour l'instant :
+
+```
+ssh <user>@<host>
+cd /chemin/vers/le/projet
+./deploy.sh
+```
+
+Étapes, dans l'ordre : `git pull --ff-only`, `composer install --no-dev
+--optimize-autoloader`, `npm ci && npm run build` (le script `build` de
+`package.json` fait déjà `vue-tsc && vite build && vite build --ssr` — un
+seul appel construit le bundle client **et** le bundle SSR), mode
+maintenance (`artisan down`/`up` autour de la migration, pour ne jamais
+servir de requête au milieu d'un schéma à moitié migré), `migrate
+--force`, `storage:link` (idempotent), cache config/routes/vues, puis
+redémarrage du process SSR — `supervisorctl restart` si disponible (Cloud
+Server), sinon message rappelant de redémarrer le site Node.js depuis le
+Manager Infomaniak (mutualisé, voir §2).
+
+Prérequis explicitement **hors du script** (jamais générés/écrits par
+lui) : `.env` déjà présent sur le serveur avec les vraies valeurs de prod
+(§1) — le script s'arrête tout de suite s'il ne le trouve pas, plutôt que
+de continuer avec un `.env.example` copié par erreur.
+
+Non couvert par ce script, à faire une seule fois lors du tout premier
+déploiement (pas à chaque déploiement suivant) : création de la base
+MySQL et de son utilisateur dans le Manager Infomaniak,
+`php artisan key:generate --force`, configuration du site Node.js pour le
+SSR (§2) et du Planificateur de tâches pour `/cron/run-schedule` (§4).
