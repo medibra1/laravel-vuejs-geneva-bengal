@@ -21,7 +21,11 @@ class SiteSettingsSeeder extends Seeder
     {
         SiteSetting::set('social_facebook', 'https://facebook.com/people/Geneva-Bengals/100076101586572');
         SiteSetting::set('social_instagram', 'https://instagram.com/geneva_bengals/');
-        SiteSetting::set('social_youtube', null);
+        // Pre-existing placeholder, carried over from DemoDataSeeder's
+        // original seedSiteSettings() — no real YouTube URL was ever
+        // provided, but unlike social_tiktok below this one predates the
+        // Pinterest -> TikTok switch and was never actually replaced.
+        SiteSetting::set('social_youtube', 'https://youtube.com/@genevabengal');
         // No real TikTok URL provided yet — left null until the client
         // gives one, fillable via the admin Settings form in the meantime.
         SiteSetting::set('social_tiktok', null);
