@@ -41,3 +41,61 @@ classique, aucune API stateful consommée en cross-domain. `SANCTUM_STATEFUL_DOM
 n'a donc pas lieu d'être définie ; si un jour une vraie API SPA-token
 apparaît, il faudra d'abord publier/câbler Sanctum avant que cette
 variable ait un effet.
+
+## 2. Process persistants (SSR, queue worker)
+
+**Constat de l'audit** : rien n'était prévu pour la prod. `php artisan
+inertia:start-ssr` (qui lance `node bootstrap/ssr/ssr.js`) n'est utilisé
+qu'en dev via `docker-compose.yml` (service `ssr`, redémarré par Docker si
+besoin) ; en prod classique PHP/Apache, rien ne garderait ce process actif
+ni ne le relancerait après un crash ou un redémarrage serveur. Même
+problème pour la queue : **les 7 classes `app/Notifications/*` et le job
+`ReconcilePendingDeposits` implémentent toutes `ShouldQueue`** — sans un
+worker qui tourne, aucune notification (confirmation d'acompte, contact,
+newsletter...) n'est jamais réellement envoyée, les jobs restent en base
+dans la table `jobs` indéfiniment.
+
+La bonne réponse dépend du palier d'hébergement, très différent d'un
+Infomaniak à l'autre :
+
+### Sur Hébergement Web mutualisé (le plus probable ici, pas d'accès root)
+
+Confirmé par la documentation Infomaniak (aucun Supervisor/systemd
+disponible sur ce palier) :
+
+- **SSR** : Infomaniak propose un vrai support Node.js sur l'hébergement
+  mutualisé — un "site Node.js" configurable depuis le Manager
+  (méthode de déploiement "Custom" : point d'entrée, port, commande de
+  build définis à la main), avec un dashboard démarrer/arrêter/redémarrer
+  qui gère lui-même la persistance du process (pas du Supervisor, mais le
+  même besoin couvert par l'outil du panel). Pointer ce site Node.js sur
+  `bootstrap/ssr/ssr.js`, port = celui mis dans `INERTIA_SSR_URL`. Si ce
+  n'est pas configuré, mettre `INERTIA_SSR_ENABLED=false` : la passerelle
+  Inertia retombe alors sur du rendu client seul (voir le commentaire déjà
+  présent dans `docker-compose.yml` sur ce comportement de fallback) — le
+  site reste fonctionnel, juste sans le bénéfice SEO du SSR (voir Phase 8
+  du projet, CLAUDE.md).
+- **Queue** : pas de process daemon possible du tout sur ce palier.
+  Recommandé : `QUEUE_CONNECTION=sync` en prod — chaque notification part
+  immédiatement, dans la requête HTTP qui la déclenche (formulaire de
+  contact, webhook Stripe...), sans worker à maintenir. Coût réel : la
+  requête attend l'envoi SMTP avant de répondre — acceptable pour le
+  volume d'un site vitrine d'élevage, pas un problème de débit. Alternative
+  si `QUEUE_CONNECTION=database` est gardé : déclencher
+  `php artisan queue:work --stop-when-empty --max-time=50` via la même
+  tâche planifiée que le scheduler (§4) plutôt qu'un vrai daemon — un
+  "worker" qui se relance toutes les 15 minutes et vide la file du moment,
+  pas un vrai temps réel mais fonctionnel sur ce palier.
+
+### Sur Cloud Server (VPS, accès root/SSH)
+
+Là, Supervisor s'installe normalement. Config fournie :
+[`deploy/supervisor/geneva-bengal.conf`](deploy/supervisor/geneva-bengal.conf)
+— deux programmes, `geneva-bengal-ssr` (`node bootstrap/ssr/ssr.js`
+directement, pas le wrapper `artisan inertia:start-ssr`) et
+`geneva-bengal-queue` (`php artisan queue:work`, `--tries=3` plutôt que le
+`--tries=1` du `docker-compose.yml` de dev — un blip SMTP/Stripe
+transitoire ne doit pas faire perdre une notification en prod). Ajuster
+les chemins/utilisateur système en tête de fichier avant `supervisorctl
+reread && supervisorctl update`. Dans ce cas `QUEUE_CONNECTION=database`
+peut être gardé tel quel (pas besoin de `sync`).
