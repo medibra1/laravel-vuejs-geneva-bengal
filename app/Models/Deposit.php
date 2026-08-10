@@ -13,7 +13,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property DepositStatus $status Larastan doesn't infer enum casts declared via the casts(): array method syntax.
- * @property PaymentMethod $payment_method Larastan doesn't infer enum casts declared via the casts(): array method syntax.
+ * @property ?PaymentMethod $payment_method Nullable — an admin-recorded reservation can be created with the method "to be defined later". Larastan doesn't infer enum casts declared via the casts(): array method syntax either way.
  * @property Carbon|null $paid_at
  * @property Carbon|null $finalized_at
  */

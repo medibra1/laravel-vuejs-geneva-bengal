@@ -4,6 +4,7 @@ namespace App\Services\Payments;
 
 use App\Enums\CatStatus;
 use App\Enums\DepositStatus;
+use App\Models\Cat;
 use App\Models\Deposit;
 use App\Models\Owner;
 use App\Notifications\Concerns\NotifiesStaff;
@@ -140,6 +141,93 @@ class DepositPaymentProcessor
 
         if ($deposit->cat_id !== null) {
             $deposit->cat->setStatus(CatStatus::Adopted->value);
+        }
+    }
+
+    /**
+     * Finalizes an adoption entirely outside the normal Deposit-driven
+     * flow — for an arrangement handled fully off-system (a gift, an
+     * in-person sale with no online deposit, etc. — see CLAUDE.md).
+     * super_admin only; deliberately still creates a Deposit rather than
+     * just flipping the cat's status, so this stays an explicit, traceable
+     * action that shows up in the same history/reporting as every other
+     * adoption, instead of being invisible to anything that queries
+     * Deposit.
+     *
+     * Reuses finalize() itself for the actual "link the owner, stamp
+     * finalized_at, move the cat to adopte" work, rather than
+     * restructuring it or duplicating its body — the only genuinely new
+     * behavior here is building the minimal Deposit record to hand it.
+     * finalize() didn't need to change at all: it already does exactly
+     * the right thing for a fresh Deposit with a cat_id and no owner yet.
+     *
+     * Guarded the same way cancel()/markPaid() are — an early return
+     * rather than an exception, since the caller (see
+     * Admin\DepositController::finalizeDirectly()) already checks this
+     * first and shows the user-facing error; this is just a
+     * defense-in-depth no-op if ever called without that check.
+     */
+    public function finalizeDirectly(Cat $cat, Owner $owner): void
+    {
+        if ($cat->status === CatStatus::Adopted->value) {
+            return;
+        }
+
+        $deposit = Deposit::create([
+            'cat_id' => $cat->id,
+            'name' => trim("{$owner->first_name} {$owner->last_name}"),
+            'email' => $owner->email,
+            'phone' => $owner->phone,
+            'amount' => 0,
+            'currency' => 'CHF',
+            'status' => DepositStatus::Paid,
+            'payment_method' => null,
+            // Explicit and distinct from every real PSP/manual-payment
+            // value (stripe/cash/bank_transfer/twint_manual) — this
+            // Deposit exists purely as a paper trail, no money ever moved
+            // through it.
+            'provider' => 'manual_no_deposit',
+            'paid_at' => now(),
+        ]);
+
+        $this->finalize($deposit, $owner);
+    }
+
+    /**
+     * Undoes a paid deposit: releases the cat it holds — whether still
+     * `en_attente` or already `adopte`, since that's exactly what this
+     * action is for — back to `disponible`, and marks the deposit itself
+     * `cancelled`. Fixes the gap where forcing a cat's status back to
+     * `disponible` from Admin/Cats/Adoption/Form.vue alone left its
+     * Deposit `paid`, so Deposit::blocksNewReservation() kept refusing
+     * any new reservation for that cat forever (see CLAUDE.md).
+     *
+     * Leaves finalized_at/owner_id untouched on purpose — the deposit
+     * keeps a historical record of what actually happened rather than
+     * pretending it was never finalized/linked to an owner.
+     *
+     * Does not call PaymentGateway::refund() — this only concerns the
+     * cat/deposit bookkeeping. If the client needs their money back, run
+     * Admin\DepositController::refund() separately, and *before* calling
+     * this: refund() itself requires status === Paid, a state this
+     * method removes.
+     *
+     * Guarded the same way markPaid() guards its own idempotency — an
+     * early return rather than an exception, since
+     * Admin\DepositController::cancel() already checks this first and
+     * shows the user-facing error (see its own docblock); this is just a
+     * defense-in-depth no-op if ever called without that check.
+     */
+    public function cancel(Deposit $deposit): void
+    {
+        if ($deposit->status !== DepositStatus::Paid) {
+            return;
+        }
+
+        $deposit->update(['status' => DepositStatus::Cancelled]);
+
+        if ($deposit->cat_id !== null) {
+            $deposit->cat->setStatus(CatStatus::Available->value);
         }
     }
 

@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Enums\PaymentMethod;
 use App\Rules\CatIsAvailableForDeposit;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -42,7 +41,20 @@ class StoreDepositRequest extends FormRequest
             'email' => ['required_without:new_owner', 'nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'amount' => ['nullable', 'integer', 'min:0'],
-            'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
+            // Stripe deliberately excluded here — an admin-recorded
+            // reservation only ever offers cash/bank_transfer/twint_manual
+            // now (see CLAUDE.md): the "payment link" it used to generate
+            // only ever led to a status page, never a real payment form.
+            // The public flow still uses PaymentMethod::Stripe as normal —
+            // Rule::in() rather than Rule::enum(PaymentMethod::class) since
+            // this deliberately excludes one of the enum's own cases.
+            //
+            // nullable (not required): the admin can leave the method "to
+            // be defined later" and choose it when actually marking the
+            // deposit paid instead — see
+            // Admin\DepositController::markPaid() and
+            // Admin\MarkDepositPaidRequest.
+            'payment_method' => ['nullable', Rule::in(['cash', 'bank_transfer', 'twint_manual'])],
             'owner_id' => ['nullable', 'exists:owners,id'],
             'new_owner' => ['nullable', 'array'],
             'new_owner.first_name' => ['required_with:new_owner', 'string', 'max:255'],

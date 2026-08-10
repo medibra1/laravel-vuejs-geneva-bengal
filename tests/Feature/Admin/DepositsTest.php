@@ -86,6 +86,89 @@ it('surfaces a gateway-level refund failure instead of marking the deposit refun
     expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
 });
 
+// --- cancel: undoes a paid deposit, releasing the cat -------------------
+
+it('cancels a paid deposit still holding the cat en_attente, releasing it back to disponible and allowing a new reservation', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $cat = Cat::factory()->create();
+    $cat->setStatus(CatStatus::Pending->value);
+    $deposit = Deposit::factory()->paid()->create(['cat_id' => $cat->id]);
+
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.cancel', $deposit));
+
+    $response->assertRedirect();
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Cancelled);
+    expect($cat->fresh()->status)->toBe(CatStatus::Available->value);
+    // Deposit::blocksNewReservation() only cares about a *paid* deposit —
+    // now that this one is cancelled, a new reservation for the same cat
+    // is no longer blocked.
+    expect(Deposit::blocksNewReservation($cat->id))->toBeFalse();
+});
+
+it('cancels an already-finalized deposit, releasing an adopted cat back to disponible without touching owner_id or finalized_at', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $cat = Cat::factory()->create();
+    $cat->setStatus(CatStatus::Adopted->value);
+    $owner = Owner::factory()->create();
+    $finalizedAt = now()->subDays(3);
+    $deposit = Deposit::factory()->paid()->create([
+        'cat_id' => $cat->id,
+        'owner_id' => $owner->id,
+        'finalized_at' => $finalizedAt,
+    ]);
+
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.cancel', $deposit));
+
+    $response->assertRedirect();
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Cancelled);
+    expect($cat->fresh()->status)->toBe(CatStatus::Available->value);
+    // The deposit keeps a historical record of what actually happened —
+    // cancel() doesn't erase who it was finalized for or when.
+    expect($deposit->fresh()->owner_id)->toBe($owner->id);
+    expect($deposit->fresh()->finalized_at->equalTo($finalizedAt))->toBeTrue();
+});
+
+it('refuses to cancel a deposit that was never paid', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $cat = Cat::factory()->create();
+    $cat->setStatus(CatStatus::Available->value);
+    $deposit = Deposit::factory()->create(['cat_id' => $cat->id, 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.cancel', $deposit));
+
+    $response->assertRedirect();
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Pending);
+    expect($cat->fresh()->status)->toBe(CatStatus::Available->value);
+});
+
+it('denies a plain admin from cancelling a deposit — super_admin only', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create();
+    $cat->setStatus(CatStatus::Pending->value);
+    $deposit = Deposit::factory()->paid()->create(['cat_id' => $cat->id]);
+
+    $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.deposits.cancel', $deposit));
+
+    $response->assertForbidden();
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
+    expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
+});
+
+it('redirects to password.confirm instead of cancelling without a recent confirmation', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $deposit = Deposit::factory()->paid()->create();
+
+    $response = $this->actingAs($superAdmin)->post(route('admin.deposits.cancel', $deposit));
+
+    $response->assertRedirect(route('password.confirm'));
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
+});
+
 // --- create/store: manual reservations -------------------------------
 
 it('lets a plain admin create a cash deposit with no owner yet', function () {
@@ -249,20 +332,23 @@ it('still requires name and email when linking an existing owner — the form pr
     $response->assertSessionHasErrors(['name', 'email']);
 });
 
-it('generates a Stripe payment link when payment_method is stripe', function () {
+it('rejects stripe as a payment_method for an admin-recorded deposit', function () {
     $admin = User::factory()->create(['email_verified_at' => now()]);
     $admin->assignRole('admin');
 
-    $this->actingAs($admin)->post(route('admin.deposits.store'), [
+    $response = $this->actingAs($admin)->post(route('admin.deposits.store'), [
         'name' => 'Jeanne Dupont',
         'email' => 'jeanne@example.com',
         'amount' => 60000,
         'payment_method' => 'stripe',
     ]);
 
-    $deposit = Deposit::firstWhere('email', 'jeanne@example.com');
-    expect($deposit->provider_reference)->not->toBeNull();
-    expect($deposit->payment_link_url)->not->toBeNull();
+    // The "Stripe" option used to generate a payment link, but that link
+    // only ever led to a status page, never a real payment form — see
+    // CLAUDE.md. Admin-recorded reservations are cash/bank_transfer/
+    // twint_manual only now; the public flow still uses Stripe normally.
+    $response->assertSessionHasErrors(['payment_method']);
+    expect(Deposit::where('email', 'jeanne@example.com')->exists())->toBeFalse();
 });
 
 it('does not generate a payment link for a manual payment method', function () {
@@ -278,6 +364,26 @@ it('does not generate a payment link for a manual payment method', function () {
 
     $deposit = Deposit::firstWhere('email', 'jeanne@example.com');
     expect($deposit->payment_link_url)->toBeNull();
+});
+
+it('creates a deposit with the payment method left "à définir plus tard"', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.store'), [
+        'name' => 'Jeanne Dupont',
+        'email' => 'jeanne@example.com',
+        'amount' => 60000,
+        'payment_method' => null,
+    ]);
+
+    $response->assertSessionDoesntHaveErrors(['payment_method']);
+    $deposit = Deposit::firstWhere('email', 'jeanne@example.com');
+    expect($deposit)->not->toBeNull();
+    expect($deposit->payment_method)->toBeNull();
+    // provider mirrors payment_method (see CLAUDE.md) — also null here,
+    // not silently left at the column's own "stripe" default.
+    expect($deposit->provider)->toBeNull();
 });
 
 // --- mark-paid: cash/bank_transfer/twint_manual -----------------------
@@ -321,6 +427,70 @@ it('refuses to mark an already-paid deposit as paid again', function () {
 
     $response->assertRedirect();
     expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
+});
+
+it('rejects marking a deposit paid with no payment method chosen yet and none supplied — a clear validation error, not a crash', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $deposit = Deposit::factory()->create(['payment_method' => null, 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.mark-paid', $deposit));
+
+    $response->assertSessionHasErrors(['payment_method']);
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Pending);
+    expect($deposit->fresh()->payment_method)->toBeNull();
+});
+
+it('resolves the payment method and marks the deposit paid when one is supplied at mark-paid time', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create();
+    $deposit = Deposit::factory()->create([
+        'cat_id' => $cat->id,
+        'payment_method' => null,
+        'status' => DepositStatus::Pending,
+    ]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.mark-paid', $deposit), [
+        'payment_method' => 'twint_manual',
+    ]);
+
+    $response->assertRedirect();
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
+    expect($deposit->fresh()->payment_method->value)->toBe('twint_manual');
+    // provider mirrors payment_method here too, same as store().
+    expect($deposit->fresh()->provider)->toBe('twint_manual');
+    expect($deposit->fresh()->paid_at)->not->toBeNull();
+    expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
+});
+
+it('rejects an invalid payment method supplied at mark-paid time for a deposit with none yet', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $deposit = Deposit::factory()->create(['payment_method' => null, 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.mark-paid', $deposit), [
+        'payment_method' => 'stripe',
+    ]);
+
+    $response->assertSessionHasErrors(['payment_method']);
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Pending);
+    expect($deposit->fresh()->payment_method)->toBeNull();
+});
+
+it('ignores a payment method supplied at mark-paid time for a deposit that already has one', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $deposit = Deposit::factory()->create(['payment_method' => 'cash', 'status' => DepositStatus::Pending]);
+
+    $response = $this->actingAs($admin)->post(route('admin.deposits.mark-paid', $deposit), [
+        'payment_method' => 'twint_manual',
+    ]);
+
+    $response->assertRedirect();
+    expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
+    // Never overwritten — the deposit already knew how it was paid.
+    expect($deposit->fresh()->payment_method->value)->toBe('cash');
 });
 
 // --- verify-stripe: on-demand check against Stripe, in place of waiting
@@ -672,6 +842,125 @@ it('redirects to password.confirm instead of verifying against Stripe without a 
 
     $response->assertRedirect(route('password.confirm'));
     expect($deposit->fresh()->status)->toBe(DepositStatus::Pending);
+});
+
+// --- finalize-directly: bypasses the Deposit flow entirely, for an
+// adoption handled fully off-system (gift, in-person sale) — super_admin
+// only. See DepositPaymentProcessor::finalizeDirectly(). -----------------
+
+it('lets a super_admin finalize an adoption directly for an available cat, linking an existing owner', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $cat = Cat::factory()->create();
+    $cat->setStatus(CatStatus::Available->value);
+    $owner = Owner::factory()->create();
+
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.cats.finalize-directly'), [
+        'cat_id' => $cat->id,
+        'owner_id' => $owner->id,
+    ]);
+
+    $response->assertRedirect();
+    expect($cat->fresh()->status)->toBe(CatStatus::Adopted->value);
+    $deposit = Deposit::firstWhere('cat_id', $cat->id);
+    expect($deposit)->not->toBeNull();
+    expect($deposit->owner_id)->toBe($owner->id);
+    expect($deposit->amount)->toBe(0);
+    expect($deposit->currency)->toBe('CHF');
+    expect($deposit->status)->toBe(DepositStatus::Paid);
+    expect($deposit->payment_method)->toBeNull();
+    expect($deposit->provider)->toBe('manual_no_deposit');
+    expect($deposit->paid_at)->not->toBeNull();
+    expect($deposit->finalized_at)->not->toBeNull();
+    expect($deposit->name)->toBe(trim("{$owner->first_name} {$owner->last_name}"));
+    expect($deposit->email)->toBe($owner->email);
+});
+
+it('lets a super_admin finalize an adoption directly for a pending cat, creating a new owner inline', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $cat = Cat::factory()->create();
+    $cat->setStatus(CatStatus::Pending->value);
+
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.cats.finalize-directly'), [
+        'cat_id' => $cat->id,
+        'new_owner' => [
+            'first_name' => 'Jeanne',
+            'last_name' => 'Dupont',
+            'email' => 'jeanne.direct@example.com',
+        ],
+    ]);
+
+    $response->assertRedirect();
+    expect($cat->fresh()->status)->toBe(CatStatus::Adopted->value);
+    $owner = Owner::firstWhere('email', 'jeanne.direct@example.com');
+    expect($owner)->not->toBeNull();
+    $deposit = Deposit::firstWhere('cat_id', $cat->id);
+    expect($deposit->owner_id)->toBe($owner->id);
+});
+
+it('denies a plain admin from finalizing an adoption directly — super_admin only', function () {
+    $admin = User::factory()->create(['email_verified_at' => now()]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create();
+    $cat->setStatus(CatStatus::Available->value);
+    $owner = Owner::factory()->create();
+
+    $response = $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.cats.finalize-directly'), [
+        'cat_id' => $cat->id,
+        'owner_id' => $owner->id,
+    ]);
+
+    $response->assertForbidden();
+    expect($cat->fresh()->status)->toBe(CatStatus::Available->value);
+    expect(Deposit::where('cat_id', $cat->id)->exists())->toBeFalse();
+});
+
+it('refuses to finalize an already-adopted cat directly', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $cat = Cat::factory()->create();
+    $cat->setStatus(CatStatus::Adopted->value);
+    $owner = Owner::factory()->create();
+
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.cats.finalize-directly'), [
+        'cat_id' => $cat->id,
+        'owner_id' => $owner->id,
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
+    expect(Deposit::where('cat_id', $cat->id)->exists())->toBeFalse();
+});
+
+it('requires either an existing owner or a new one to finalize directly', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $cat = Cat::factory()->create();
+    $cat->setStatus(CatStatus::Available->value);
+
+    $response = $this->actingAs($superAdmin)->withSession(['auth.password_confirmed_at' => time()])->post(route('admin.cats.finalize-directly'), [
+        'cat_id' => $cat->id,
+    ]);
+
+    $response->assertSessionHasErrors(['owner_id', 'new_owner']);
+    expect($cat->fresh()->status)->toBe(CatStatus::Available->value);
+});
+
+it('redirects to password.confirm instead of finalizing directly without a recent confirmation', function () {
+    $superAdmin = User::factory()->create(['email_verified_at' => now()]);
+    $superAdmin->assignRole('super_admin');
+    $cat = Cat::factory()->create();
+    $cat->setStatus(CatStatus::Available->value);
+    $owner = Owner::factory()->create();
+
+    $response = $this->actingAs($superAdmin)->post(route('admin.cats.finalize-directly'), [
+        'cat_id' => $cat->id,
+        'owner_id' => $owner->id,
+    ]);
+
+    $response->assertRedirect(route('password.confirm'));
+    expect($cat->fresh()->status)->toBe(CatStatus::Available->value);
 });
 
 it('does not require a fresh confirmation for mark-paid or assign-cat — those stay behind role middleware only', function () {

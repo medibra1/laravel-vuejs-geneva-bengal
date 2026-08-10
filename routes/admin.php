@@ -116,4 +116,19 @@ Route::prefix('admin')
         Route::post('deposits/{deposit}/refund', [DepositController::class, 'refund'])
             ->middleware('password.confirm')
             ->name('deposits.refund');
+        // Undoes a paid deposit — releases the cat (en_attente or already
+        // adopte) back to disponible. Same sensitivity/group as refund()
+        // above: this defeats a confirmed reservation/adoption, not just a
+        // display toggle. See CLAUDE.md.
+        Route::post('deposits/{deposit}/cancel', [DepositController::class, 'cancel'])
+            ->middleware('password.confirm')
+            ->name('deposits.cancel');
+        // Bypasses the Deposit-driven flow entirely — a gift, an in-person
+        // sale with no online deposit, etc. Still creates a Deposit under
+        // the hood (see DepositPaymentProcessor::finalizeDirectly()), just
+        // not through any of the routes above. Same sensitivity/group as
+        // refund()/cancel(): this directly marks a cat adopted.
+        Route::post('cats/finalize-directly', [DepositController::class, 'finalizeDirectly'])
+            ->middleware('password.confirm')
+            ->name('cats.finalize-directly');
     });

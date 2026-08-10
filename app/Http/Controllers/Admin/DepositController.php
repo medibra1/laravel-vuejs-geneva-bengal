@@ -8,7 +8,9 @@ use App\Enums\DepositStatus;
 use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AssignCatToDepositRequest;
+use App\Http\Requests\Admin\FinalizeCatDirectlyRequest;
 use App\Http\Requests\Admin\FinalizeDepositRequest;
+use App\Http\Requests\Admin\MarkDepositPaidRequest;
 use App\Http\Requests\Admin\StoreDepositRequest;
 use App\Models\Cat;
 use App\Models\Deposit;
@@ -83,8 +85,14 @@ class DepositController extends Controller
      * Deposit shape, but amount/owner/payment method are all trusted admin
      * input instead of derived server-side, since this is staff recording
      * a reservation made in person/by phone, not a public form.
+     *
+     * cash/bank_transfer/twint_manual only (see StoreDepositRequest) — a
+     * "Stripe" option used to be offered here too, generating a payment
+     * link, but that link only ever led to a status page, never a real
+     * payment form (see CLAUDE.md), so it's been removed. The public flow
+     * (Public\DepositController::store()) still uses Stripe normally.
      */
-    public function store(StoreDepositRequest $request, PaymentGateway $gateway, DepositPaymentProcessor $processor): RedirectResponse
+    public function store(StoreDepositRequest $request, DepositPaymentProcessor $processor): RedirectResponse
     {
         $owner = $this->resolveOwner($request);
 
@@ -110,21 +118,6 @@ class DepositController extends Controller
 
         $processor->reserve($deposit);
 
-        if ($deposit->payment_method === PaymentMethod::Stripe) {
-            // Minimal adaptation to the PaymentGateway interface's move to
-            // PaymentIntents (see CLAUDE.md) — this admin-created-deposit
-            // flow itself isn't redesigned here, so payment_link_url now
-            // holds the checkout page URL rather than a Stripe-hosted
-            // Checkout link; not meaningful to share with a client until
-            // the frontend prompt rebuilds this wizard against the new API.
-            $intent = $gateway->createPaymentIntent($deposit);
-
-            $deposit->update([
-                'provider_reference' => $intent->id,
-                'payment_link_url' => $intent->url,
-            ]);
-        }
-
         return redirect()->route('admin.deposits.index')->with('success', __('Deposit created.'));
     }
 
@@ -132,8 +125,16 @@ class DepositController extends Controller
      * For cash/bank_transfer/twint_manual only — a Stripe deposit is only
      * ever marked paid by the webhook (see CLAUDE.md: it's the sole
      * source of truth there, a manual override would defeat that).
+     *
+     * A deposit created with payment_method left "to be defined later"
+     * (see StoreDepositRequest) resolves it right here —
+     * MarkDepositPaidRequest requires the request's own payment_method in
+     * that case (a clear validation error otherwise, never reaching this
+     * body), persisted onto the deposit before markPaid() runs — provider
+     * mirrors it, same as store(). A deposit that already has a
+     * payment_method ignores the field entirely, even if submitted.
      */
-    public function markPaid(Deposit $deposit, DepositPaymentProcessor $processor): RedirectResponse
+    public function markPaid(MarkDepositPaidRequest $request, Deposit $deposit, DepositPaymentProcessor $processor): RedirectResponse
     {
         if ($deposit->payment_method === PaymentMethod::Stripe) {
             return back()->with('error', __('Stripe deposits are marked paid automatically once the webhook confirms payment.'));
@@ -141,6 +142,15 @@ class DepositController extends Controller
 
         if ($deposit->status !== DepositStatus::Pending) {
             return back()->with('error', __('Only a pending deposit can be marked paid.'));
+        }
+
+        if ($deposit->payment_method === null) {
+            $paymentMethod = $request->validated('payment_method');
+
+            $deposit->update([
+                'payment_method' => $paymentMethod,
+                'provider' => $paymentMethod,
+            ]);
         }
 
         $processor->markPaid($deposit);
@@ -201,6 +211,33 @@ class DepositController extends Controller
     }
 
     /**
+     * super_admin only — see CLAUDE.md. Finalizes an adoption entirely
+     * outside the normal Deposit-driven flow, for an arrangement handled
+     * fully off-system (a gift, an in-person sale with no online deposit,
+     * etc.). Unlike finalize() above, there's no existing Deposit to check
+     * a status on — the only real precondition is that the cat isn't
+     * already adopted.
+     */
+    public function finalizeDirectly(FinalizeCatDirectlyRequest $request, DepositPaymentProcessor $processor): RedirectResponse
+    {
+        $cat = Cat::findOrFail($request->validated('cat_id'));
+
+        if ($cat->status === CatStatus::Adopted->value) {
+            return back()->with('error', __('This cat has already been adopted.'));
+        }
+
+        $owner = $this->resolveOwner($request);
+
+        if ($owner === null) {
+            return back()->with('error', __('An owner is required to finalize this adoption.'));
+        }
+
+        $processor->finalizeDirectly($cat, $owner);
+
+        return back()->with('success', __('Adoption finalized without an online deposit.'));
+    }
+
+    /**
      * Turns a waiting-list entry (cat_id null) into a reservation for a
      * specific kitten once one becomes available. Restricted to a still-
      * pending deposit: once it's paid, the deposit is tied to whatever the
@@ -245,6 +282,31 @@ class DepositController extends Controller
         $deposit->update(['status' => DepositStatus::Refunded]);
 
         return back()->with('success', __('Deposit refunded.'));
+    }
+
+    /**
+     * super_admin only — same sensitivity as refund(), see CLAUDE.md:
+     * this undoes a confirmed reservation/adoption, not just a display
+     * toggle. Releases the cat (whether still `en_attente` or already
+     * `adopte`) back to `disponible` and marks the deposit `cancelled` —
+     * fixes the gap where forcing a cat's status back to `disponible`
+     * from Admin/Cats/Adoption/Form.vue alone left its Deposit `paid`,
+     * silently blocking any new reservation for that cat forever via
+     * Deposit::blocksNewReservation().
+     *
+     * Purely a cat/deposit bookkeeping action — never touches money. If
+     * the client also needs a refund, run refund() separately first:
+     * it requires status === Paid, a state this removes.
+     */
+    public function cancel(Deposit $deposit, DepositPaymentProcessor $processor): RedirectResponse
+    {
+        if ($deposit->status !== DepositStatus::Paid) {
+            return back()->with('error', __('Only a paid deposit can be cancelled.'));
+        }
+
+        $processor->cancel($deposit);
+
+        return back()->with('success', __('Reservation cancelled — the cat is available again.'));
     }
 
     /**
