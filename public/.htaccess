@@ -5,6 +5,13 @@
 
     RewriteEngine On
 
+    # Let/Let's Encrypt ACME HTTP-01 validation (used by Infomaniak's
+    # automatic SSL issuance) must always reach the plain static file
+    # under this path, never fall through to index.php — placed first,
+    # with [L], so it's unaffected by any rewrite rule added below it,
+    # present or future.
+    RewriteRule ^\.well-known/acme-challenge/ - [L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

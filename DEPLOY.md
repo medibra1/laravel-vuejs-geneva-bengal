@@ -99,3 +99,23 @@ transitoire ne doit pas faire perdre une notification en prod). Ajuster
 les chemins/utilisateur système en tête de fichier avant `supervisorctl
 reread && supervisorctl update`. Dans ce cas `QUEUE_CONNECTION=database`
 peut être gardé tel quel (pas besoin de `sync`).
+
+## 3. Certificat SSL (validation ACME)
+
+**Constat de l'audit** : pas de `.htaccess` à la racine du repo (normal —
+Laravel n'en a jamais eu besoin, le document root pointe directement sur
+`public/`, comme le confirme le guide officiel d'installation Laravel
+d'Infomaniak : "pointer le dossier cible vers le sous-dossier `public`").
+Le seul `.htaccess` pertinent est `public/.htaccess`, celui généré par
+défaut par Laravel — ses règles de réécriture ont déjà chacune une
+condition `RewriteCond %{REQUEST_FILENAME} !-f` : un fichier qui existe
+réellement sur disque (donc un vrai fichier de challenge ACME déposé par
+Infomaniak sous `public/.well-known/acme-challenge/`) n'était donc déjà
+**pas** intercepté en pratique.
+
+Corrigé quand même par une règle explicite (`^\.well-known/acme-challenge/
+- [L]`, tout en haut, avant les autres) plutôt que de compter sur cette
+condition implicite : plus robuste si une règle future (redirection HTTPS
+forcée, etc.) est ajoutée dans ce fichier sans y repenser, et lisible
+immédiatement pour qui relit ce `.htaccess` sans avoir à dérouler la
+logique `!-f` de chaque règle en dessous.
