@@ -72,20 +72,25 @@ Route::group([
 Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle'])->name('webhooks.stripe');
 
 // Infomaniak's shared-hosting task scheduler only calls a URL (no real
-// crontab there, see DEPLOY.md #4) — this stands in for the classic
-// `* * * * * php artisan schedule:run` cron entry. Token-gated (not left
+// crontab there, see DEPLOY.md #4) — this stands in for both the classic
+// `* * * * * php artisan schedule:run` cron entry and a queue worker
+// daemon (neither of which shared hosting can run). Token-gated (not left
 // open) so a discovered URL can't be used to force-run due scheduled
-// tasks on demand; throttled on top as a second, cheap guard.
-Route::get('/cron/run-schedule', function (Request $request) {
+// tasks or drain the queue on demand; throttled on top as a second,
+// cheap guard. GET-only, so Laravel's CSRF guard (which only checks
+// state-changing verbs) never applies here regardless of the `web`
+// middleware group's session/cookie middleware being harmlessly present.
+Route::get('/cron/run', function (Request $request) {
     abort_unless(
         config('app.cron_secret') && hash_equals((string) config('app.cron_secret'), (string) $request->query('token')),
         403
     );
 
     Artisan::call('schedule:run');
+    Artisan::call('queue:work', ['--stop-when-empty' => true, '--max-time' => 50]);
 
-    return response()->noContent();
-})->middleware('throttle:20,1')->name('cron.run-schedule');
+    return response('OK', 200);
+})->middleware('throttle:10,1')->name('cron.run');
 
 // One canonical sitemap listing every locale variant of every page (via
 // hreflang alternates) rather than a separate /fr/sitemap.xml, /en/sitemap.xml.

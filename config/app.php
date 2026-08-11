@@ -90,7 +90,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Shared-hosting stand-in for `* * * * * php artisan schedule:run` — see
-    | routes/web.php's "cron.run-schedule" route and DEPLOY.md #4. Read
+    | routes/web.php's "cron.run" route and DEPLOY.md #4. Read
     | from config rather than env() directly outside this file, so it still
     | works once config:cache has run in production.
     |
