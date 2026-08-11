@@ -203,13 +203,46 @@ prendre effet immédiatement.
 
 ## 6. Script de déploiement
 
+### Déploiement continu (`.github/workflows/deploy.yml`)
+
+Se déclenche automatiquement après que `Backend`/`Frontend` (voir
+[`backend.yml`](.github/workflows/backend.yml)/
+[`frontend.yml`](.github/workflows/frontend.yml)) ont fini avec succès sur
+`main` (`workflow_run`), ou manuellement depuis l'onglet Actions
+(`workflow_dispatch`). Build le projet côté CI (`composer install
+--no-dev`, `npm ci && npm run build`) puis synchronise le résultat vers le
+serveur par `rsync` en SSH, avant de lancer `migrate --force` +
+`storage:link` + les caches config/routes/vues directement sur le serveur
+par SSH.
+
+⚠️ **Ne passe pas par `deploy.sh` ci-dessous** — logique dupliquée, pas
+`deploy.sh` appelé à distance. Différences assumées à connaître : pas de
+mode maintenance (`artisan down`/`up`) autour de `migrate --force`, et pas
+de redémarrage du process SSR après déploiement (§2 — à refaire à la main
+depuis le Manager Infomaniak, ou via `supervisorctl` sur Cloud Server,
+après chaque déploiement CI tant que ce workflow n'y touche pas). Si
+`deploy.sh` change, penser à reporter tout changement pertinent ici aussi
+(les deux mécanismes coexistent, pas un remplacement de l'un par l'autre).
+
+Secrets GitHub Actions requis (Settings → Secrets and variables →
+Actions), aucun documenté avant l'ajout de ce workflow :
+
+| Secret | Contenu |
+|---|---|
+| `INFOMANIAK_SSH_KEY` | clé privée SSH (format `id_ed25519`, sans passphrase — un `workflow_run` ne peut pas la saisir de façon interactive) autorisée sur le compte SSH du Manager Infomaniak |
+| `INFOMANIAK_HOST` | hôte SSH (ex. fourni par le Manager Infomaniak à la création de l'accès SSH) |
+| `INFOMANIAK_USER` | utilisateur SSH |
+| `INFOMANIAK_PATH` | chemin absolu du projet sur le serveur (celui pointé par le document root `public/`, voir §3) |
+
+### Script manuel (`deploy.sh`)
+
 [`deploy.sh`](deploy.sh) — à exécuter **sur le serveur**, en SSH, depuis
 la racine du projet (l'accès SSH est disponible sur l'offre Hébergement
 Web mutualisé d'Infomaniak, créé depuis la section FTP/SSH du Manager ;
-c'est ce qui permet de lancer `composer`/`npm`/`artisan` du tout). Il n'y
-a pas d'étape de déploiement continu dans `.github/workflows/*.yml` —
-ceux-ci ne font que tester/builder, pas déployer — donc ce script reste
-le mécanisme de déploiement réel, lancé à la main pour l'instant :
+c'est ce qui permet de lancer `composer`/`npm`/`artisan` du tout).
+Mécanisme de déploiement alternatif — plus complet que le workflow CD
+ci-dessus (mode maintenance, tentative de redémarrage SSR), à préférer
+pour un déploiement surveillé à la main :
 
 ```
 ssh <user>@<host>
