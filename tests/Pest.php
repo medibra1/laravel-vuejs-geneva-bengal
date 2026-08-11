@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Mcamara\LaravelLocalization\LaravelLocalization;
 use Tests\TestCase;
 
 /*
@@ -61,26 +60,23 @@ function something()
 | Locale-aware requests
 |--------------------------------------------------------------------------
 |
-| mcamara/laravel-localization builds its locale-prefixed routes at
-| application boot time from the incoming request, which the testing
-| harness bootstraps before any request exists. Refreshing the app with
-| the target locale forced via env lets route-dependent feature tests
-| resolve /fr or /en correctly instead of 404ing. See vendor README
-| "Testing" section for the upstream-documented pattern. Only the public
-| routes (currently just "/") are locale-prefixed — see routes/web.php.
+| No-op kept for call-site compatibility across ~13 Feature test files.
+| The old mcamara/laravel-localization package built its locale-prefixed
+| routes at application boot time from the incoming request, which the
+| testing harness bootstraps before any request exists — this helper used
+| to force-rebuild the app with the target locale via env so /fr or /en
+| would resolve instead of 404ing.
+|
+| niels-numbers/laravel-localizer registers both locale variants
+| (with_locale.*, without_locale.*) as static routes once, unconditionally,
+| at boot — every test already visits a literal path like $this->get('/fr/...')
+| rather than route('home'), so /fr and /en resolve correctly with no
+| per-test setup at all. Left in place rather than touched across every
+| call site in the same pass as the package swap.
 |
 */
 
 function refreshApplicationWithLocale(string $locale): void
 {
-    /** @var TestCase $test */
-    $test = test();
-
-    $test->tearDown();
-    putenv(LaravelLocalization::ENV_ROUTE_KEY.'='.$locale);
-    $test->setUp();
+    //
 }
-
-pest()->afterEach(function () {
-    putenv(LaravelLocalization::ENV_ROUTE_KEY);
-});

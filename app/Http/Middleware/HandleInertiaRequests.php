@@ -7,10 +7,11 @@ use App\Models\Page;
 use App\Models\SiteSetting;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Facades\Route;
 use Inertia\Middleware;
-use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
+use NielsNumbers\LaravelLocalizer\Facades\Localizer;
+use NielsNumbers\LaravelLocalizer\Routing\LocalizerZiggyV2;
 use Spatie\Honeypot\Honeypot;
-use Tighten\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -96,8 +97,14 @@ class HandleInertiaRequests extends Middleware
             // by the `@routes` Blade directive — that global doesn't exist
             // in the Node SSR process, so ssr.ts needs this prop instead to
             // resolve route() during server rendering. See CLAUDE.md Phase 8.
+            // LocalizerZiggyV2 (not the plain Ziggy class) so the SSR
+            // manifest is locale-aware too, same as the @routes directive
+            // (bound to LocalizerBladeRouteGeneratorV2 in AppServiceProvider)
+            // — Ziggy's own BladeRouteGenerator instantiates `new Ziggy`
+            // directly, so that container binding alone doesn't cover this
+            // direct instantiation here.
             'ziggy' => fn () => [
-                ...(new Ziggy)->toArray(),
+                ...(new LocalizerZiggyV2)->toArray(),
                 'location' => $request->url(),
             ],
         ];
@@ -140,18 +147,19 @@ class HandleInertiaRequests extends Middleware
      */
     private function alternateUrls(Request $request): array
     {
-        $segments = explode('/', trim($request->path(), '/'));
-        $locales = array_keys(LaravelLocalization::getSupportedLocales());
-
-        if (! in_array($segments[0], $locales, true)) {
+        if (! Route::isLocalized()) {
             return [];
         }
 
-        $rest = implode('/', array_slice($segments, 1));
-
-        return collect($locales)
+        return collect(Localizer::supportedLocales())
             ->mapWithKeys(fn (string $locale) => [
-                $locale => url('/'.$locale.($rest !== '' ? '/'.$rest : '')),
+                // localizedSwitcherUrl (not localizedUrl): always emits a
+                // prefixed URL, even for the default locale — matches the
+                // pre-migration behavior where every locale always got an
+                // explicit /fr or /en prefix (hide_default_locale is off
+                // here, but localizedUrl() would still special-case this
+                // if it were ever turned on).
+                $locale => Route::localizedSwitcherUrl($locale),
             ])
             ->all();
     }

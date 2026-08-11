@@ -14,15 +14,13 @@ use App\Http\Controllers\Public\StripeWebhookController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
-use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
 use Spatie\Honeypot\ProtectAgainstSpam;
 
 // Public, SEO-facing pages live under /fr and /en (see CLAUDE.md i18n
-// layer 1).
-Route::group([
-    'prefix' => LaravelLocalization::setLocale(),
-    'middleware' => ['localeSessionRedirect', 'localizationRedirect', 'localeViewPath'],
-], function (): void {
+// layer 1). Route::localize() registers two static routes per definition
+// (with_locale.* and without_locale.*), unlike the old package's
+// per-request dynamic prefix — this is what makes route:cache safe.
+Route::localize(function (): void {
     Route::get('/', [HomeController::class, 'index'])->name('home');
 
     Route::get('/chatons-disponibles', [CatController::class, 'index'])->name('cats.index');
