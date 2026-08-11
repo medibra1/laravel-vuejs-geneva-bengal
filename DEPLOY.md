@@ -145,15 +145,18 @@ tâches" de ce palier n'exécute **pas** une commande shell, il appelle une
 (contre 1 minute sur Cloud Server). Impossible donc d'y coller directement
 `php artisan schedule:run` en ligne de commande.
 
-Solution retenue : une route dédiée qui déclenche `schedule:run` en
-interne, protégée par un jeton (sinon n'importe qui trouvant l'URL pourrait
-forcer l'exécution des tâches planifiées à volonté) —
-[`routes/web.php`](routes/web.php), `GET /cron/run-schedule?token=...`,
+Solution retenue : une route dédiée qui déclenche `schedule:run` **et**
+`queue:work --stop-when-empty --max-time=50` en interne (le mutualisé ne
+permet pas non plus de laisser un worker de queue tourner en démon, voir
+§2 — cette route sert donc aussi de traitement de queue périodique),
+protégée par un jeton (sinon n'importe qui trouvant l'URL pourrait forcer
+l'exécution des tâches planifiées ou vider la queue à volonté) —
+[`routes/web.php`](routes/web.php), `GET /cron/run?token=...`,
 comparaison en `hash_equals()` contre `config('app.cron_secret')` (lu
 depuis `CRON_SECRET` en `.env`, voir §1). À configurer dans le
 Planificateur de tâches Infomaniak :
 ```
-https://<domaine>/cron/run-schedule?token=<CRON_SECRET>
+https://<domaine>/cron/run?token=<CRON_SECRET>
 ```
 Intervalle 15 minutes, aligné sur la grille de l'heure (`:00`, `:15`,
 `:30`, `:45` — pas un décalage arbitraire type `:05`/`:20`) : `daily()`
@@ -234,4 +237,4 @@ Non couvert par ce script, à faire une seule fois lors du tout premier
 déploiement (pas à chaque déploiement suivant) : création de la base
 MySQL et de son utilisateur dans le Manager Infomaniak,
 `php artisan key:generate --force`, configuration du site Node.js pour le
-SSR (§2) et du Planificateur de tâches pour `/cron/run-schedule` (§4).
+SSR (§2) et du Planificateur de tâches pour `/cron/run` (§4).

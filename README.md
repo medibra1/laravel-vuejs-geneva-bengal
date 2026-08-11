@@ -73,6 +73,12 @@ npm run build                  # build + vérification TypeScript (vue-tsc)
 
 Les deux workflows CI (`backend.yml`, `frontend.yml`) sont volontairement découplés : le premier ne dépend jamais de `node_modules`/build compilé, le second jamais de `vendor/`.
 
+## Déploiement
+
+Voir [`DEPLOY.md`](DEPLOY.md) pour la checklist complète (variables d'env, SSR, script `deploy.sh`, changement de domaine).
+
+⚠️ Sur l'hébergement Web mutualisé (pas de crontab ni de process daemon) : le Laravel Scheduler et le traitement de la queue ne tournent pas en tâche de fond — ils sont déclenchés par un appel HTTP externe, `GET /cron/run?token=<CRON_SECRET>` (route `cron.run`, jeton comparé via `hash_equals()`), à brancher sur le "Planificateur de tâches" HTTP d'Infomaniak. Détail dans DEPLOY.md §4.
+
 ## État du projet
 
 - [x] Fondations — Laravel, Inertia/Vue/TypeScript, PrimeVue, Tailwind, i18n, Docker, CI, rôles
