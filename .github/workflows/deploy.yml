@@ -1,0 +1,72 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Backend", "Frontend"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch: {}   # permet aussi un déclenchement manuel depuis GitHub
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install PHP dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Prepare SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.INFOMANIAK_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.INFOMANIAK_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Sync files to Infomaniak
+        run: |
+          rsync -avz --delete \
+            --exclude='.env' \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='storage/logs' \
+            --exclude='storage/framework/cache' \
+            --exclude='storage/framework/sessions' \
+            --exclude='storage/framework/views' \
+            --exclude='storage/app/public' \
+            -e "ssh -i ~/.ssh/id_ed25519" \
+            ./ ${{ secrets.INFOMANIAK_USER }}@${{ secrets.INFOMANIAK_HOST }}:${{ secrets.INFOMANIAK_PATH }}/
+
+      - name: Run post-deploy commands
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.INFOMANIAK_USER }}@${{ secrets.INFOMANIAK_HOST }} "
+            cd ${{ secrets.INFOMANIAK_PATH }} &&
+            php artisan migrate --force &&
+            php artisan storage:link || true &&
+            php artisan config:cache &&
+            php artisan route:cache &&
+            php artisan view:cache
+          "
