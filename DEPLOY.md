@@ -6,9 +6,10 @@ PHP/Apache — sans Docker côté serveur. Écrit pour l'offre **Hébergement
 Web (mutualisé)**, avec les différences notées quand l'offre **Cloud
 Server** (VPS avec accès root) change la réponse.
 
-Le `docker-compose.yml` et les workflows `.github/workflows/*.yml` restent
-inchangés par ce document : ils décrivent l'environnement de dev/CI, pas la
-prod.
+Le `docker-compose.yml` et les workflows `backend.yml`/`frontend.yml`
+restent inchangés par ce document : ils décrivent l'environnement de
+dev/CI, pas la prod. Seul `.github/workflows/deploy.yml` (§6) touche
+réellement au déploiement.
 
 ## 1. Variables d'environnement (`.env` en prod)
 
