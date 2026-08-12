@@ -3,6 +3,7 @@ import { Head, Link, usePage } from '@inertiajs/vue3';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 import PageBanner from '@/Components/PageBanner.vue';
 import SectionHeading from '@/Components/SectionHeading.vue';
+import ResponsiveImage from '@/Components/ResponsiveImage.vue';
 import type { PageProps } from '@/types';
 import type { Cat } from '@/types/models';
 
@@ -40,10 +41,13 @@ function description(cat: Cat): string {
                     class="group block overflow-hidden rounded-2xl border border-gray-200 bg-white text-center shadow-sm transition hover:shadow-lg"
                 >
                     <div class="aspect-square overflow-hidden bg-gray-100">
-                        <img
+                        <ResponsiveImage
                             v-if="cat.photos.length"
-                            :src="cat.photos[0].url"
+                            :sm="cat.photos[0].sm_url"
+                            :md="cat.photos[0].md_url"
+                            :fallback="cat.photos[0].url"
                             :alt="cat.name"
+                            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                             class="h-full w-full object-cover transition group-hover:scale-105"
                         />
                         <div v-else class="flex h-full items-center justify-center text-gray-400">{{ $t('common.no_photo') }}</div>

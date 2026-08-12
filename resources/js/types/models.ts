@@ -8,6 +8,9 @@ export interface Color {
 export interface CatPhoto {
     id: number;
     url: string;
+    sm_url: string;
+    md_url: string;
+    lg_url: string;
 }
 
 export interface CatDeposit {
