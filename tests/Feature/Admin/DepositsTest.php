@@ -7,6 +7,7 @@ use App\Models\Deposit;
 use App\Models\Owner;
 use App\Models\User;
 use App\Notifications\DepositConfirmedNotification;
+use App\Notifications\DepositPaidNotification;
 use App\Notifications\NewDepositCreatedNotification;
 use App\Services\Payments\PaymentGateway;
 use Illuminate\Support\Facades\Notification;
@@ -528,6 +529,7 @@ it('marks a pending stripe deposit as paid when Stripe confirms the checkout is 
     expect($deposit->fresh()->paid_at)->not->toBeNull();
     expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
     Notification::assertSentOnDemand(DepositConfirmedNotification::class);
+    Notification::assertSentTo($admin, DepositPaidNotification::class);
 });
 
 it('leaves a pending stripe deposit untouched when Stripe reports it as unpaid', function () {

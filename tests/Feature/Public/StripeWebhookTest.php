@@ -6,6 +6,7 @@ use App\Models\Cat;
 use App\Models\Deposit;
 use App\Models\User;
 use App\Notifications\DepositConfirmedNotification;
+use App\Notifications\DepositPaidNotification;
 use App\Notifications\DepositUnavailableNotification;
 use App\Services\Payments\PaymentGateway;
 use Illuminate\Support\Facades\Notification;
@@ -98,6 +99,8 @@ beforeEach(function () {
 
 it('marks a deposit paid and captures its PaymentIntent on a validly signed payment_intent.amount_capturable_updated event', function () {
     Notification::fake();
+    $admin = User::factory()->create(['is_active' => true]);
+    $admin->assignRole('admin');
     $deposit = Deposit::factory()->create([
         'status' => DepositStatus::Pending,
         'provider_reference' => 'pi_test_123',
@@ -117,6 +120,7 @@ it('marks a deposit paid and captures its PaymentIntent on a validly signed paym
     expect($deposit->fresh()->paid_at)->not->toBeNull();
     expect($this->gateway->capturedDepositIds)->toBe([$deposit->id]);
     Notification::assertSentOnDemand(DepositConfirmedNotification::class);
+    Notification::assertSentTo($admin, DepositPaidNotification::class);
 });
 
 /**
@@ -144,6 +148,8 @@ it('covers the full public flow — deposit creation through webhook-confirmed c
     );
     $this->app->instance(PaymentGateway::class, $gateway);
     Notification::fake();
+    $admin = User::factory()->create(['is_active' => true]);
+    $admin->assignRole('admin');
     $cat = Cat::factory()->create();
     $cat->setStatus(CatStatus::Available->value);
 
@@ -177,6 +183,7 @@ it('covers the full public flow — deposit creation through webhook-confirmed c
     expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
     expect($gateway->capturedDepositIds)->toBe([$deposit->id]);
     Notification::assertSentOnDemand(DepositConfirmedNotification::class);
+    Notification::assertSentTo($admin, DepositPaidNotification::class);
 });
 
 it('moves the linked cat to en_attente once its deposit is paid', function () {
@@ -221,6 +228,8 @@ it('rejects a request with an invalid signature and leaves the deposit untouched
 it('marks a TWINT deposit paid without calling capture() — it was already auto-captured', function () {
     Notification::fake();
     $this->gateway->isCapturedResult = true;
+    $admin = User::factory()->create(['is_active' => true]);
+    $admin->assignRole('admin');
     $deposit = Deposit::factory()->create([
         'status' => DepositStatus::Pending,
         'provider_reference' => 'pi_test_twint',
@@ -241,6 +250,7 @@ it('marks a TWINT deposit paid without calling capture() — it was already auto
     // fail on Stripe's side, see StripeGateway::capture()'s docblock.
     expect($this->gateway->capturedDepositIds)->toBeEmpty();
     Notification::assertSentOnDemand(DepositConfirmedNotification::class);
+    Notification::assertSentTo($admin, DepositPaidNotification::class);
 });
 
 it('refunds instead of cancelling a losing TWINT PaymentIntent, since it was already auto-captured', function () {
