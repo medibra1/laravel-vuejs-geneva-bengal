@@ -11,6 +11,7 @@ import type { SiteSettings } from '@/types/models';
 
 const props = defineProps<{
     settings: SiteSettings;
+    logoUrl: string | null;
 }>();
 
 const form = useForm({
@@ -19,12 +20,20 @@ const form = useForm({
     social_youtube: props.settings.social_youtube ?? '',
     social_tiktok: props.settings.social_tiktok ?? '',
     address: props.settings.address ?? '',
+    phone: props.settings.phone ?? '',
+    email: props.settings.email ?? '',
     deposit_amount: props.settings.deposit_amount ?? null,
     price_range_min: props.settings.price_range_min ?? null,
     price_range_max: props.settings.price_range_max ?? null,
     default_seo_title: props.settings.default_seo_title ?? '',
     default_seo_description: props.settings.default_seo_description ?? '',
+    logo: null as File | null,
 });
+
+function onLogoSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    form.logo = input.files?.[0] ?? null;
+}
 
 // form.* stays in centimes (what's stored and what admin.settings.update
 // validates) — PrimeVue's InputNumber in currency mode reads/writes whole
@@ -45,8 +54,10 @@ const depositAmountChf = chfModel('deposit_amount');
 const priceRangeMinChf = chfModel('price_range_min');
 const priceRangeMaxChf = chfModel('price_range_max');
 
+// _method spoofing + forceFormData: a real PUT can't carry a file upload —
+// same pattern as Admin/Galleries/Form.vue's update.
 function submit(): void {
-    form.put(route('admin.settings.update'));
+    form.transform((data) => ({ ...data, _method: 'put' })).post(route('admin.settings.update'), { forceFormData: true });
 }
 </script>
 
@@ -62,6 +73,27 @@ function submit(): void {
         <div class="py-12">
             <div class="mx-auto max-w-3xl sm:px-6 lg:px-8">
                 <form class="space-y-8 bg-white dark:bg-neutral-800 p-6 shadow-sm sm:rounded-lg" @submit.prevent="submit">
+                    <section>
+                        <h3 class="font-semibold text-gray-800">Logo</h3>
+                        <div class="mt-4">
+                            <input
+                                id="logo"
+                                type="file"
+                                accept="image/*"
+                                class="block w-full text-sm"
+                                @change="onLogoSelected"
+                            />
+                            <InputError :message="form.errors.logo" />
+
+                            <img
+                                v-if="logoUrl"
+                                :src="logoUrl"
+                                alt="Logo actuel"
+                                class="mt-3 h-16 w-auto"
+                            />
+                        </div>
+                    </section>
+
                     <section>
                         <h3 class="font-semibold text-gray-800">Réseaux sociaux</h3>
                         <div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -89,10 +121,25 @@ function submit(): void {
                     </section>
 
                     <section>
-                        <h3 class="font-semibold text-gray-800">Adresse</h3>
-                        <div class="mt-4">
-                            <InputText id="address" v-model="form.address" class="w-full" />
-                            <InputError :message="form.errors.address" />
+                        <h3 class="font-semibold text-gray-800">Coordonnées</h3>
+                        <div class="mt-4 space-y-4">
+                            <div>
+                                <InputLabel for="address" value="Adresse" />
+                                <InputText id="address" v-model="form.address" class="mt-1 w-full" />
+                                <InputError :message="form.errors.address" />
+                            </div>
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                <div>
+                                    <InputLabel for="phone" value="Téléphone" />
+                                    <InputText id="phone" v-model="form.phone" class="mt-1 w-full" />
+                                    <InputError :message="form.errors.phone" />
+                                </div>
+                                <div>
+                                    <InputLabel for="email" value="E-mail" />
+                                    <InputText id="email" v-model="form.email" class="mt-1 w-full" />
+                                    <InputError :message="form.errors.email" />
+                                </div>
+                            </div>
                         </div>
                     </section>
 

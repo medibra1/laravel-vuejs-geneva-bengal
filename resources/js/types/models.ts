@@ -143,6 +143,8 @@ export interface SiteSettings {
     social_youtube: string | null;
     social_tiktok: string | null;
     address: string | null;
+    phone: string | null;
+    email: string | null;
     deposit_amount: number | null;
     price_range_min: number | null;
     price_range_max: number | null;

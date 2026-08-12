@@ -46,6 +46,8 @@ const props = defineProps<{
 const pageCtx = usePage<PageProps>();
 const honeypot = pageCtx.props.honeypot;
 const address = computed(() => pageCtx.props.address);
+const phone = computed(() => pageCtx.props.phone);
+const email = computed(() => pageCtx.props.email);
 const socialLinks = computed(() => pageCtx.props.socialLinks);
 const { t } = useI18n();
 
@@ -163,6 +165,12 @@ function submitContact(): void {
                 <div>
                     <h2 class="font-heading text-brand-gray text-2xl font-bold uppercase tracking-wide">{{ $t('contact.heading') }}</h2>
                     <p v-if="address" class="mt-4 text-neutral-700">{{ address }}</p>
+                    <p v-if="phone" class="mt-2 text-neutral-700">
+                        <a :href="`tel:${phone}`" class="hover:text-brand-green">{{ phone }}</a>
+                    </p>
+                    <p v-if="email" class="mt-2 text-neutral-700">
+                        <a :href="`mailto:${email}`" class="hover:text-brand-green">{{ email }}</a>
+                    </p>
                     <SocialLinks class="[&_a]:hover:text-brand-green mt-4 text-brand-gray" v-bind="socialLinks" />
                 </div>
 

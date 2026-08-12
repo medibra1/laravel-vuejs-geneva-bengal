@@ -27,6 +27,9 @@ export type PageProps<
         tiktok: string | null;
     };
     address: string | null;
+    phone: string | null;
+    email: string | null;
+    logoUrl: string | null;
     honeypot: Honeypot;
     alternateUrls: Record<string, string>;
 };
