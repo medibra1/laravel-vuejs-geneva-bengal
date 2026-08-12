@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Public;
 
+use App\Enums\GalleryType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\GalleryResource;
 use App\Models\Gallery;
@@ -12,7 +13,10 @@ class GalleryController extends Controller
 {
     public function index(): Response
     {
-        $galleries = Gallery::query()->with('media')->orderBy('position')->get();
+        // Explicitly scoped to Gallery — the galleries table also now holds
+        // hero slider slides and homepage social tiles (see Admin\GalleryController),
+        // which this public gallery page must never mix in.
+        $galleries = Gallery::query()->ofType(GalleryType::Gallery)->with('media')->orderBy('position')->get();
 
         return Inertia::render('Public/Galerie', [
             'galleries' => GalleryResource::collection($galleries)->resolve(),

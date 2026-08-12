@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\GalleryType;
+use App\Rules\GalleryTypeLimitNotReached;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
@@ -39,7 +40,7 @@ class StoreGalleryRequest extends FormRequest
             'caption' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'integer', 'min:0'],
             'image' => ['required', 'image', 'max:5120'],
-            'type' => ['required', new Enum(GalleryType::class)],
+            'type' => ['required', new Enum(GalleryType::class), new GalleryTypeLimitNotReached],
         ];
     }
 }
