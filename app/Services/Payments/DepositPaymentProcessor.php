@@ -9,6 +9,7 @@ use App\Models\Deposit;
 use App\Models\Owner;
 use App\Notifications\Concerns\NotifiesStaff;
 use App\Notifications\DepositConfirmedNotification;
+use App\Notifications\DepositPaidNotification;
 use App\Notifications\DepositUnavailableNotification;
 use App\Notifications\NewDepositCreatedNotification;
 use Illuminate\Support\Facades\DB;
@@ -258,6 +259,8 @@ class DepositPaymentProcessor
 
         Notification::route('mail', $deposit->email)
             ->notify(new DepositConfirmedNotification($deposit));
+
+        Notification::send($this->activeStaff(), new DepositPaidNotification($deposit));
     }
 
     /**

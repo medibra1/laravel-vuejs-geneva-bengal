@@ -7,6 +7,7 @@ use App\Models\Cat;
 use App\Models\Deposit;
 use App\Models\User;
 use App\Notifications\DepositConfirmedNotification;
+use App\Notifications\DepositPaidNotification;
 use App\Notifications\DepositUnavailableNotification;
 use App\Notifications\StripeReconciliationIssueNotification;
 use App\Services\Payments\DepositPaymentProcessor;
@@ -29,6 +30,8 @@ it('marks paid and captures the PaymentIntent for a pending deposit the gateway 
     $gateway = new FakePaymentGateway;
     $gateway->checkoutPaidResult = true;
     $this->app->instance(PaymentGateway::class, $gateway);
+    $admin = User::factory()->create(['is_active' => true]);
+    $admin->assignRole('admin');
 
     $deposit = Deposit::factory()->create([
         'status' => DepositStatus::Pending,
@@ -41,6 +44,7 @@ it('marks paid and captures the PaymentIntent for a pending deposit the gateway 
     expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
     expect($gateway->capturedDepositIds)->toBe([$deposit->id]);
     Notification::assertSentOnDemand(DepositConfirmedNotification::class);
+    Notification::assertSentTo($admin, DepositPaidNotification::class);
 });
 
 it('leaves a deposit alone if the gateway still reports it unpaid', function () {
