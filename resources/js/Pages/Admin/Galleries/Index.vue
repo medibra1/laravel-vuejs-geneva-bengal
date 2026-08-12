@@ -18,9 +18,9 @@ const tabs: Array<{ value: GalleryType; label: string }> = [
 ];
 
 const titles: Record<GalleryType, string> = {
-    gallery: 'Galerie — Photos galerie',
-    hero_slide: 'Galerie — Slider accueil',
-    social_tile: 'Galerie — Tuiles réseaux sociaux',
+    gallery: 'Médias — Photos galerie',
+    hero_slide: 'Médias — Slider accueil',
+    social_tile: 'Médias — Tuiles réseaux sociaux',
 };
 
 function goToPage(page: number): void {
@@ -40,7 +40,7 @@ function destroy(gallery: Gallery): void {
     <AdminLayout>
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">Galerie</h2>
+                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">Médias</h2>
                 <Link :href="route('admin.galleries.create', { type })">
                     <Button label="Ajouter une photo" icon="pi pi-plus" />
                 </Link>

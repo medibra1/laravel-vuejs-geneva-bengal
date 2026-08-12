@@ -60,7 +60,7 @@ const contentLinks: NavItem[] = [
     { name: 'admin.cats.breeders.index', label: 'Reproducteurs', icon: 'pi-star' },
     { name: 'admin.owners.index', label: 'Adoptants', icon: 'pi-users' },
     { name: 'admin.litters.index', label: 'Portées', icon: 'pi-sitemap' },
-    { name: 'admin.galleries.index', label: 'Galerie', icon: 'pi-images' },
+    { name: 'admin.galleries.index', label: 'Médias', icon: 'pi-images' },
     { name: 'admin.pages.index', label: 'Pages', icon: 'pi-file' },
     { name: 'admin.faq-items.index', label: 'FAQ', icon: 'pi-question-circle' },
     { name: 'admin.testimonials.index', label: 'Témoignages', icon: 'pi-comment' },
