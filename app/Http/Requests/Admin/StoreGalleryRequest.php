@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\GalleryType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 
 class StoreGalleryRequest extends FormRequest
 {
@@ -17,6 +19,18 @@ class StoreGalleryRequest extends FormRequest
     }
 
     /**
+     * Defaults `type` to Gallery when omitted, so the existing
+     * gallery-creation flow (no `type` field in the form) keeps working
+     * unchanged.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'type' => $this->input('type', GalleryType::Gallery->value),
+        ]);
+    }
+
+    /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
@@ -25,6 +39,7 @@ class StoreGalleryRequest extends FormRequest
             'caption' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'integer', 'min:0'],
             'image' => ['required', 'image', 'max:5120'],
+            'type' => ['required', new Enum(GalleryType::class)],
         ];
     }
 }
