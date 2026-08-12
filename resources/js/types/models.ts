@@ -85,11 +85,17 @@ export interface Litter {
     kittens_count?: number;
 }
 
+export type GalleryType = 'gallery' | 'hero_slide' | 'social_tile';
+
 export interface Gallery {
     id: number;
     caption: string | null;
     position: number;
+    type: GalleryType;
     image_url: string | null;
+    image_sm_url: string | null;
+    image_md_url: string | null;
+    image_lg_url: string | null;
 }
 
 export interface CmsPage {

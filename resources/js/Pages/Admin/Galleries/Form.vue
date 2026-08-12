@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
@@ -7,15 +7,27 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
-import type { Gallery } from '@/types/models';
+import type { Gallery, GalleryType } from '@/types/models';
 
 const props = defineProps<{
     gallery?: Gallery;
+    type: GalleryType;
 }>();
+
+const typeLabels: Record<GalleryType, string> = {
+    gallery: 'Photos galerie',
+    hero_slide: 'Slider accueil',
+    social_tile: 'Tuiles réseaux sociaux',
+};
+
+// The gallery's own type (edit) always wins over the `type` query-string
+// prop (create) — it never changes on update, no field exposed for it.
+const activeType = props.gallery?.type ?? props.type;
 
 const form = useForm({
     caption: props.gallery?.caption ?? '',
     position: props.gallery?.position ?? 0,
+    type: activeType,
     image: null as File | null,
 });
 
@@ -42,13 +54,15 @@ function submit(): void {
     <AdminLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-white">
-                {{ gallery ? 'Modifier la photo' : 'Ajouter une photo' }}
+                {{ gallery ? 'Modifier la photo' : 'Ajouter une photo' }} — {{ typeLabels[activeType] }}
             </h2>
         </template>
 
         <div class="py-12">
             <div class="mx-auto max-w-2xl sm:px-6 lg:px-8">
                 <form class="space-y-6 bg-white dark:bg-neutral-800 p-6 shadow-sm sm:rounded-lg" @submit.prevent="submit">
+                    <InputError :message="form.errors.type" />
+
                     <div>
                         <InputLabel for="caption" value="Légende" />
                         <InputText id="caption" v-model="form.caption" class="mt-1 w-full" />
@@ -83,12 +97,9 @@ function submit(): void {
                         <PrimaryButton :disabled="form.processing">
                             {{ gallery ? 'Enregistrer' : 'Ajouter' }}
                         </PrimaryButton>
-                        <Button
-                            label="Annuler"
-                            severity="secondary"
-                            text
-                            @click="$inertia.get(route('admin.galleries.index'))"
-                        />
+                        <Link :href="route('admin.galleries.index', { type: activeType })">
+                            <Button label="Annuler" severity="secondary" text />
+                        </Link>
                     </div>
                 </form>
             </div>
