@@ -9,7 +9,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use NielsNumbers\LaravelLocalizer\Facades\Localizer;
+use NielsNumbers\LaravelLocalizer\Routing\LocalizerBladeRouteGeneratorV2;
 use Stripe\StripeClient;
+use Tighten\Ziggy\BladeRouteGenerator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +28,12 @@ class AppServiceProvider extends ServiceProvider
             new StripeClient(config('services.stripe.secret')),
             (string) config('services.stripe.webhook_secret'),
         ));
+
+        // Makes the @routes Blade directive emit a locale-aware manifest,
+        // so route() in JS resolves the /fr or /en variant automatically —
+        // this project is on tightenco/ziggy ^2.0 (Tighten\Ziggy namespace),
+        // hence the V2 adapter.
+        $this->app->bind(BladeRouteGenerator::class, LocalizerBladeRouteGeneratorV2::class);
     }
 
     /**
@@ -33,6 +42,16 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        // laravel-localizer's default locale falls back to
+        // config('app.fallback_locale') (= 'en', the Laravel-native
+        // "translation missing" fallback — unrelated to which locale a
+        // visitor with no locale signal should land on). This app has no
+        // lang/ files at all (see CLAUDE.md i18n layers), so
+        // fallback_locale has no other effect here — but it still drove an
+        // unprefixed "/" visitor to /en instead of /fr without this
+        // override. app.locale (='fr') is the actual site default.
+        Localizer::setActiveDefaultLocale(config('app.locale'));
 
         Gate::before(fn (User $user) => $user->hasRole('super_admin') ? true : null);
 
