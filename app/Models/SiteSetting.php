@@ -6,12 +6,15 @@ use Database\Factories\SiteSettingFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 #[Fillable(['key', 'value'])]
-class SiteSetting extends Model
+class SiteSetting extends Model implements HasMedia
 {
     /** @use HasFactory<SiteSettingFactory> */
-    use HasFactory;
+    use HasFactory, InteractsWithMedia;
 
     protected function casts(): array
     {
@@ -28,5 +31,35 @@ class SiteSetting extends Model
     public static function set(string $key, mixed $value): void
     {
         static::query()->updateOrCreate(['key' => $key], ['value' => $value]);
+    }
+
+    /**
+     * Only the row with key='logo' ever actually holds media — attaching
+     * media collections to SiteSetting generically (rather than a
+     * dedicated SiteLogo model) keeps "the site logo" conceptually a
+     * setting like any other, at the cost of this trait being unused on
+     * every other row. updateOrCreate() in set() never touches this row's
+     * id, so a media attachment survives any future SiteSetting::set('logo', ...)
+     * call on the same key.
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('logo')->singleFile();
+    }
+
+    /**
+     * nonQueued(): same reasoning as Cat/Gallery's conversions — an
+     * infrequent admin action, and this app's queue only drains
+     * periodically via /cron/run (see routes/web.php).
+     */
+    public function registerMediaConversions(?Media $media = null): void
+    {
+        foreach (['sm' => 480, 'md' => 800, 'lg' => 1400] as $name => $width) {
+            $this->addMediaConversion($name)
+                ->nonQueued()
+                ->width($width)
+                ->format('webp')
+                ->quality(80);
+        }
     }
 }

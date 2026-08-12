@@ -32,11 +32,18 @@ class UpdateSiteSettingsRequest extends FormRequest
             'social_youtube' => ['nullable', 'url', 'max:255'],
             'social_tiktok' => ['nullable', 'url', 'max:255'],
             'address' => ['nullable', 'string', 'max:500'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
             'deposit_amount' => ['nullable', 'integer', 'min:0'],
             'price_range_min' => ['nullable', 'integer', 'min:0'],
             'price_range_max' => ['nullable', 'integer', 'min:0', 'gte:price_range_min'],
             'default_seo_title' => ['nullable', 'string', 'max:255'],
             'default_seo_description' => ['nullable', 'string', 'max:500'],
+            // Handled separately in SiteSettingController::update() (media,
+            // not a plain SiteSetting::set() value) — validated here anyway
+            // so a bad upload gets a normal form error instead of an
+            // unhandled exception deeper in the controller.
+            'logo' => ['nullable', 'image', 'max:2048'],
         ];
     }
 }
