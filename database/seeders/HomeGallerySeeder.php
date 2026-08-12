@@ -15,9 +15,11 @@ class HomeGallerySeeder extends Seeder
      * change. Not called from DatabaseSeeder — run manually once per
      * environment: `php artisan db:seed --class=HomeGallerySeeder`.
      *
-     * Idempotent on (type, position): re-running skips any pair that
-     * already has a row, so it never duplicates entries or re-runs the
-     * sm/md/lg conversions for images already imported.
+     * Idempotent: safe to re-run in any environment — Gallery::firstOrCreate()
+     * on the (type, position) unique index (see the galleries migration)
+     * means a second run never duplicates rows, and the wasRecentlyCreated
+     * guard in importType() means it never re-runs the sm/md/lg conversions
+     * for images already imported.
      */
     public function run(): void
     {
@@ -49,14 +51,16 @@ class HomeGallerySeeder extends Seeder
     private function importType(GalleryType $type, array $pathsByPosition): void
     {
         foreach ($pathsByPosition as $position => $path) {
-            if (Gallery::query()->ofType($type)->where('position', $position)->exists()) {
+            $gallery = Gallery::firstOrCreate(['type' => $type, 'position' => $position]);
+
+            // firstOrCreate() alone would still avoid duplicating the row on
+            // a second run, but without this guard it would re-run addMedia()
+            // (and the sm/md/lg conversions) against an already-imported row
+            // every time — wasRecentlyCreated is what actually makes this
+            // idempotent on the media side, not just the row itself.
+            if (! $gallery->wasRecentlyCreated) {
                 continue;
             }
-
-            $gallery = Gallery::create([
-                'type' => $type,
-                'position' => $position,
-            ]);
 
             $gallery->addMedia($path)->preservingOriginal()->toMediaCollection('image');
         }
