@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Public\Concerns\SharesHeroSlides;
 use App\Models\Cat;
 use App\Models\Litter;
 use Illuminate\Support\Carbon;
@@ -11,6 +12,8 @@ use Inertia\Response;
 
 class LitterController extends Controller
 {
+    use SharesHeroSlides;
+
     /**
      * "Portées prévues" — only litters not yet born, soonest first. Past
      * litters belong in the cats/kittens listing once born, not here.
@@ -32,6 +35,7 @@ class LitterController extends Controller
 
         return Inertia::render('Public/PorteesPrevues', [
             'litters' => $litters,
+            'heroSlides' => $this->heroSlides(),
         ]);
     }
 
