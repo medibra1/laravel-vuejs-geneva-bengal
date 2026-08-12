@@ -10,11 +10,12 @@ import DepositForm from '@/Components/DepositForm.vue';
 import PhotoLightbox from '@/Components/PhotoLightbox.vue';
 import ResponsiveImage from '@/Components/ResponsiveImage.vue';
 import type { PageProps } from '@/types';
-import type { Cat } from '@/types/models';
+import type { Cat, Gallery } from '@/types/models';
 
 const props = defineProps<{
     cat: Cat;
     depositAmount: number;
+    heroSlides: Gallery[];
 }>();
 
 const page = usePage<PageProps>();
@@ -83,7 +84,7 @@ function formatPrice(cents: number | null): string {
     </Head>
 
     <PublicLayout>
-        <PageBanner :script="isKitten ? $t('catDetail.banner_script_kitten') : $t('catDetail.banner_script_breeder')" :subtitle="cat.name" />
+        <PageBanner :script="isKitten ? $t('catDetail.banner_script_kitten') : $t('catDetail.banner_script_breeder')" :subtitle="cat.name" :slides="heroSlides" />
 
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
             <SectionHeading :script="isKitten ? $t('catDetail.heading_kitten') : $t('catDetail.heading_breeder')" />

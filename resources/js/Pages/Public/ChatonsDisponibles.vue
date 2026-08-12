@@ -7,11 +7,12 @@ import SectionHeading from '@/Components/SectionHeading.vue';
 import NewsletterForm from '@/Components/NewsletterForm.vue';
 import ResponsiveImage from '@/Components/ResponsiveImage.vue';
 import type { PageProps } from '@/types';
-import type { Cat } from '@/types/models';
+import type { Cat, Gallery } from '@/types/models';
 
 const props = defineProps<{
     cats: Cat[];
     activeColorSlug: string | null;
+    heroSlides: Gallery[];
 }>();
 
 const page = usePage<PageProps>();
@@ -28,7 +29,7 @@ const activeColor = computed(() => page.props.colors.find((color) => color.slug 
     </Head>
 
     <PublicLayout>
-        <PageBanner :script="$t('catsList.banner_script')" :subtitle="$t('catsList.banner_subtitle')" />
+        <PageBanner :script="$t('catsList.banner_script')" :subtitle="$t('catsList.banner_subtitle')" :slides="heroSlides" />
 
         <section id="nos-chatons" class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
             <SectionHeading :script="$t('catsList.heading_script')" :title="$t('catsList.heading_title')" center />

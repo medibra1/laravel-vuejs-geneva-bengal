@@ -11,6 +11,7 @@ import type { Gallery } from '@/types/models';
 
 defineProps<{
     galleries: Gallery[];
+    heroSlides: Gallery[];
 }>();
 
 const openIndex = ref<number | null>(null);
@@ -26,7 +27,7 @@ const openIndex = ref<number | null>(null);
     </Head>
 
     <PublicLayout>
-        <PageBanner :script="$t('gallery.banner_script')" :subtitle="$t('gallery.banner_subtitle')" />
+        <PageBanner :script="$t('gallery.banner_script')" :subtitle="$t('gallery.banner_subtitle')" :slides="heroSlides" />
 
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
             <SectionHeading :script="$t('gallery.heading_script')" :title="$t('gallery.heading_title')" center />

@@ -5,10 +5,11 @@ import PageBanner from '@/Components/PageBanner.vue';
 import SectionHeading from '@/Components/SectionHeading.vue';
 import ResponsiveImage from '@/Components/ResponsiveImage.vue';
 import type { PageProps } from '@/types';
-import type { Cat } from '@/types/models';
+import type { Cat, Gallery } from '@/types/models';
 
 defineProps<{
     cats: Cat[];
+    heroSlides: Gallery[];
 }>();
 
 const page = usePage<PageProps>();
@@ -28,7 +29,7 @@ function description(cat: Cat): string {
     </Head>
 
     <PublicLayout>
-        <PageBanner :script="$t('breeders.banner_script')" :subtitle="$t('breeders.banner_subtitle')" />
+        <PageBanner :script="$t('breeders.banner_script')" :subtitle="$t('breeders.banner_subtitle')" :slides="heroSlides" />
 
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
             <SectionHeading :script="$t('breeders.heading_script')" :title="$t('breeders.heading_title')" center />

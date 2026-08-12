@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 import PageBanner from '@/Components/PageBanner.vue';
 import SectionHeading from '@/Components/SectionHeading.vue';
+import type { Gallery } from '@/types/models';
 
 interface LitterParent {
     id: number;
@@ -23,6 +24,7 @@ interface PublicLitter {
 
 defineProps<{
     litters: PublicLitter[];
+    heroSlides: Gallery[];
 }>();
 
 const { t, locale } = useI18n();
@@ -44,7 +46,7 @@ function formatDate(date: string | null): string {
     </Head>
 
     <PublicLayout>
-        <PageBanner :script="$t('litters.banner_script')" :subtitle="$t('litters.banner_subtitle')" />
+        <PageBanner :script="$t('litters.banner_script')" :subtitle="$t('litters.banner_subtitle')" :slides="heroSlides" />
 
         <section class="mx-auto max-w-5xl px-6 py-16 sm:py-24">
             <SectionHeading :script="$t('litters.heading_script')" :title="$t('litters.heading_title')" center />
