@@ -5,6 +5,7 @@ import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { createApp, DefineComponent, h } from "vue";
 import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
+import ToastService from "primevue/toastservice";
 import Aura from "@primeuix/themes/aura";
 import { createI18n } from "vue-i18n";
 import { ZiggyVue } from 'ziggy-js';
@@ -33,6 +34,7 @@ createInertiaApp({
             .use(plugin)
             .use(createPinia())
             .use(PrimeVue, { theme: { preset: Aura, options: { darkModeSelector: ".dark" } } })
+            .use(ToastService)
             .use(ZiggyVue)
             .use(i18n)
             .mount(el);

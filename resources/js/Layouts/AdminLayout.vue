@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NotificationBell from '@/Components/Admin/NotificationBell.vue';
+import FlashToast from '@/Components/FlashToast.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import type { PageProps } from '@/types';
 import logoLight from '../../images/admin/logo.png';
@@ -291,4 +292,5 @@ function isActive(link: NavItem): boolean {
             </div>
         </div>
     </div>
+    <FlashToast />
 </template>
