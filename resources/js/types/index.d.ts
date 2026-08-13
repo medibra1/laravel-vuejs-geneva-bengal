@@ -15,6 +15,10 @@ export type PageProps<
         roles: string[];
     };
     locale: string;
+    flash: {
+        success: string | null;
+        error: string | null;
+    };
     // null on any page with no authenticated user — see
     // HandleInertiaRequests::notifications().
     notifications: AppNotifications | null;
