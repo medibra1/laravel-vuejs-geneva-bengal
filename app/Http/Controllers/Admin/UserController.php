@@ -59,7 +59,7 @@ class UserController extends Controller
 
         Password::sendResetLink(['email' => $user->email]);
 
-        return redirect()->route('admin.users.index')->with('success', __('Admin account created.'));
+        return redirect()->route('admin.users.index')->with('success', 'Compte administrateur créé.');
     }
 
     public function edit(User $user): Response
@@ -79,30 +79,30 @@ class UserController extends Controller
         $newRole = $request->validated('role');
 
         if ($newRole !== 'super_admin' && $user->isLastActiveSuperAdmin()) {
-            return back()->with('error', __('You cannot demote the last active super_admin.'));
+            return back()->with('error', 'Impossible de rétrograder le dernier super administrateur actif.');
         }
 
         $user->syncRoles([$newRole]);
 
-        return redirect()->route('admin.users.index')->with('success', __('Admin role updated.'));
+        return redirect()->route('admin.users.index')->with('success', 'Rôle administrateur mis à jour.');
     }
 
     public function resendResetLink(User $user): RedirectResponse
     {
         Password::sendResetLink(['email' => $user->email]);
 
-        return back()->with('success', __('Password reset link sent.'));
+        return back()->with('success', 'Lien de réinitialisation du mot de passe envoyé.');
     }
 
     public function toggleActive(User $user): RedirectResponse
     {
         if ($user->is_active && $user->isLastActiveSuperAdmin()) {
-            return back()->with('error', __('You cannot deactivate the last active super_admin.'));
+            return back()->with('error', 'Impossible de désactiver le dernier super administrateur actif.');
         }
 
         $user->update(['is_active' => ! $user->is_active]);
 
-        return back()->with('success', __('Account status updated.'));
+        return back()->with('success', 'Statut du compte mis à jour.');
     }
 
     /**
@@ -117,7 +117,7 @@ class UserController extends Controller
     public function destroy(User $user): RedirectResponse
     {
         if ($user->isLastActiveSuperAdmin()) {
-            return back()->with('error', __('You cannot delete the last active super_admin.'));
+            return back()->with('error', 'Impossible de supprimer le dernier super administrateur actif.');
         }
 
         $hasActedOnAnything = Activity::query()
@@ -126,11 +126,11 @@ class UserController extends Controller
             ->exists();
 
         if ($hasActedOnAnything) {
-            return back()->with('error', __('This account has logged activity — deactivate it instead of deleting it.'));
+            return back()->with('error', 'Ce compte a une activité enregistrée — désactivez-le plutôt que de le supprimer.');
         }
 
         $user->delete();
 
-        return redirect()->route('admin.users.index')->with('success', __('Admin account deleted.'));
+        return redirect()->route('admin.users.index')->with('success', 'Compte administrateur supprimé.');
     }
 }

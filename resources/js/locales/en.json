@@ -71,7 +71,8 @@
         "home_body": "Our newsletter is the best way to be informed as soon as new kittens are available on our website.",
         "email_placeholder": "Email",
         "submit": "Subscribe",
-        "success": "Thank you for subscribing!"
+        "success": "Thank you for subscribing!",
+        "error": "Something went wrong. Please check your email address and try again."
     },
     "catsList": {
         "meta_title": "Available Bengal kittens",
@@ -157,6 +158,8 @@
         "unavailable_body": "Someone else finished their reservation moments before you. Don't worry — you were not charged, the payment authorization was cancelled. Feel free to take a look at our other available kittens.",
         "pending_heading": "We're processing your payment",
         "pending_body": "This should only take a moment. You'll receive a confirmation email as soon as the payment is validated — no need to stay on this page.",
+        "timeout_heading": "This is taking longer than expected",
+        "timeout_body": "Your payment is being processed but confirmation is taking a while. Don't worry: if the payment went through, you'll receive a confirmation email as soon as it's validated — you can safely close this page. If nothing happens within a few minutes, please contact us.",
         "back_link": "Back to available kittens"
     },
     "newsletterUnsubscribed": {

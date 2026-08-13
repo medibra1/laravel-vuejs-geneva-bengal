@@ -70,6 +70,13 @@ class DepositController extends Controller
             'currency' => 'CHF',
             'status' => DepositStatus::Pending,
             'provider' => 'stripe',
+            // Captured now — the only point where the visitor's active
+            // locale is known. DepositConfirmedNotification/
+            // DepositUnavailableNotification (triggered later by the
+            // Stripe webhook or the reconciliation job, neither in the
+            // context of this visitor's request) read it back to send the
+            // confirmation email in the right language. See CLAUDE.md.
+            'locale' => app()->getLocale(),
         ]);
 
         $intent = $gateway->createPaymentIntent($deposit);

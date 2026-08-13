@@ -28,13 +28,13 @@ class ContactRequestController extends Controller
     {
         $contactRequest->update($request->validated());
 
-        return redirect()->route('admin.contact-requests.index')->with('success', __('Contact request updated.'));
+        return redirect()->route('admin.contact-requests.index')->with('success', 'Demande de contact mise à jour.');
     }
 
     public function destroy(ContactRequest $contactRequest): RedirectResponse
     {
         $contactRequest->delete();
 
-        return redirect()->route('admin.contact-requests.index')->with('success', __('Contact request deleted.'));
+        return redirect()->route('admin.contact-requests.index')->with('success', 'Demande de contact supprimée.');
     }
 }

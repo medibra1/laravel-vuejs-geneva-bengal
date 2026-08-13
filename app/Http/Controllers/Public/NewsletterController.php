@@ -30,8 +30,11 @@ class NewsletterController extends Controller
             $subscriber->save();
 
             Notification::send($this->activeStaff(), new NewNewsletterSubscriberNotification($subscriber));
+            // ->locale() captures the visitor's current locale now and
+            // carries it through the notification queue job — see the same
+            // comment in Public\ContactController::store().
             Notification::route('mail', $subscriber->email)
-                ->notify(new NewsletterSubscriptionConfirmedNotification($subscriber));
+                ->notify((new NewsletterSubscriptionConfirmedNotification($subscriber))->locale(app()->getLocale()));
         }
 
         return back()->with('success', __('Subscribed.'));

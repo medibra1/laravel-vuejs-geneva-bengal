@@ -20,8 +20,13 @@ class ContactController extends Controller
         $contactRequest = ContactRequest::create($request->validated());
 
         Notification::send($this->activeStaff(), new NewContactRequestNotification($contactRequest));
+        // ->locale() captures the visitor's current locale now and carries
+        // it through the notification queue job, so the confirmation email
+        // is sent in the language the site was browsed in even though
+        // ShouldQueue means toMail() actually runs later, on the queue
+        // worker (no active per-request locale there otherwise).
         Notification::route('mail', $contactRequest->email)
-            ->notify(new ContactRequestConfirmedNotification($contactRequest));
+            ->notify((new ContactRequestConfirmedNotification($contactRequest))->locale(app()->getLocale()));
 
         return back()->with('success', __('Your message has been sent.'));
     }

@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import type { PageProps } from '@/types';
 import SocialLinks from '@/Components/SocialLinks.vue';
 import ScrollToTop from '@/Components/ScrollToTop.vue';
+import FlashToast from '@/Components/FlashToast.vue';
 import logoFallback from '../../images/shared/logo-gb.png';
 
 const page = usePage<PageProps>();
@@ -363,6 +364,7 @@ watch(
         </footer>
 
         <ScrollToTop />
+        <FlashToast />
     </div>
 </template>
 

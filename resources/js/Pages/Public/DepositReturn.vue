@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 
@@ -29,6 +29,16 @@ const MAX_POLL_ATTEMPTS = 20;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let pollAttempts = 0;
 
+// True once polling has given up without the status ever leaving "pending"
+// — e.g. the Stripe webhook never reached the app (misconfigured endpoint,
+// network issue) and the daily ReconcilePendingDeposits job hasn't run yet.
+// Without this, the page silently stays on the "pending" branch forever,
+// which reads as broken rather than "still working, just slower than
+// usual". Reset on prop change so a fresh visit (new depositStatus) doesn't
+// inherit a stale timeout from a previous poll cycle.
+const pollTimedOut = ref(false);
+const isTimedOut = computed(() => pollTimedOut.value && props.depositStatus === 'pending');
+
 function stopPolling(): void {
     if (pollTimer === null) return;
 
@@ -42,6 +52,7 @@ onMounted(() => {
     pollTimer = setInterval(() => {
         if (pollAttempts >= MAX_POLL_ATTEMPTS) {
             stopPolling();
+            pollTimedOut.value = true;
             return;
         }
 
@@ -88,6 +99,14 @@ onBeforeUnmount(stopPolling);
                 <h1 class="mt-6 text-2xl font-semibold text-neutral-900">{{ $t('depositReturn.cancelled_heading') }}</h1>
                 <p class="mt-4 text-neutral-600">
                     {{ $t('depositReturn.cancelled_body') }}
+                </p>
+            </template>
+
+            <template v-else-if="isTimedOut">
+                <i class="pi pi-clock text-5xl text-neutral-400" />
+                <h1 class="mt-6 text-2xl font-semibold text-neutral-900">{{ $t('depositReturn.timeout_heading') }}</h1>
+                <p class="mt-4 text-neutral-600">
+                    {{ $t('depositReturn.timeout_body') }}
                 </p>
             </template>
 

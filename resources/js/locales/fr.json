@@ -71,7 +71,8 @@
         "home_body": "Notre infolettre est la meilleure façon d'être informé dès qu'il y a de nouveaux chatons disponibles sur notre site Web.",
         "email_placeholder": "E-mail",
         "submit": "S'inscrire",
-        "success": "Merci de votre inscription !"
+        "success": "Merci de votre inscription !",
+        "error": "Une erreur est survenue. Vérifiez votre adresse e-mail et réessayez."
     },
     "catsList": {
         "meta_title": "Chatons Bengal disponibles",
@@ -157,6 +158,8 @@
         "unavailable_body": "Quelqu'un d'autre vient de finaliser sa réservation quelques instants avant vous. Rassurez-vous : vous n'avez pas été débité(e), l'autorisation de paiement a été annulée. N'hésitez pas à consulter nos autres chatons disponibles.",
         "pending_heading": "Nous traitons votre paiement",
         "pending_body": "Cela ne devrait prendre qu'un instant. Vous recevrez un e-mail de confirmation dès que le paiement sera validé — inutile de rester sur cette page.",
+        "timeout_heading": "Cela prend plus de temps que prévu",
+        "timeout_body": "Votre paiement est en cours de traitement mais la confirmation tarde à arriver. Pas d'inquiétude : si le paiement a bien été effectué, vous recevrez un e-mail de confirmation dès qu'il sera validé — vous pouvez fermer cette page en toute sécurité. Si rien ne se passe d'ici quelques minutes, contactez-nous.",
         "back_link": "Retour aux chatons disponibles"
     },
     "newsletterUnsubscribed": {

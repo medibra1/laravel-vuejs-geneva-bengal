@@ -14,10 +14,14 @@ use Illuminate\Support\Facades\Notification;
 use Throwable;
 
 /**
- * Daily safety net for a Deposit whose webhook never arrived (network
- * blip, Stripe retries exhausted, etc.) — see CLAUDE.md. Only looks at
- * deposits at least an hour old so it never races the webhook for one
- * that's simply still being paid.
+ * Safety net for a Deposit whose webhook never arrived (network blip,
+ * misconfigured endpoint, Stripe retries exhausted, etc.) — see CLAUDE.md.
+ * Scheduled every 15 minutes (see routes/console.php), not daily — a
+ * webhook that never arrives would otherwise leave a visitor's checkout
+ * page stuck on "pending" for up to 24h. Only looks at deposits at least
+ * GRACE_PERIOD_MINUTES old so it never races the webhook for one that's
+ * simply still being paid: an ordinary webhook responds within seconds, so
+ * this margin is generous without meaningfully delaying the catch-up.
  *
  * Also releases the cat held by a deposit whose PaymentIntent authorization
  * was abandoned/expired (see Deposit::PENDING_EXPIRY_HOURS) rather than
@@ -33,12 +37,14 @@ class ReconcilePendingDeposits implements ShouldQueue
 {
     use NotifiesStaff, Queueable;
 
+    private const GRACE_PERIOD_MINUTES = 10;
+
     public function handle(PaymentGateway $gateway, DepositPaymentProcessor $processor): void
     {
         Deposit::query()
             ->where('status', DepositStatus::Pending)
             ->whereNotNull('provider_reference')
-            ->where('created_at', '<=', now()->subHour())
+            ->where('created_at', '<=', now()->subMinutes(self::GRACE_PERIOD_MINUTES))
             ->each(function (Deposit $deposit) use ($gateway, $processor): void {
                 try {
                     $isPaid = $gateway->isCheckoutPaid($deposit);

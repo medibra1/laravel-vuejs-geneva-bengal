@@ -19,7 +19,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'cat_id', 'owner_id', 'name', 'email', 'phone', 'amount', 'currency',
-    'status', 'provider', 'provider_reference', 'payment_link_url',
+    'status', 'provider', 'locale', 'provider_reference', 'payment_link_url',
     'payment_method', 'created_by', 'paid_at', 'finalized_at',
 ])]
 class Deposit extends Model

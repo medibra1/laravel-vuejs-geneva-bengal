@@ -34,10 +34,13 @@ class NewsletterSubscriptionConfirmedNotification extends Notification implement
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Confirmation d\'inscription à la newsletter — Geneva Bengal')
-            ->greeting('Bonjour,')
-            ->line('Vous êtes désormais inscrit(e) à la newsletter Geneva Bengal.')
-            ->line('Vous pouvez vous désinscrire à tout moment en un clic.')
-            ->action('Se désabonner', route('newsletter.unsubscribe', $this->subscriber->unsubscribe_token));
+            ->subject(__('emails.newsletter_confirmed.subject'))
+            ->greeting(__('emails.newsletter_confirmed.greeting'))
+            ->line(__('emails.newsletter_confirmed.line_subscribed'))
+            ->line(__('emails.newsletter_confirmed.line_unsubscribe'))
+            ->action(
+                __('emails.newsletter_confirmed.action_unsubscribe'),
+                route('newsletter.unsubscribe', $this->subscriber->unsubscribe_token),
+            );
     }
 }

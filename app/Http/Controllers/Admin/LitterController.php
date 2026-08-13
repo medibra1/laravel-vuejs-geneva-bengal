@@ -40,7 +40,7 @@ class LitterController extends Controller
     {
         Litter::create($request->validated());
 
-        return redirect()->route('admin.litters.index')->with('success', __('Litter created.'));
+        return redirect()->route('admin.litters.index')->with('success', 'Portée créée.');
     }
 
     public function edit(Litter $litter): Response
@@ -56,13 +56,13 @@ class LitterController extends Controller
     {
         $litter->update($request->validated());
 
-        return redirect()->route('admin.litters.index')->with('success', __('Litter updated.'));
+        return redirect()->route('admin.litters.index')->with('success', 'Portée mise à jour.');
     }
 
     public function destroy(Litter $litter): RedirectResponse
     {
         $litter->delete();
 
-        return redirect()->route('admin.litters.index')->with('success', __('Litter deleted.'));
+        return redirect()->route('admin.litters.index')->with('success', 'Portée supprimée.');
     }
 }

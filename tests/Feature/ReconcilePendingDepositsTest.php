@@ -63,7 +63,7 @@ it('leaves a deposit alone if the gateway still reports it unpaid', function () 
     expect($deposit->fresh()->status)->toBe(DepositStatus::Pending);
 });
 
-it('never touches a deposit still inside the one-hour grace window', function () {
+it('never touches a deposit still inside the grace period', function () {
     $gateway = new FakePaymentGateway;
     $gateway->checkoutPaidResult = true;
     $this->app->instance(PaymentGateway::class, $gateway);
@@ -71,7 +71,7 @@ it('never touches a deposit still inside the one-hour grace window', function ()
     $deposit = Deposit::factory()->create([
         'status' => DepositStatus::Pending,
         'provider_reference' => 'pi_test_fresh',
-        'created_at' => now()->subMinutes(10),
+        'created_at' => now()->subMinutes(2),
     ]);
 
     (new ReconcilePendingDeposits)->handle($gateway, app(DepositPaymentProcessor::class));

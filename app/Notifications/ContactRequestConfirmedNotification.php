@@ -34,10 +34,10 @@ class ContactRequestConfirmedNotification extends Notification implements Should
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Votre message a bien été reçu — Geneva Bengal')
-            ->greeting("Bonjour {$this->contactRequest->name},")
-            ->line('Nous avons bien reçu votre message et nous vous répondrons dans les plus brefs délais.')
-            ->line('Voici un rappel de votre message :')
+            ->subject(__('emails.contact_confirmed.subject'))
+            ->greeting(__('emails.contact_confirmed.greeting', ['name' => $this->contactRequest->name]))
+            ->line(__('emails.contact_confirmed.line_received'))
+            ->line(__('emails.contact_confirmed.line_reminder'))
             ->line($this->contactRequest->message);
     }
 }

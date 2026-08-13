@@ -44,6 +44,14 @@ class HandleInertiaRequests extends Middleware
                 'roles' => $request->user()?->getRoleNames() ?? [],
             ],
             'locale' => app()->getLocale(),
+            // Session flash messages set by controllers via ->with('success'|'error', ...)
+            // — read once by FlashToast.vue (mounted in both AdminLayout.vue and
+            // PublicLayout.vue) and shown as a toast. Only read here, never written:
+            // Laravel's session flash bag already clears itself after one request.
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+            ],
             // Admin-only, but shared globally rather than per-controller so
             // NotificationBell.vue (mounted once in AdminLayout.vue) always
             // has fresh data without a dedicated endpoint — refreshed on
