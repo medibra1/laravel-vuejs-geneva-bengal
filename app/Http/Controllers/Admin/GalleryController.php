@@ -49,7 +49,7 @@ class GalleryController extends Controller
 
         return redirect()
             ->route('admin.galleries.index', ['type' => $gallery->type->value])
-            ->with('success', __('Photo added.'));
+            ->with('success', 'Photo ajoutée.');
     }
 
     public function edit(Gallery $gallery): Response
@@ -70,7 +70,7 @@ class GalleryController extends Controller
 
         return redirect()
             ->route('admin.galleries.index', ['type' => $gallery->type->value])
-            ->with('success', __('Photo updated.'));
+            ->with('success', 'Photo mise à jour.');
     }
 
     public function destroy(Gallery $gallery): RedirectResponse
@@ -81,7 +81,7 @@ class GalleryController extends Controller
 
         return redirect()
             ->route('admin.galleries.index', ['type' => $type->value])
-            ->with('success', __('Photo deleted.'));
+            ->with('success', 'Photo supprimée.');
     }
 
     private function resolveType(?string $value): GalleryType

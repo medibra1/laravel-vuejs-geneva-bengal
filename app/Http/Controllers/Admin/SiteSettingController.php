@@ -44,7 +44,7 @@ class SiteSettingController extends Controller
             $this->logoSetting()->addMedia($request->file('logo'))->toMediaCollection('logo');
         }
 
-        return redirect()->route('admin.settings.edit')->with('success', __('Settings updated.'));
+        return redirect()->route('admin.settings.edit')->with('success', 'Réglages mis à jour.');
     }
 
     /**

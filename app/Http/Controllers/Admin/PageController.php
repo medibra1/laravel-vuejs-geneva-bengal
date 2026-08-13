@@ -30,7 +30,7 @@ class PageController extends Controller
     {
         Page::create($request->validated());
 
-        return redirect()->route('admin.pages.index')->with('success', __('Page created.'));
+        return redirect()->route('admin.pages.index')->with('success', 'Page créée.');
     }
 
     public function edit(Page $page): Response
@@ -44,14 +44,14 @@ class PageController extends Controller
     {
         $page->update($request->validated());
 
-        return redirect()->route('admin.pages.index')->with('success', __('Page updated.'));
+        return redirect()->route('admin.pages.index')->with('success', 'Page mise à jour.');
     }
 
     public function destroy(Page $page): RedirectResponse
     {
         $page->delete();
 
-        return redirect()->route('admin.pages.index')->with('success', __('Page deleted.'));
+        return redirect()->route('admin.pages.index')->with('success', 'Page supprimée.');
     }
 
     /**

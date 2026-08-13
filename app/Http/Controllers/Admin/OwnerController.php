@@ -40,7 +40,7 @@ class OwnerController extends Controller
     {
         Owner::create($request->validated());
 
-        return redirect()->route('admin.owners.index')->with('success', __('Owner created.'));
+        return redirect()->route('admin.owners.index')->with('success', 'Adoptant créé.');
     }
 
     public function edit(Owner $owner): Response
@@ -56,14 +56,14 @@ class OwnerController extends Controller
     {
         $owner->update($request->validated());
 
-        return redirect()->route('admin.owners.index')->with('success', __('Owner updated.'));
+        return redirect()->route('admin.owners.index')->with('success', 'Adoptant mis à jour.');
     }
 
     public function destroy(Owner $owner): RedirectResponse
     {
         $owner->delete();
 
-        return redirect()->route('admin.owners.index')->with('success', __('Owner deleted.'));
+        return redirect()->route('admin.owners.index')->with('success', 'Adoptant supprimé.');
     }
 
     /**

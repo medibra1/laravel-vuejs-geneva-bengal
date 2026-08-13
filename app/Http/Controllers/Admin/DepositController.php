@@ -118,7 +118,7 @@ class DepositController extends Controller
 
         $processor->reserve($deposit);
 
-        return redirect()->route('admin.deposits.index')->with('success', __('Deposit created.'));
+        return redirect()->route('admin.deposits.index')->with('success', 'Réservation créée.');
     }
 
     /**
@@ -137,11 +137,11 @@ class DepositController extends Controller
     public function markPaid(MarkDepositPaidRequest $request, Deposit $deposit, DepositPaymentProcessor $processor): RedirectResponse
     {
         if ($deposit->payment_method === PaymentMethod::Stripe) {
-            return back()->with('error', __('Stripe deposits are marked paid automatically once the webhook confirms payment.'));
+            return back()->with('error', 'Les acomptes Stripe sont marqués payés automatiquement dès que le webhook confirme le paiement.');
         }
 
         if ($deposit->status !== DepositStatus::Pending) {
-            return back()->with('error', __('Only a pending deposit can be marked paid.'));
+            return back()->with('error', 'Seule une réservation en attente peut être marquée comme payée.');
         }
 
         if ($deposit->payment_method === null) {
@@ -155,7 +155,7 @@ class DepositController extends Controller
 
         $processor->markPaid($deposit);
 
-        return back()->with('success', __('Deposit marked as paid.'));
+        return back()->with('success', 'Réservation marquée comme payée.');
     }
 
     /**
@@ -168,20 +168,20 @@ class DepositController extends Controller
     public function verifyStripe(Deposit $deposit, PaymentGateway $gateway, DepositPaymentProcessor $processor): RedirectResponse
     {
         if ($deposit->payment_method !== PaymentMethod::Stripe) {
-            return back()->with('error', __('Only a Stripe deposit can be verified against Stripe.'));
+            return back()->with('error', 'Seule une réservation Stripe peut être vérifiée auprès de Stripe.');
         }
 
         if ($deposit->status !== DepositStatus::Pending) {
-            return back()->with('error', __('Only a pending deposit can be verified.'));
+            return back()->with('error', 'Seule une réservation en attente peut être vérifiée.');
         }
 
         if (! $gateway->isCheckoutPaid($deposit)) {
-            return back()->with('error', __('Stripe reports this payment is not confirmed yet.'));
+            return back()->with('error', 'Stripe indique que ce paiement n\'est pas encore confirmé.');
         }
 
         $processor->markPaid($deposit, $deposit->provider_reference);
 
-        return back()->with('success', __('Payment confirmed on Stripe — deposit marked as paid.'));
+        return back()->with('success', 'Paiement confirmé sur Stripe — réservation marquée comme payée.');
     }
 
     /**
@@ -192,22 +192,22 @@ class DepositController extends Controller
     public function finalize(FinalizeDepositRequest $request, Deposit $deposit, DepositPaymentProcessor $processor): RedirectResponse
     {
         if ($deposit->status !== DepositStatus::Paid) {
-            return back()->with('error', __('Only a paid deposit can be finalized.'));
+            return back()->with('error', 'Seule une réservation payée peut être finalisée.');
         }
 
         if ($deposit->finalized_at !== null) {
-            return back()->with('error', __('This deposit was already finalized.'));
+            return back()->with('error', 'Cette réservation a déjà été finalisée.');
         }
 
         $owner = $deposit->owner ?? $this->resolveOwner($request);
 
         if ($owner === null) {
-            return back()->with('error', __('An owner is required to finalize this deposit.'));
+            return back()->with('error', 'Un adoptant est requis pour finaliser cette réservation.');
         }
 
         $processor->finalize($deposit, $owner);
 
-        return back()->with('success', __('Adoption finalized.'));
+        return back()->with('success', 'Adoption finalisée.');
     }
 
     /**
@@ -223,18 +223,18 @@ class DepositController extends Controller
         $cat = Cat::findOrFail($request->validated('cat_id'));
 
         if ($cat->status === CatStatus::Adopted->value) {
-            return back()->with('error', __('This cat has already been adopted.'));
+            return back()->with('error', 'Ce chat a déjà été adopté.');
         }
 
         $owner = $this->resolveOwner($request);
 
         if ($owner === null) {
-            return back()->with('error', __('An owner is required to finalize this adoption.'));
+            return back()->with('error', 'Un adoptant est requis pour finaliser cette adoption.');
         }
 
         $processor->finalizeDirectly($cat, $owner);
 
-        return back()->with('success', __('Adoption finalized without an online deposit.'));
+        return back()->with('success', 'Adoption finalisée sans acompte en ligne.');
     }
 
     /**
@@ -247,11 +247,11 @@ class DepositController extends Controller
     public function assignCat(AssignCatToDepositRequest $request, Deposit $deposit, DepositPaymentProcessor $processor): RedirectResponse
     {
         if ($deposit->cat_id !== null) {
-            return back()->with('error', __('This reservation is already tied to a cat.'));
+            return back()->with('error', 'Cette réservation est déjà liée à un chat.');
         }
 
         if ($deposit->status !== DepositStatus::Pending) {
-            return back()->with('error', __('A cat can only be assigned to a still-pending waiting-list entry.'));
+            return back()->with('error', 'Un chat ne peut être assigné qu\'à une inscription en liste d\'attente encore en attente.');
         }
 
         $deposit->update(['cat_id' => $request->validated('cat_id')]);
@@ -261,7 +261,7 @@ class DepositController extends Controller
         // DepositPaymentProcessor::reserve().
         $processor->reserve($deposit, notifyStaff: false);
 
-        return back()->with('success', __('Cat assigned to the reservation.'));
+        return back()->with('success', 'Chat assigné à la réservation.');
     }
 
     /**
@@ -272,16 +272,16 @@ class DepositController extends Controller
     public function refund(Deposit $deposit, PaymentGateway $gateway): RedirectResponse
     {
         if ($deposit->status !== DepositStatus::Paid) {
-            return back()->with('error', __('Only a paid deposit can be refunded.'));
+            return back()->with('error', 'Seule une réservation payée peut être remboursée.');
         }
 
         if (! $gateway->refund($deposit)) {
-            return back()->with('error', __('The refund could not be processed.'));
+            return back()->with('error', 'Le remboursement n\'a pas pu être traité.');
         }
 
         $deposit->update(['status' => DepositStatus::Refunded]);
 
-        return back()->with('success', __('Deposit refunded.'));
+        return back()->with('success', 'Réservation remboursée.');
     }
 
     /**
@@ -301,12 +301,12 @@ class DepositController extends Controller
     public function cancel(Deposit $deposit, DepositPaymentProcessor $processor): RedirectResponse
     {
         if ($deposit->status !== DepositStatus::Paid) {
-            return back()->with('error', __('Only a paid deposit can be cancelled.'));
+            return back()->with('error', 'Seule une réservation payée peut être annulée.');
         }
 
         $processor->cancel($deposit);
 
-        return back()->with('success', __('Reservation cancelled — the cat is available again.'));
+        return back()->with('success', 'Réservation annulée — le chat est de nouveau disponible.');
     }
 
     /**

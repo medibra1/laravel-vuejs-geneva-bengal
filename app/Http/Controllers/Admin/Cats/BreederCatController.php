@@ -69,7 +69,7 @@ class BreederCatController extends Controller
             $cat->addMedia($photo)->toMediaCollection('photos');
         }
 
-        return redirect()->route('admin.cats.breeders.index')->with('success', __('Cat created.'));
+        return redirect()->route('admin.cats.breeders.index')->with('success', 'Chat créé.');
     }
 
     public function edit(Cat $cat): Response
@@ -94,7 +94,7 @@ class BreederCatController extends Controller
             $cat->addMedia($photo)->toMediaCollection('photos');
         }
 
-        return redirect()->route('admin.cats.breeders.index')->with('success', __('Cat updated.'));
+        return redirect()->route('admin.cats.breeders.index')->with('success', 'Chat mis à jour.');
     }
 
     public function destroy(Cat $cat): RedirectResponse
@@ -103,7 +103,7 @@ class BreederCatController extends Controller
 
         $cat->delete();
 
-        return redirect()->route('admin.cats.breeders.index')->with('success', __('Cat deleted.'));
+        return redirect()->route('admin.cats.breeders.index')->with('success', 'Chat supprimé.');
     }
 
     public function destroyPhoto(Cat $cat, Media $media): RedirectResponse
@@ -114,7 +114,7 @@ class BreederCatController extends Controller
 
         $media->delete();
 
-        return back()->with('success', __('Photo deleted.'));
+        return back()->with('success', 'Photo supprimée.');
     }
 
     /**

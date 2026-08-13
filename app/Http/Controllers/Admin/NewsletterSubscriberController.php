@@ -57,6 +57,6 @@ class NewsletterSubscriberController extends Controller
             'unsubscribed_at' => $newsletterSubscriber->isUnsubscribed() ? null : now(),
         ]);
 
-        return back()->with('success', __('Subscriber status updated.'));
+        return back()->with('success', 'Statut de l\'abonné mis à jour.');
     }
 }

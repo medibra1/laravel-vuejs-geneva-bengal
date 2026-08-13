@@ -30,7 +30,7 @@ class FaqItemController extends Controller
     {
         FaqItem::create($request->validated());
 
-        return redirect()->route('admin.faq-items.index')->with('success', __('FAQ item created.'));
+        return redirect()->route('admin.faq-items.index')->with('success', 'Question FAQ créée.');
     }
 
     public function edit(FaqItem $faqItem): Response
@@ -49,13 +49,13 @@ class FaqItemController extends Controller
     {
         $faqItem->update($request->validated());
 
-        return redirect()->route('admin.faq-items.index')->with('success', __('FAQ item updated.'));
+        return redirect()->route('admin.faq-items.index')->with('success', 'Question FAQ mise à jour.');
     }
 
     public function destroy(FaqItem $faqItem): RedirectResponse
     {
         $faqItem->delete();
 
-        return redirect()->route('admin.faq-items.index')->with('success', __('FAQ item deleted.'));
+        return redirect()->route('admin.faq-items.index')->with('success', 'Question FAQ supprimée.');
     }
 }
