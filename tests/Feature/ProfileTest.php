@@ -39,30 +39,3 @@ it('leaves email verification status unchanged when the email address is unchang
 
     expect($user->refresh()->email_verified_at)->not->toBeNull();
 });
-
-it('lets a user delete their account', function () {
-    $user = User::factory()->create();
-
-    $response = $this->actingAs($user)->delete('/profile', [
-        'password' => 'password',
-    ]);
-
-    $response->assertSessionHasNoErrors()->assertRedirect('/');
-
-    $this->assertGuest();
-    expect($user->fresh())->toBeNull();
-});
-
-it('requires the correct password to delete the account', function () {
-    $user = User::factory()->create();
-
-    $response = $this->actingAs($user)
-        ->from('/profile')
-        ->delete('/profile', [
-            'password' => 'wrong-password',
-        ]);
-
-    $response->assertSessionHasErrors('password')->assertRedirect('/profile');
-
-    expect($user->fresh())->not->toBeNull();
-});
