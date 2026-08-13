@@ -71,7 +71,8 @@
         "home_body": "Our newsletter is the best way to be informed as soon as new kittens are available on our website.",
         "email_placeholder": "Email",
         "submit": "Subscribe",
-        "success": "Thank you for subscribing!"
+        "success": "Thank you for subscribing!",
+        "error": "Something went wrong. Please check your email address and try again."
     },
     "catsList": {
         "meta_title": "Available Bengal kittens",

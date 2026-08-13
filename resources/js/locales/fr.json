@@ -71,7 +71,8 @@
         "home_body": "Notre infolettre est la meilleure façon d'être informé dès qu'il y a de nouveaux chatons disponibles sur notre site Web.",
         "email_placeholder": "E-mail",
         "submit": "S'inscrire",
-        "success": "Merci de votre inscription !"
+        "success": "Merci de votre inscription !",
+        "error": "Une erreur est survenue. Vérifiez votre adresse e-mail et réessayez."
     },
     "catsList": {
         "meta_title": "Chatons Bengal disponibles",

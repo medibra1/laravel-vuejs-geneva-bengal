@@ -52,7 +52,10 @@ function submit(): void {
             {{ $t('newsletter.submit') }}
         </button>
     </form>
-    <p v-if="form.recentlySuccessful" class="mt-2 text-sm text-emerald-700">
+    <p v-if="form.errors.email" class="mt-2 text-sm text-red-600">
+        {{ $t('newsletter.error') }}
+    </p>
+    <p v-else-if="form.recentlySuccessful" class="mt-2 text-sm text-emerald-700">
         {{ $t('newsletter.success') }}
     </p>
 </template>
