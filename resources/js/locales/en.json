@@ -94,6 +94,7 @@
         "heading_kitten": "About this Bengal kitten for sale",
         "heading_breeder": "About this breeding Bengal cat",
         "enlarge_photo": "Enlarge photo",
+        "select_photo": "View photo {n}",
         "label_kitten_name": "Kitten's name",
         "label_name": "Name",
         "species_label": "{color} Bengal cat",
@@ -119,7 +120,8 @@
         "heading_script": "Our finest photos",
         "heading_title": "Gallery updated regularly",
         "empty_heading": "No photos yet",
-        "empty_body": "The gallery will be updated soon."
+        "empty_body": "The gallery will be updated soon.",
+        "open_photo": "View photo {n} full size"
     },
     "breeders": {
         "meta_title": "Our breeding Bengal cats",
