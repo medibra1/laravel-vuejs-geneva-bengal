@@ -11,6 +11,16 @@ use Illuminate\Http\Response;
 
 class StripeWebhookController extends Controller
 {
+    /**
+     * Deliberately does not drain the queue itself (no inline
+     * Artisan::call('queue:work', ...)) — Stripe expects a fast 2xx and
+     * will retry aggressively if this endpoint is slow, and a queue:work
+     * call here would also process unrelated jobs (newsletter/contact
+     * emails, ReconcilePendingDeposits, ...) on a webhook request's
+     * budget. Queued notifications (markPaid()'s DepositConfirmedNotification/
+     * DepositPaidNotification) are drained by the scheduled /cron/run
+     * endpoint instead — see routes/web.php and DEPLOY.md §4.
+     */
     public function handle(Request $request, PaymentGateway $gateway, DepositPaymentProcessor $processor): Response
     {
         $result = $gateway->handleWebhook($request);
