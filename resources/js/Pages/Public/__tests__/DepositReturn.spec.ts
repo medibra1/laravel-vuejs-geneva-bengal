@@ -39,6 +39,8 @@ const messages = {
             unavailable_body: "Quelqu'un d'autre vient de finaliser sa réservation. Vous n'avez pas été débité(e).",
             pending_heading: 'Nous traitons votre paiement',
             pending_body: 'Cela ne devrait prendre que quelques instants.',
+            timeout_heading: 'Cela prend plus de temps que prévu',
+            timeout_body: 'La confirmation tarde à arriver.',
             back_link: 'Retour aux chatons disponibles',
         },
     },
@@ -134,13 +136,23 @@ describe('DepositReturn polling', () => {
         vi.useRealTimers();
     });
 
-    it('stops polling after the maximum number of attempts even if the deposit never leaves pending', async () => {
+    it('stops polling and shows the timeout message after the maximum number of attempts even if the deposit never leaves pending', async () => {
         vi.useFakeTimers();
-        mountReturn('pending');
+        const wrapper = mountReturn('pending');
 
-        // 20 attempts at 3.5s each.
-        await vi.advanceTimersByTimeAsync(3500 * 20);
+        // Still showing the ordinary pending message before the cap.
+        expect(wrapper.text()).toContain(messages.fr.depositReturn.pending_heading);
+        expect(wrapper.text()).not.toContain(messages.fr.depositReturn.timeout_heading);
+
+        // 20 attempts at 3.5s each, then one more tick for the interval to
+        // notice the cap was reached (the check runs at the top of each
+        // tick, so it's the 21st tick that sees pollAttempts >= 20 and
+        // flips pollTimedOut).
+        await vi.advanceTimersByTimeAsync(3500 * 21);
         expect(routerReload).toHaveBeenCalledTimes(20);
+
+        expect(wrapper.text()).toContain(messages.fr.depositReturn.timeout_heading);
+        expect(wrapper.text()).not.toContain(messages.fr.depositReturn.pending_heading);
 
         // Capped — no further calls even much later.
         await vi.advanceTimersByTimeAsync(3500 * 5);
