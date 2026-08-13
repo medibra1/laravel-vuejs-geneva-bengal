@@ -163,6 +163,7 @@ function formatPrice(cents: number | null): string {
                             type="button"
                             class="h-16 w-16 shrink-0 overflow-hidden rounded-lg ring-2 transition"
                             :class="index === selectedPhotoIndex ? 'ring-brand-green' : 'ring-transparent opacity-70 hover:opacity-100 hover:ring-gray-300'"
+                            :aria-label="$t('catDetail.select_photo', { n: index + 1 })"
                             @click="selectedPhotoIndex = index"
                         >
                             <ResponsiveImage
@@ -181,10 +182,10 @@ function formatPrice(cents: number | null): string {
                     <h3 class="font-heading text-brand-gray text-xl font-bold">
                         {{ isKitten ? $t('catDetail.label_kitten_name') : $t('catDetail.label_name') }} : {{ cat.name }}
                     </h3>
-                    <p v-if="isKitten" class="text-brand-green mt-1 font-semibold uppercase tracking-wide">
+                    <p v-if="isKitten" class="text-brand-green-contrast mt-1 font-semibold uppercase tracking-wide">
                         {{ cat.status === 'disponible' ? $t('common.status_available') : $t('common.status_waiting') }}
                     </p>
-                    <p class="text-brand-tan mt-1">{{ speciesLabel }}</p>
+                    <p class="text-brand-tan-contrast mt-1">{{ speciesLabel }}</p>
 
                     <p v-if="description" class="mt-4 text-neutral-600">{{ description }}</p>
 

@@ -38,7 +38,7 @@ const activeColor = computed(() => page.props.colors.find((color) => color.slug 
                 <span class="text-brand-gray">
                     {{ $t('catsList.filtered_by_color') }} <strong>{{ activeColor.name }}</strong>
                 </span>
-                <Link :href="route('cats.index')" class="text-brand-green font-semibold underline hover:no-underline">
+                <Link :href="route('cats.index')" class="text-brand-green-contrast font-semibold underline hover:no-underline">
                     {{ $t('catsList.reset') }}
                 </Link>
             </div>
@@ -68,10 +68,10 @@ const activeColor = computed(() => page.props.colors.find((color) => color.slug 
                         <h3 class="font-heading text-brand-gray text-base font-bold uppercase tracking-wide">
                             {{ cat.name }} — {{ cat.status === 'disponible' ? $t('common.status_available') : $t('common.status_waiting') }}
                         </h3>
-                        <p class="text-brand-tan mt-1 text-sm">
+                        <p class="text-brand-tan-contrast mt-1 text-sm">
                             Bengal {{ cat.color?.name }} {{ cat.sex === 'male' ? $t('common.male_lower') : $t('common.female_lower') }}
                         </p>
-                        <span class="text-brand-green mt-3 inline-block text-sm font-semibold uppercase tracking-wide">
+                        <span class="text-brand-green-contrast mt-3 inline-block text-sm font-semibold uppercase tracking-wide">
                             {{ $t('common.read_more') }} →
                         </span>
                     </div>
