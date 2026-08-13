@@ -20,7 +20,7 @@ import logo from '../../images/shared/logo-gb.png';
 
             <div class="relative flex flex-col items-center px-12 text-center">
                 <Link href="/" class="rounded-2xl bg-white p-4 shadow-xl">
-                    <img :src="logo" alt="Geneva Bengal" class="h-16 w-auto" />
+                    <img :src="logo" alt="Geneva Bengal" width="64" height="64" class="h-16 w-auto" />
                 </Link>
                 <h1 class="font-script mt-8 text-4xl text-white">Geneva Bengal</h1>
                 <p class="mt-3 max-w-xs text-sm text-emerald-100/90">
@@ -33,7 +33,7 @@ import logo from '../../images/shared/logo-gb.png';
         <div class="flex flex-1 flex-col items-center justify-center px-6 py-12 sm:px-12">
             <div class="w-full max-w-sm">
                 <Link href="/" class="mb-8 flex justify-center lg:hidden">
-                    <img :src="logo" alt="Geneva Bengal" class="h-14 w-auto" />
+                    <img :src="logo" alt="Geneva Bengal" width="56" height="56" class="h-14 w-auto" />
                 </Link>
 
                 <div class="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm dark:border-neutral-800 dark:bg-neutral-800">

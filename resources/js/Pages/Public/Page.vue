@@ -96,7 +96,7 @@ function submitContact(): void {
             <SectionHeading :script="page.title" />
             <div
                 v-if="page.body"
-                class="mt-6 max-w-none text-neutral-700 [&_a]:text-brand-green [&_a]:underline [&_h2]:font-heading [&_h2]:mt-8 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:uppercase [&_h2]:tracking-wide [&_h2]:text-brand-gray [&_h3]:mt-6 [&_h3]:text-lg [&_h3]:font-semibold [&_img]:mt-4 [&_img]:max-w-full [&_img]:rounded-md [&_ol]:mt-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mt-4 [&_p:first-child]:mt-0 [&_ul]:mt-2 [&_ul]:list-disc [&_ul]:pl-6"
+                class="mt-6 max-w-none text-neutral-700 [&_a]:text-brand-green-contrast [&_a]:underline [&_h2]:font-heading [&_h2]:mt-8 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:uppercase [&_h2]:tracking-wide [&_h2]:text-brand-gray [&_h3]:mt-6 [&_h3]:text-lg [&_h3]:font-semibold [&_img]:mt-4 [&_img]:max-w-full [&_img]:rounded-md [&_ol]:mt-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mt-4 [&_p:first-child]:mt-0 [&_ul]:mt-2 [&_ul]:list-disc [&_ul]:pl-6"
                 v-html="page.body"
             />
         </section>
@@ -221,7 +221,7 @@ function submitContact(): void {
                     </div>
 
                     <button type="submit" class="btn-outline-brand" :disabled="contactForm.processing">{{ $t('contact.submit') }}</button>
-                    <p v-if="contactForm.recentlySuccessful" class="text-brand-green text-sm">
+                    <p v-if="contactForm.recentlySuccessful" class="text-brand-green-contrast text-sm">
                         {{ $t('contact.success') }}
                     </p>
                 </form>

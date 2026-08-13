@@ -19,6 +19,15 @@
     --color-brand-gray: #525253;
     --color-brand-ink: #1d1d1d;
     --color-brand-canvas: #f2f3f4;
+
+    /* Darkened variants of brand-green/brand-tan for use as *text* (or as a
+       text-bearing background) on white/brand-canvas — the base tones above
+       are accent colors (buttons, borders, dots) and fail WCAG AA (~2.3-2.6:1)
+       as foreground text. Kept separate rather than darkening the base
+       tokens, since those are correct as-is everywhere they're used as an
+       accent rather than to carry text. */
+    --color-brand-green-contrast: #2e7d38;
+    --color-brand-tan-contrast: #816b4a;
 }
 
 /*

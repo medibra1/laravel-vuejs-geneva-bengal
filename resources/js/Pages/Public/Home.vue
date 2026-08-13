@@ -48,19 +48,19 @@ const placeholderHref = '#';
 
                     <div class="mt-10 space-y-6">
                         <div>
-                            <h4 class="font-heading text-brand-green text-sm font-light">{{ $t('home.quality_title') }}</h4>
+                            <h4 class="font-heading text-brand-green-contrast text-sm font-light">{{ $t('home.quality_title') }}</h4>
                             <p class="mt-1 text-neutral-600">
                                 {{ $t('home.quality_body') }}
                             </p>
                         </div>
                         <div>
-                            <h4 class="font-heading text-brand-green text-sm font-light">{{ $t('home.health_title') }}</h4>
+                            <h4 class="font-heading text-brand-green-contrast text-sm font-light">{{ $t('home.health_title') }}</h4>
                             <p class="mt-1 text-neutral-600">
                                 {{ $t('home.health_body') }}
                             </p>
                         </div>
                         <div>
-                            <h4 class="font-heading text-brand-green text-sm font-light">{{ $t('home.temperament_title') }}</h4>
+                            <h4 class="font-heading text-brand-green-contrast text-sm font-light">{{ $t('home.temperament_title') }}</h4>
                             <p class="mt-1 text-neutral-600">
                                 {{ $t('home.temperament_body') }}
                             </p>
@@ -68,7 +68,7 @@ const placeholderHref = '#';
                     </div>
                 </div>
                 <div>
-                    <img :src="kittensMontage" :alt="$t('home.montage_alt')"
+                    <img :src="kittensMontage" :alt="$t('home.montage_alt')" width="889" height="867"
                         class="w-full rounded-lg" />
                 </div>
             </div>
@@ -98,7 +98,7 @@ const placeholderHref = '#';
                     <NewsletterForm class="mt-6 max-w-md" />
                 </div>
                 <div>
-                    <img :src="newsletterKitten" alt="" class="mx-auto w-full max-w-sm rounded-full" />
+                    <img :src="newsletterKitten" alt="" width="600" height="600" class="mx-auto w-full max-w-sm rounded-full" />
                 </div>
             </div>
         </section>
@@ -117,12 +117,12 @@ const placeholderHref = '#';
                     </a>
                 </div>
                 <div>
-                    <img :src="internationalKitten" alt="" class="mx-auto w-full max-w-sm rounded-full" />
+                    <img :src="internationalKitten" alt="" width="600" height="600" class="mx-auto w-full max-w-sm rounded-full" />
                 </div>
             </div>
         </section>
 
-        <section class="bg-brand-green py-10 text-white">
+        <section class="bg-brand-green-contrast py-10 text-white">
             <div
                 class="mx-auto flex max-w-7xl flex-col items-center justify-center gap-4 px-6 text-center sm:flex-row sm:justify-between sm:text-left">
                 <div>
@@ -137,7 +137,8 @@ const placeholderHref = '#';
             <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
                 <div class="grid grid-cols-3 gap-2">
                     <a v-for="tile in socialTiles" :key="tile.id" :href="socialLinks.facebook ?? placeholderHref"
-                        target="_blank" rel="noopener" class="aspect-square overflow-hidden rounded">
+                        target="_blank" rel="noopener" :aria-label="$t('social.facebook_title')"
+                        class="aspect-square overflow-hidden rounded">
                         <ResponsiveImage
                             v-if="tile.image_url"
                             :sm="tile.image_sm_url"

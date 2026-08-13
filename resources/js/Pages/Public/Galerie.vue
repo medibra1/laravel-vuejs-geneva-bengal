@@ -38,6 +38,7 @@ const openIndex = ref<number | null>(null);
                     :key="item.id"
                     type="button"
                     class="group aspect-square overflow-hidden rounded"
+                    :aria-label="item.caption || $t('gallery.open_photo', { n: index + 1 })"
                     @click="openIndex = index"
                 >
                     <ResponsiveImage

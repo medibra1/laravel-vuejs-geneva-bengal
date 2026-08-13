@@ -57,13 +57,13 @@ function description(cat: Cat): string {
                         <h3 class="font-heading text-brand-gray text-base font-bold uppercase tracking-wide">
                             {{ cat.name }}
                         </h3>
-                        <p class="text-brand-tan mt-1 text-sm">
+                        <p class="text-brand-tan-contrast mt-1 text-sm">
                             Bengal {{ cat.color?.name }} {{ cat.sex === 'male' ? $t('common.male_lower') : $t('common.female_lower') }}
                         </p>
                         <p v-if="description(cat)" class="mt-3 line-clamp-3 text-sm text-neutral-600">
                             {{ description(cat) }}
                         </p>
-                        <span class="text-brand-green mt-3 inline-block text-sm font-semibold uppercase tracking-wide">
+                        <span class="text-brand-green-contrast mt-3 inline-block text-sm font-semibold uppercase tracking-wide">
                             {{ $t('common.learn_more') }} →
                         </span>
                     </div>

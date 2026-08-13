@@ -68,7 +68,7 @@ function formatDate(date: string | null): string {
                     </div>
 
                     <div class="flex-1">
-                        <p class="text-brand-green font-heading text-sm font-semibold tracking-wide uppercase">
+                        <p class="text-brand-green-contrast font-heading text-sm font-semibold tracking-wide uppercase">
                             {{ formatDate(litter.expected_date) }}
                         </p>
                         <p class="mt-1 text-neutral-700">

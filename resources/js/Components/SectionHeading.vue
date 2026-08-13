@@ -32,7 +32,7 @@ withDefaults(
         </h2>
         <h3
             v-if="title"
-            class="font-heading text-brand-tan mt-2 text-xl font-bold tracking-wide uppercase"
+            class="font-heading text-brand-tan-contrast mt-2 text-xl font-bold tracking-wide uppercase"
             :class="center ? 'text-center' : ''"
         >
             {{ title }}

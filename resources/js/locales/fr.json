@@ -94,6 +94,7 @@
         "heading_kitten": "À propos de ce chaton bengal à vendre",
         "heading_breeder": "À propos de ce chat Bengal reproducteur",
         "enlarge_photo": "Agrandir la photo",
+        "select_photo": "Voir la photo {n}",
         "label_kitten_name": "Nom du chaton",
         "label_name": "Nom",
         "species_label": "Chat Bengal {color}",
@@ -119,7 +120,8 @@
         "heading_script": "Nos plus belles photos",
         "heading_title": "Galerie mise à jour régulièrement",
         "empty_heading": "Aucune photo pour le moment",
-        "empty_body": "La galerie sera mise à jour prochainement."
+        "empty_body": "La galerie sera mise à jour prochainement.",
+        "open_photo": "Voir la photo {n} en grand"
     },
     "breeders": {
         "meta_title": "Nos chats Bengal reproducteurs",
