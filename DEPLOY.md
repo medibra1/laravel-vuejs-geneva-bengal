@@ -225,9 +225,14 @@ déploiement est nécessaire sans passer par un tag.
 
 Une fois déclenché, le workflow build le projet côté CI (`composer install
 --no-dev`, `npm ci && npm run build`) puis synchronise le résultat vers le
-serveur par `rsync` en SSH, avant de lancer `migrate --force` +
-`storage:link` + les caches config/routes/vues directement sur le serveur
-par SSH.
+serveur par `rsync` en SSH, avant de lancer `migrate --force` + `db:seed
+--force` + `storage:link` + les caches config/routes/vues directement sur
+le serveur par SSH. `db:seed --force` est sans danger à rejouer à chaque
+déploiement : chaque seeder de `DatabaseSeeder::run()` (rôles, super_admin,
+couleurs, pages CMS/FAQ, réglages du site, galerie hero/tuiles sociales de
+la home) est idempotent (`firstOrCreate`/upsert par une clé stable) —
+c'est ce qui évite d'avoir à se connecter en SSH à la main à chaque fois
+qu'un seeder change ou qu'un nouveau est ajouté.
 
 ⚠️ **Ne passe pas par `deploy.sh` ci-dessous** — logique dupliquée, pas
 `deploy.sh` appelé à distance. Différences assumées à connaître : pas de
@@ -270,7 +275,8 @@ cd /chemin/vers/le/projet
 seul appel construit le bundle client **et** le bundle SSR), mode
 maintenance (`artisan down`/`up` autour de la migration, pour ne jamais
 servir de requête au milieu d'un schéma à moitié migré), `migrate
---force`, `storage:link` (idempotent), cache config/routes/vues, puis
+--force`, `db:seed --force` (idempotent, voir §6 ci-dessus),
+`storage:link` (idempotent), cache config/routes/vues, puis
 redémarrage du process SSR — `supervisorctl restart` si disponible (Cloud
 Server), sinon message rappelant de redémarrer le site Node.js depuis le
 Manager Infomaniak (mutualisé, voir §2).

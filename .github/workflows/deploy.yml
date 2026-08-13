@@ -63,6 +63,7 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.INFOMANIAK_USER }}@${{ secrets.INFOMANIAK_HOST }} "
             cd ${{ secrets.INFOMANIAK_PATH }} &&
             php artisan migrate --force &&
+            php artisan db:seed --force &&
             php artisan storage:link || true &&
             php artisan config:cache &&
             php artisan route:cache &&

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
 # Deploy Geneva Bengal to production. Run on the server itself (over SSH),
-# from the project root — see DEPLOY.md. There is no CD step in
-# .github/workflows/ (those only test/build), so this script is the actual
-# deploy mechanism for now, invoked by hand.
+# from the project root — see DEPLOY.md. Alternative to
+# .github/workflows/deploy.yml (which rsyncs a CI-built artifact instead of
+# building on the server) — more complete (maintenance mode, SSR restart
+# attempt), preferred for a watched manual deploy.
 #
 # Assumes `git`, `composer`, `node`/`npm` and `php` are already on PATH for
 # the SSH session (adjust with full paths below if your hosting exposes
@@ -36,6 +37,14 @@ php artisan down --retry=15 || true
 
 echo "==> php artisan migrate --force"
 php artisan migrate --force
+
+echo "==> php artisan db:seed --force"
+# Every seeder in DatabaseSeeder::run() is idempotent (firstOrCreate/upsert
+# by a stable key) — safe to re-run on every deploy, not just the first.
+# This is what keeps roles/super_admin/colors/CMS pages/site
+# settings/homepage gallery rows in sync with the repo without a manual SSH
+# step each time a seeder changes or a new one is added.
+php artisan db:seed --force
 
 echo "==> storage:link"
 # No-op (exit 0) if it already exists from a previous deploy.
