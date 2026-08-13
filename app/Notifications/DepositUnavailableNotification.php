@@ -71,15 +71,15 @@ class DepositUnavailableNotification extends Notification implements ShouldQueue
     private function clientMail(): MailMessage
     {
         $message = (new MailMessage)
-            ->subject('Votre réservation n\'a pas pu être confirmée — Geneva Bengal')
-            ->greeting("Bonjour {$this->deposit->name},")
-            ->line("Le chaton que vous souhaitiez réserver vient d'être réservé par quelqu'un d'autre, quelques instants avant vous.");
+            ->subject(__('emails.deposit_unavailable.subject'))
+            ->greeting(__('emails.deposit_unavailable.greeting', ['name' => $this->deposit->name]))
+            ->line(__('emails.deposit_unavailable.line_taken'));
 
         $message = $this->refunded
-            ? $message->line('Votre paiement TWINT a été débité puis intégralement remboursé — vous ne serez pas facturé.')
-            : $message->line('Votre carte n\'a pas été débitée — l\'autorisation a été annulée.');
+            ? $message->line(__('emails.deposit_unavailable.line_refunded'))
+            : $message->line(__('emails.deposit_unavailable.line_not_charged'));
 
-        return $message->line('N\'hésitez pas à consulter nos autres chatons disponibles.');
+        return $message->line(__('emails.deposit_unavailable.line_closing'));
     }
 
     private function staffMail(): MailMessage

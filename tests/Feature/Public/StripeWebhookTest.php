@@ -182,7 +182,16 @@ it('covers the full public flow — deposit creation through webhook-confirmed c
     expect($deposit->fresh()->paid_at)->not->toBeNull();
     expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
     expect($gateway->capturedDepositIds)->toBe([$deposit->id]);
-    Notification::assertSentOnDemand(DepositConfirmedNotification::class);
+    // The webhook request itself has no notion of "the visitor's
+    // language" — the deposit's own locale (captured at creation, see
+    // Public\DepositController::store()) is what confirmPaid() must carry
+    // over via ->locale() so this email doesn't default to French for an
+    // English-speaking visitor. See CLAUDE.md.
+    expect($deposit->fresh()->locale)->toBe('fr');
+    Notification::assertSentOnDemand(
+        DepositConfirmedNotification::class,
+        fn (DepositConfirmedNotification $notification) => $notification->locale === 'fr',
+    );
     Notification::assertSentTo($admin, DepositPaidNotification::class);
 });
 
@@ -251,6 +260,45 @@ it('marks a TWINT deposit paid without calling capture() — it was already auto
     expect($this->gateway->capturedDepositIds)->toBeEmpty();
     Notification::assertSentOnDemand(DepositConfirmedNotification::class);
     Notification::assertSentTo($admin, DepositPaidNotification::class);
+});
+
+it('sends the losing deposit\'s client email in the locale captured at checkout, regardless of the app default', function () {
+    Notification::fake();
+    $admin = User::factory()->create(['is_active' => true]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create();
+    $winningDeposit = Deposit::factory()->paid()->create([
+        'cat_id' => $cat->id,
+        'provider_reference' => 'pi_test_locale_winner',
+    ]);
+    $losingDeposit = Deposit::factory()->create([
+        'cat_id' => $cat->id,
+        'status' => DepositStatus::Pending,
+        'provider_reference' => 'pi_test_locale_loser',
+        'locale' => 'en',
+    ]);
+
+    $payload = paymentIntentAmountCapturableUpdatedPayload('pi_test_locale_loser', (string) $losingDeposit->id);
+    $header = signedStripeWebhookHeader($payload, 'whsec_test_secret');
+
+    $this->call('POST', '/webhooks/stripe', [], [], [], [
+        'HTTP_Stripe-Signature' => $header,
+        'CONTENT_TYPE' => 'application/json',
+    ], $payload)->assertNoContent();
+
+    expect($losingDeposit->fresh()->status)->toBe(DepositStatus::Unavailable);
+    // The client email must follow the deposit's own captured locale...
+    Notification::assertSentOnDemand(
+        DepositUnavailableNotification::class,
+        fn (DepositUnavailableNotification $notification) => $notification->locale === 'en',
+    );
+    // ...while staff always gets the French version — no ->locale() call
+    // on that instance, see DepositPaymentProcessor::loseRace().
+    Notification::assertSentTo(
+        $admin,
+        DepositUnavailableNotification::class,
+        fn (DepositUnavailableNotification $notification) => $notification->locale === null,
+    );
 });
 
 it('refunds instead of cancelling a losing TWINT PaymentIntent, since it was already auto-captured', function () {

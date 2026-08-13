@@ -257,8 +257,11 @@ class DepositPaymentProcessor
             $deposit->cat->setStatus(CatStatus::Pending->value);
         }
 
+        // ->locale() falls back to the app default when $deposit->locale is
+        // null (admin-created deposits never go through the public checkout
+        // flow that captures it) — see Public\DepositController::store().
         Notification::route('mail', $deposit->email)
-            ->notify(new DepositConfirmedNotification($deposit));
+            ->notify((new DepositConfirmedNotification($deposit))->locale($deposit->locale));
 
         Notification::send($this->activeStaff(), new DepositPaidNotification($deposit));
     }
@@ -294,8 +297,11 @@ class DepositPaymentProcessor
 
         $deposit->update(['status' => DepositStatus::Unavailable]);
 
+        // Same ->locale() fallback as confirmPaid() above — staff always
+        // gets the French version regardless (separate instance, no
+        // ->locale() call).
         Notification::route('mail', $deposit->email)
-            ->notify(new DepositUnavailableNotification($deposit, $refunded));
+            ->notify((new DepositUnavailableNotification($deposit, $refunded))->locale($deposit->locale));
 
         Notification::send($this->activeStaff(), new DepositUnavailableNotification($deposit, $refunded));
     }

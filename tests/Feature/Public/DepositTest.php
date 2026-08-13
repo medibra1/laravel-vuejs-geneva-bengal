@@ -45,6 +45,7 @@ it('creates a pending deposit and renders the integrated checkout page with a Pa
     expect($deposit->amount)->toBe(50000);
     expect($deposit->currency)->toBe('CHF');
     expect($deposit->provider_reference)->toBe('pi_test_fake_'.$deposit->id);
+    expect($deposit->locale)->toBe('fr');
 
     // No more cross-origin redirect to a Stripe-hosted page — the
     // PaymentIntent is confirmed client-side, on this same response, via
@@ -60,6 +61,23 @@ it('creates a pending deposit and renders the integrated checkout page with a Pa
         ->where('amount', 50000)
         ->where('currency', 'CHF')
     );
+});
+
+it('captures the visitor\'s active locale on the deposit for later use by the confirmation email', function () {
+    refreshApplicationWithLocale('en');
+    config(['honeypot.enabled' => false]);
+    $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
+
+    $this->post('/en/deposits', [
+        'name' => 'John Smith',
+        'email' => 'john@example.com',
+    ]);
+
+    // Neither the Stripe webhook nor the daily reconciliation job that
+    // eventually trigger DepositConfirmedNotification have any notion of
+    // "the current visitor's language" — this is the only point where it's
+    // known, see Public\DepositController::store().
+    expect(Deposit::sole()->locale)->toBe('en');
 });
 
 it('includes the cat name in the checkout page props when the deposit is for a specific cat', function () {
