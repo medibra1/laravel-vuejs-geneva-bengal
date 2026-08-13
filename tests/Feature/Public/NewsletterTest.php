@@ -15,7 +15,7 @@ beforeEach(function () {
     Role::findOrCreate('super_admin');
 });
 
-it('subscribes an email, notifies staff, and emails a confirmation with the unsubscribe link', function () {
+it('subscribes an email, notifies staff by mail and bell, and emails a confirmation with the unsubscribe link', function () {
     refreshApplicationWithLocale('fr');
     config(['honeypot.enabled' => false]);
     Notification::fake();
@@ -28,7 +28,10 @@ it('subscribes an email, notifies staff, and emails a confirmation with the unsu
     $subscriber = NewsletterSubscriber::where('email', 'fan@example.com')->sole();
     expect($subscriber->unsubscribe_token)->not->toBeNull();
     expect($subscriber->isUnsubscribed())->toBeFalse();
-    Notification::assertSentTo($activeAdmin, NewNewsletterSubscriberNotification::class);
+    Notification::assertSentTo($activeAdmin, NewNewsletterSubscriberNotification::class, function ($notification) {
+        return in_array('mail', $notification->via($notification), true)
+            && in_array('database', $notification->via($notification), true);
+    });
     Notification::assertSentOnDemand(
         NewsletterSubscriptionConfirmedNotification::class,
         fn (NewsletterSubscriptionConfirmedNotification $notification, array $channels, object $notifiable) => $notifiable->routes['mail'] === 'fan@example.com',

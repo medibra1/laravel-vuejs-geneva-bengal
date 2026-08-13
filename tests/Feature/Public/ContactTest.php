@@ -3,6 +3,7 @@
 use App\Enums\ContactReason;
 use App\Models\ContactRequest;
 use App\Models\User;
+use App\Notifications\ContactRequestConfirmedNotification;
 use App\Notifications\NewContactRequestNotification;
 use Illuminate\Support\Facades\Notification;
 use Spatie\Honeypot\Honeypot;
@@ -36,6 +37,24 @@ it('creates a contact request and notifies active admin staff', function () {
     Notification::assertSentTo($activeAdmin, NewContactRequestNotification::class);
     Notification::assertNotSentTo($inactiveAdmin, NewContactRequestNotification::class);
     Notification::assertNotSentTo($regularUser, NewContactRequestNotification::class);
+});
+
+it('emails the sender an acknowledgement of receipt', function () {
+    refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
+    Notification::fake();
+
+    $this->post('/fr/contact', [
+        'name' => 'Marie Dupont',
+        'email' => 'marie@example.com',
+        'reason' => ContactReason::Adopt->value,
+        'message' => 'Je souhaite adopter un chaton.',
+    ]);
+
+    Notification::assertSentOnDemand(
+        ContactRequestConfirmedNotification::class,
+        fn (ContactRequestConfirmedNotification $notification, array $channels, object $notifiable) => $notifiable->routes['mail'] === 'marie@example.com',
+    );
 });
 
 it('stores the contact notification in the database channel, for the bell', function () {

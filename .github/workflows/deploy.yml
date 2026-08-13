@@ -1,15 +1,13 @@
 name: Deploy
 
 on:
-  workflow_run:
-    workflows: ["Backend", "Frontend"]
-    types: [completed]
-    branches: [main]
+  push:
+    tags:
+      - "v*"
   workflow_dispatch: {}   # permet aussi un déclenchement manuel depuis GitHub
 
 jobs:
   deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:

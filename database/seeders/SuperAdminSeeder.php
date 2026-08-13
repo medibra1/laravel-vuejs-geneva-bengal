@@ -12,8 +12,10 @@ class SuperAdminSeeder extends Seeder
      * created through the admin/users UI instead of the console.
      *
      * Credentials come from env (SUPER_ADMIN_EMAIL/SUPER_ADMIN_PASSWORD),
-     * never hardcoded — see .env.example. firstOrCreate keeps this
-     * re-runnable in every environment, including production.
+     * never hardcoded — see .env.example.
+     *
+     * Idempotent (firstOrCreate by email): safe to re-run in any
+     * environment, including production.
      */
     public function run(): void
     {

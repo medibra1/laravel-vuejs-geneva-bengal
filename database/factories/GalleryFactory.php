@@ -19,7 +19,12 @@ class GalleryFactory extends Factory
     {
         return [
             'caption' => fake()->optional()->sentence(),
-            'position' => fake()->numberBetween(0, 100),
+            // unique(): backs the (type, position) unique DB index — two
+            // factory calls landing on the same position for the same type
+            // (e.g. count(10)->create(['type' => 'gallery'])) would
+            // otherwise collide often enough in practice to be a real risk,
+            // not just a theoretical one.
+            'position' => fake()->unique()->numberBetween(0, 1000),
         ];
     }
 }

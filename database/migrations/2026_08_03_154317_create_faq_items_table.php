@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('faq_items', function (Blueprint $table) {
             $table->id();
+            // Derived from the French question text (Str::slug), same
+            // convention as Page::getSlugOptions() — the real DB-level
+            // dedup constraint for ContentPagesSeeder::seedFaqItems(),
+            // replacing an in-memory array_search against existing
+            // questions.
+            $table->string('slug')->unique();
             $table->json('question');
             $table->json('answer');
             $table->unsignedInteger('order')->default(0);

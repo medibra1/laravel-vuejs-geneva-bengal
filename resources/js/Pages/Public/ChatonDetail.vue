@@ -8,12 +8,14 @@ import SectionHeading from '@/Components/SectionHeading.vue';
 import NewsletterForm from '@/Components/NewsletterForm.vue';
 import DepositForm from '@/Components/DepositForm.vue';
 import PhotoLightbox from '@/Components/PhotoLightbox.vue';
+import ResponsiveImage from '@/Components/ResponsiveImage.vue';
 import type { PageProps } from '@/types';
-import type { Cat } from '@/types/models';
+import type { Cat, Gallery } from '@/types/models';
 
 const props = defineProps<{
     cat: Cat;
     depositAmount: number;
+    heroSlides: Gallery[];
 }>();
 
 const page = usePage<PageProps>();
@@ -82,7 +84,7 @@ function formatPrice(cents: number | null): string {
     </Head>
 
     <PublicLayout>
-        <PageBanner :script="isKitten ? $t('catDetail.banner_script_kitten') : $t('catDetail.banner_script_breeder')" :subtitle="cat.name" />
+        <PageBanner :script="isKitten ? $t('catDetail.banner_script_kitten') : $t('catDetail.banner_script_breeder')" :subtitle="cat.name" :slides="heroSlides" />
 
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
             <SectionHeading :script="isKitten ? $t('catDetail.heading_kitten') : $t('catDetail.heading_breeder')" />
@@ -99,7 +101,15 @@ function formatPrice(cents: number | null): string {
                                 :aria-label="$t('catDetail.enlarge_photo')"
                                 @click="lightboxIndex = selectedPhotoIndex"
                             >
-                                <img :src="selectedPhoto.url" :alt="cat.name" class="h-full w-full object-cover" />
+                                <ResponsiveImage
+                                    :md="selectedPhoto.md_url"
+                                    :lg="selectedPhoto.lg_url"
+                                    :fallback="selectedPhoto.url"
+                                    :alt="cat.name"
+                                    sizes="(min-width: 768px) 50vw, 100vw"
+                                    eager
+                                    class="h-full w-full object-cover"
+                                />
                             </button>
                         </Transition>
                         <div v-if="!selectedPhoto" class="flex h-full items-center justify-center text-gray-400">
@@ -155,7 +165,14 @@ function formatPrice(cents: number | null): string {
                             :class="index === selectedPhotoIndex ? 'ring-brand-green' : 'ring-transparent opacity-70 hover:opacity-100 hover:ring-gray-300'"
                             @click="selectedPhotoIndex = index"
                         >
-                            <img :src="photo.url" :alt="`${cat.name} — photo ${index + 1}`" class="h-full w-full object-cover" />
+                            <ResponsiveImage
+                                :sm="photo.sm_url"
+                                :md="photo.md_url"
+                                :fallback="photo.url"
+                                :alt="`${cat.name} — photo ${index + 1}`"
+                                sizes="64px"
+                                class="h-full w-full object-cover"
+                            />
                         </button>
                     </div>
                 </div>
@@ -195,7 +212,7 @@ function formatPrice(cents: number | null): string {
             </div>
         </section>
 
-        <PhotoLightbox v-model="lightboxIndex" :photos="cat.photos.map((photo) => ({ url: photo.url }))" />
+        <PhotoLightbox v-model="lightboxIndex" :photos="cat.photos.map((photo) => ({ url: photo.lg_url ?? photo.url }))" />
 
         <section v-if="isKitten" class="bg-brand-canvas border-t border-gray-200 py-16 sm:py-24">
             <div class="mx-auto max-w-3xl px-6 text-center">

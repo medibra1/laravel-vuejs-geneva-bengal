@@ -5,11 +5,15 @@ import { useI18n } from 'vue-i18n';
 import type { PageProps } from '@/types';
 import SocialLinks from '@/Components/SocialLinks.vue';
 import ScrollToTop from '@/Components/ScrollToTop.vue';
-import logo from '../../images/shared/logo-gb.png';
-import logoFooter from '../../images/shared/logo-footer.png';
+import logoFallback from '../../images/shared/logo-gb.png';
 
 const page = usePage<PageProps>();
 const currentLocale = computed(() => page.props.locale);
+// SiteSettingsSeeder always seeds a real logo (imported from this same
+// file), so logoUrl is only null in the narrow window before that seeder
+// has ever run — the bundled asset is just a safety net, not the normal
+// path.
+const logo = computed(() => page.props.logoUrl ?? logoFallback);
 
 // Inertia visits swap page.props reactively without remounting app.ts, so
 // vue-i18n's active locale (fixed at mount time otherwise) needs to be kept
@@ -21,6 +25,8 @@ const colors = computed(() => page.props.colors);
 const alternateUrls = computed(() => page.props.alternateUrls);
 const socialLinks = computed(() => page.props.socialLinks);
 const address = computed(() => page.props.address);
+const phone = computed(() => page.props.phone);
+const email = computed(() => page.props.email);
 
 const raceInfoPages = computed(() => menuPages.value.filter((p) => p.menu_group === 'race_info'));
 const adoptionPages = computed(() => menuPages.value.filter((p) => p.menu_group === 'adoption'));
@@ -308,8 +314,14 @@ watch(
             <div class="mx-auto max-w-7xl px-6 pt-16 pb-10">
                 <div class="grid grid-cols-1 gap-x-12 gap-y-12 text-center sm:grid-cols-2 sm:text-left lg:grid-cols-4">
                     <div>
-                        <img :src="logoFooter" alt="Geneva Bengal" class="mx-auto h-24 w-auto rounded-full sm:mx-0" />
-                        <p v-if="address" class="my-8 text-sm text-neutral-200">{{ address }}</p>
+                        <img :src="logo" alt="Geneva Bengal" class="mx-auto h-24 w-auto rounded-full object-cover sm:mx-0" />
+                        <p v-if="address" class="mt-8 text-sm text-neutral-200">{{ address }}</p>
+                        <p v-if="phone" class="mt-1 text-sm text-neutral-200">
+                            <a :href="`tel:${phone}`" class="hover:text-brand-green">{{ phone }}</a>
+                        </p>
+                        <p v-if="email" class="mt-1 mb-8 text-sm text-neutral-200">
+                            <a :href="`mailto:${email}`" class="hover:text-brand-green">{{ email }}</a>
+                        </p>
                         <SocialLinks v-bind="socialLinks" class="[&_a]:hover:text-brand-green justify-center sm:justify-start" />
                     </div>
                     <div>

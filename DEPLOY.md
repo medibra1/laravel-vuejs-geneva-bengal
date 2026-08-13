@@ -206,11 +206,24 @@ prendre effet immédiatement.
 
 ### Déploiement continu (`.github/workflows/deploy.yml`)
 
-Se déclenche automatiquement après que `Backend`/`Frontend` (voir
+Un push sur `main` déclenche toujours `Backend`/`Frontend` (voir
 [`backend.yml`](.github/workflows/backend.yml)/
-[`frontend.yml`](.github/workflows/frontend.yml)) ont fini avec succès sur
-`main` (`workflow_run`), ou manuellement depuis l'onglet Actions
-(`workflow_dispatch`). Build le projet côté CI (`composer install
+[`frontend.yml`](.github/workflows/frontend.yml)) — feedback rapide sur
+chaque commit — mais ne déploie plus rien en prod. Le déploiement ne se
+déclenche que sur le **push d'un tag de version** (`push: tags: ["v*"]`),
+ou manuellement depuis l'onglet Actions (`workflow_dispatch`). Pour
+publier une release :
+
+```
+git tag v1.4.0
+git push origin v1.4.0
+```
+
+`workflow_dispatch` reste disponible comme filet manuel depuis l'onglet
+Actions de GitHub (choisir le workflow "Deploy" → "Run workflow") si un
+déploiement est nécessaire sans passer par un tag.
+
+Une fois déclenché, le workflow build le projet côté CI (`composer install
 --no-dev`, `npm ci && npm run build`) puis synchronise le résultat vers le
 serveur par `rsync` en SSH, avant de lancer `migrate --force` +
 `storage:link` + les caches config/routes/vues directement sur le serveur

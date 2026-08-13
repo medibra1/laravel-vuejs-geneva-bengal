@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\ModelStatus\HasStatuses;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
@@ -67,6 +68,30 @@ class Cat extends Model implements HasMedia
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('photos');
+    }
+
+    /**
+     * nonQueued(): uploads are an infrequent admin action, and this app's
+     * queue only drains periodically via the /cron/run endpoint (see
+     * routes/web.php) — conversions must be ready immediately, not wait on
+     * that cycle.
+     *
+     * nonQueued() is called first, before the width()/format()/quality()
+     * chain: Manipulations declares `@mixin ImageDriver`, so Larastan
+     * resolves those magic-__call methods against ImageDriver rather than
+     * Conversion — chaining nonQueued() (a real method on Conversion) after
+     * them makes it look undefined. Calling it first keeps the chain typed
+     * as Conversion throughout; execution order has no actual effect here.
+     */
+    public function registerMediaConversions(?Media $media = null): void
+    {
+        foreach (['sm' => 480, 'md' => 800, 'lg' => 1400] as $name => $width) {
+            $this->addMediaConversion($name)
+                ->nonQueued()
+                ->width($width)
+                ->format('webp')
+                ->quality(80);
+        }
     }
 
     /**

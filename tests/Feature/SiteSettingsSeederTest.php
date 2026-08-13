@@ -15,7 +15,6 @@ it('seeds the real social links, address and pricing defaults', function () {
     expect(SiteSetting::get('social_facebook'))
         ->toBe('https://facebook.com/people/Geneva-Bengals/100076101586572');
     expect(SiteSetting::get('social_instagram'))->toBe('https://instagram.com/geneva_bengals/');
-    expect(SiteSetting::get('social_youtube'))->not->toBeNull();
     expect(SiteSetting::get('address'))->toBe('1209 Genève, Suisse');
     expect(SiteSetting::get('deposit_amount'))->not->toBeNull();
     expect(SiteSetting::get('price_range_min'))->not->toBeNull();
@@ -24,9 +23,28 @@ it('seeds the real social links, address and pricing defaults', function () {
     expect(SiteSetting::get('default_seo_description'))->not->toBeNull();
 });
 
+it('seeds social_youtube, social_tiktok, phone and email as null — no real values provided yet', function () {
+    $this->seed(SiteSettingsSeeder::class);
+
+    expect(SiteSetting::get('social_youtube'))->toBeNull();
+    expect(SiteSetting::get('social_tiktok'))->toBeNull();
+    expect(SiteSetting::get('phone'))->toBeNull();
+    expect(SiteSetting::get('email'))->toBeNull();
+});
+
+it('imports the current logo as the initial dynamic logo', function () {
+    $this->seed(SiteSettingsSeeder::class);
+
+    $logo = SiteSetting::where('key', 'logo')->first();
+
+    expect($logo)->not->toBeNull();
+    expect($logo->getFirstMedia('logo'))->not->toBeNull();
+});
+
 it('is idempotent — re-running does not duplicate rows', function () {
     $this->seed(SiteSettingsSeeder::class);
     $this->seed(SiteSettingsSeeder::class);
 
     expect(SiteSetting::where('key', 'social_facebook')->count())->toBe(1);
+    expect(SiteSetting::where('key', 'logo')->count())->toBe(1);
 });

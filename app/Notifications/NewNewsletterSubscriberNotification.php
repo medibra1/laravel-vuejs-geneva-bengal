@@ -5,13 +5,14 @@ namespace App\Notifications;
 use App\Models\NewsletterSubscriber;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Bell-only (no mail) — unlike contact requests and deposits, a newsletter
- * signup is routine and frequent enough that emailing every active admin
- * for each one would just be noise. Staff can still see it land in the
- * list at their own pace.
+ * Mail + database — the client asked to be emailed on every newsletter
+ * signup too, not just see it land in the admin bell. Originally bell-only
+ * on the reasoning that this is too frequent/low-stakes to justify an
+ * email each time; reversed on explicit request (2026-08-13).
  */
 class NewNewsletterSubscriberNotification extends Notification implements ShouldQueue
 {
@@ -26,7 +27,14 @@ class NewNewsletterSubscriberNotification extends Notification implements Should
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['mail', 'database'];
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        return (new MailMessage)
+            ->subject('Nouvel abonné newsletter — Geneva Bengal')
+            ->line("Nouvel abonné à la newsletter : {$this->subscriber->email}.");
     }
 
     /**

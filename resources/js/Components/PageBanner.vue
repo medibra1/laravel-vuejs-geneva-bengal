@@ -1,35 +1,45 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useImageSlider } from '@/Composables/useImageSlider';
-import banner1 from '../../images/home/slider-1.jpg';
-import banner2 from '../../images/home/slider-2.jpg';
+import type { Gallery } from '@/types/models';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         /** Script-font ("Sacramento") line, e.g. "Chatons Bengal". */
         script: string;
         /** Optional bold line underneath, e.g. a cat's name or a tagline. */
         subtitle?: string;
+        /**
+         * Same hero_slide Gallery rows as the homepage's HeroSlider.vue —
+         * every page using PageBanner wants the same ambient rotation, none
+         * pick their own image. Passed in (not fetched here) since sharing
+         * it globally via HandleInertiaRequests would run the query on
+         * every request, admin included.
+         */
+        slides: Gallery[];
     }>(),
     {
         subtitle: undefined,
     },
 );
 
-// Same curated 1920x1275 photo set as HeroSlider.vue's homepage hero — kept
-// local to this component (no `images` prop) since every page using
-// PageBanner wants the same ambient rotation, none pick their own image.
-const images = [banner1, banner2];
+// No srcset possible on a CSS background-image — see HeroSlider.vue for
+// the same reasoning.
+const backgroundUrls = computed(() => props.slides.map((slide) => slide.image_lg_url ?? slide.image_url ?? ''));
 
-const { currentSlide } = useImageSlider(() => images.length);
+const { currentSlide } = useImageSlider(() => props.slides.length);
 </script>
 
 <template>
-    <section class="relative flex h-64 items-center justify-center overflow-hidden bg-neutral-900 text-white sm:h-80">
+    <section
+        v-if="slides.length"
+        class="relative flex h-64 items-center justify-center overflow-hidden bg-neutral-900 text-white sm:h-80"
+    >
         <Transition name="fade">
             <div
                 :key="currentSlide"
                 class="absolute inset-0 bg-cover bg-center"
-                :style="{ backgroundImage: `url(${images[currentSlide]})` }"
+                :style="{ backgroundImage: `url(${backgroundUrls[currentSlide]})` }"
             />
         </Transition>
         <div class="absolute inset-0 bg-neutral-900/50" />

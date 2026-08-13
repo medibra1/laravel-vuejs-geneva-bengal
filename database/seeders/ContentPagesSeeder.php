@@ -15,8 +15,9 @@ use Illuminate\Support\Str;
  * PublicLayout.vue) and "a-propos"/"contact" — routes/web.php's own
  * hardcoded literal routes — would 404 outright.
  *
- * Idempotent (firstOrCreate by slug / by fr question text): safe to
- * re-run in any environment, same convention as ColorSeeder.
+ * Idempotent: safe to re-run in any environment — Page and FaqItem rows
+ * are both firstOrCreate'd by a slug derived from their French title/
+ * question text (Str::slug), same convention as ColorSeeder.
  */
 class ContentPagesSeeder extends Seeder
 {
@@ -190,10 +191,6 @@ class ContentPagesSeeder extends Seeder
 
     private function seedFaqItems(): void
     {
-        $existingQuestions = FaqItem::query()->get()
-            ->map(fn (FaqItem $item) => $item->getTranslation('question', 'fr'))
-            ->all();
-
         $faqs = [
             [
                 'question' => ['fr' => "Quel est le prix d'un chaton Bengal ?", 'en' => 'What is the price of a Bengal kitten?'],
@@ -226,11 +223,7 @@ class ContentPagesSeeder extends Seeder
         ];
 
         foreach ($faqs as $order => $item) {
-            if (in_array($item['question']['fr'], $existingQuestions, true)) {
-                continue;
-            }
-
-            FaqItem::create([
+            FaqItem::firstOrCreate(['slug' => Str::slug($item['question']['fr'])], [
                 'question' => $item['question'],
                 'answer' => $item['answer'],
                 'order' => $order,

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\CatStatus;
 use App\Enums\CatType;
+use App\Enums\GalleryType;
 use App\Models\Cat;
 use App\Models\Color;
 use App\Models\ContactRequest;
@@ -138,11 +139,27 @@ class DemoDataSeeder extends Seeder
         Owner::factory()->count(2)->create();
     }
 
+    /**
+     * firstOrCreate() on (type, position) — the same unique DB index
+     * HomeGallerySeeder relies on — rather than a plain create(): this
+     * seeder isn't guarded by the isProduction() check for its own re-runs
+     * within a single environment (only DatabaseSeeder's dev-only gate
+     * decides whether it runs at all), so a second `php artisan db:seed`
+     * in local dev would otherwise collide on the same (type=gallery,
+     * position) pairs instead of just being a no-op.
+     */
     private function seedGalleries(): void
     {
         foreach (self::PHOTO_POOL as $position => $photo) {
-            Gallery::create(['caption' => fake()->optional()->sentence(), 'position' => $position])
-                ->addMedia(resource_path("images/home/{$photo}"))
+            $gallery = Gallery::firstOrCreate(['type' => GalleryType::Gallery, 'position' => $position], [
+                'caption' => fake()->optional()->sentence(),
+            ]);
+
+            if (! $gallery->wasRecentlyCreated) {
+                continue;
+            }
+
+            $gallery->addMedia(resource_path("images/home/{$photo}"))
                 ->preservingOriginal()
                 ->toMediaCollection('image');
         }

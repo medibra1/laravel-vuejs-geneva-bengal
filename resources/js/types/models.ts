@@ -8,6 +8,9 @@ export interface Color {
 export interface CatPhoto {
     id: number;
     url: string;
+    sm_url: string;
+    md_url: string;
+    lg_url: string;
 }
 
 export interface CatDeposit {
@@ -85,11 +88,17 @@ export interface Litter {
     kittens_count?: number;
 }
 
+export type GalleryType = 'gallery' | 'hero_slide' | 'social_tile';
+
 export interface Gallery {
     id: number;
     caption: string | null;
     position: number;
+    type: GalleryType;
     image_url: string | null;
+    image_sm_url: string | null;
+    image_md_url: string | null;
+    image_lg_url: string | null;
 }
 
 export interface CmsPage {
@@ -134,6 +143,8 @@ export interface SiteSettings {
     social_youtube: string | null;
     social_tiktok: string | null;
     address: string | null;
+    phone: string | null;
+    email: string | null;
     deposit_amount: number | null;
     price_range_min: number | null;
     price_range_max: number | null;

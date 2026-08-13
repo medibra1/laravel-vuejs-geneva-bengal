@@ -18,7 +18,11 @@ class GalleryResource extends JsonResource
             'id' => $gallery->id,
             'caption' => $gallery->caption,
             'position' => $gallery->position,
+            'type' => $gallery->type->value,
             'image_url' => $gallery->getFirstMediaUrl('image') ?: null,
+            'image_sm_url' => $gallery->getFirstMediaUrl('image', 'sm') ?: null,
+            'image_md_url' => $gallery->getFirstMediaUrl('image', 'md') ?: null,
+            'image_lg_url' => $gallery->getFirstMediaUrl('image', 'lg') ?: null,
         ];
     }
 }

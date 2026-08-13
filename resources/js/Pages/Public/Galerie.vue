@@ -6,10 +6,12 @@ import PageBanner from '@/Components/PageBanner.vue';
 import SectionHeading from '@/Components/SectionHeading.vue';
 import NewsletterForm from '@/Components/NewsletterForm.vue';
 import PhotoLightbox from '@/Components/PhotoLightbox.vue';
+import ResponsiveImage from '@/Components/ResponsiveImage.vue';
 import type { Gallery } from '@/types/models';
 
 defineProps<{
     galleries: Gallery[];
+    heroSlides: Gallery[];
 }>();
 
 const openIndex = ref<number | null>(null);
@@ -25,7 +27,7 @@ const openIndex = ref<number | null>(null);
     </Head>
 
     <PublicLayout>
-        <PageBanner :script="$t('gallery.banner_script')" :subtitle="$t('gallery.banner_subtitle')" />
+        <PageBanner :script="$t('gallery.banner_script')" :subtitle="$t('gallery.banner_subtitle')" :slides="heroSlides" />
 
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
             <SectionHeading :script="$t('gallery.heading_script')" :title="$t('gallery.heading_title')" center />
@@ -38,10 +40,13 @@ const openIndex = ref<number | null>(null);
                     class="group aspect-square overflow-hidden rounded"
                     @click="openIndex = index"
                 >
-                    <img
+                    <ResponsiveImage
                         v-if="item.image_url"
-                        :src="item.image_url"
+                        :sm="item.image_sm_url"
+                        :md="item.image_md_url"
+                        :fallback="item.image_url"
                         :alt="item.caption ?? ''"
+                        sizes="(min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw"
                         class="h-full w-full object-cover transition group-hover:scale-105"
                     />
                 </button>
@@ -55,7 +60,7 @@ const openIndex = ref<number | null>(null);
 
         <PhotoLightbox
             v-model="openIndex"
-            :photos="galleries.map((item) => ({ url: item.image_url ?? '', caption: item.caption }))"
+            :photos="galleries.map((item) => ({ url: item.image_lg_url ?? item.image_url ?? '', caption: item.caption }))"
         />
 
         <section class="bg-brand-canvas border-t border-gray-200 py-16 sm:py-24">

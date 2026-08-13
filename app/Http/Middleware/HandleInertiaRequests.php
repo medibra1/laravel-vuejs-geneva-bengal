@@ -87,6 +87,14 @@ class HandleInertiaRequests extends Middleware
             // Same reasoning — the footer shows it on every public page,
             // not just Contact.
             'address' => SiteSetting::get('address'),
+            'phone' => SiteSetting::get('phone'),
+            'email' => SiteSetting::get('email'),
+            // Single row + single media lookup — negligible next to the
+            // plain SiteSetting::get() calls above, unlike heroSlides
+            // (Gallery::query()->with('media')->get(), a real query per
+            // request) which is deliberately per-controller instead — see
+            // SharesHeroSlides.
+            'logoUrl' => SiteSetting::query()->where('key', 'logo')->first()?->getFirstMediaUrl('logo') ?: null,
             // Shared globally (not per-controller) since more than one
             // public form needs it (contact, newsletter signup).
             'honeypot' => app(Honeypot::class),

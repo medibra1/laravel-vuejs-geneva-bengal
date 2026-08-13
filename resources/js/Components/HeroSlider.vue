@@ -1,18 +1,29 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import catHead from '../../images/home/cat-head.png';
 import { useImageSlider } from '@/Composables/useImageSlider';
+import type { Gallery } from '@/types/models';
 
 const props = defineProps<{
-    slides: string[];
+    slides: Gallery[];
 }>();
 
 const { currentSlide, next, previous, goTo, restart } = useImageSlider(() => props.slides.length);
+
+// No srcset possible on a CSS background-image — the hero is always
+// full-bleed, so the largest conversion is the correct choice regardless
+// of viewport (unlike an <img>, there's no smaller-viewport case where a
+// smaller file would still look right here).
+const backgroundUrls = computed(() => props.slides.map((slide) => slide.image_lg_url ?? slide.image_url ?? ''));
 </script>
 
 <template>
-    <section class="relative flex h-[70vh] min-h-[520px] items-center overflow-hidden bg-neutral-900 text-white sm:h-[85vh]">
+    <section
+        v-if="slides.length"
+        class="relative flex h-[70vh] min-h-[520px] items-center overflow-hidden bg-neutral-900 text-white sm:h-[85vh]"
+    >
         <Transition name="fade">
-            <div :key="currentSlide" class="kenburns absolute inset-0 bg-cover bg-top" :style="{ backgroundImage: `url(${slides[currentSlide]})` }" />
+            <div :key="currentSlide" class="kenburns absolute inset-0 bg-cover bg-top" :style="{ backgroundImage: `url(${backgroundUrls[currentSlide]})` }" />
         </Transition>
         <!-- Matches bengal-client's .slider-image:before exactly: a dark
              vignette behind the text card, fading bottom-to-top on mobile

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Public;
 use App\Enums\CatStatus;
 use App\Enums\CatType;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Public\Concerns\SharesHeroSlides;
 use App\Http\Resources\CatResource;
 use App\Models\Cat;
 use App\Models\Color;
@@ -14,6 +15,8 @@ use Inertia\Response;
 
 class CatController extends Controller
 {
+    use SharesHeroSlides;
+
     /**
      * List available kittens. Filtered explicitly on `disponible` — not
      * just "not adopted" — so a kitten currently `en_attente` (an
@@ -51,6 +54,7 @@ class CatController extends Controller
         return Inertia::render('Public/ChatonsDisponibles', [
             'cats' => CatResource::collection($cats),
             'activeColorSlug' => $color?->slug,
+            'heroSlides' => $this->heroSlides(),
         ]);
     }
 
@@ -61,6 +65,7 @@ class CatController extends Controller
         return Inertia::render('Public/ChatonDetail', [
             'cat' => CatResource::make($cat),
             'depositAmount' => SiteSetting::get('deposit_amount', 50000),
+            'heroSlides' => $this->heroSlides(),
         ]);
     }
 
@@ -78,6 +83,7 @@ class CatController extends Controller
 
         return Inertia::render('Public/Reproducteurs', [
             'cats' => CatResource::collection($cats),
+            'heroSlides' => $this->heroSlides(),
         ]);
     }
 }

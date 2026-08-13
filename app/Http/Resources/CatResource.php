@@ -47,6 +47,9 @@ class CatResource extends JsonResource
             'photos' => $cat->getMedia('photos')->map(fn ($media) => [
                 'id' => $media->id,
                 'url' => $media->getUrl(),
+                'sm_url' => $media->getUrl('sm'),
+                'md_url' => $media->getUrl('md'),
+                'lg_url' => $media->getUrl('lg'),
             ])->all(),
             // Only present on Admin\Cats\AdoptionCatController::edit() —
             // powers CatAdoptionPanel.vue's reservation status view.

@@ -5,35 +5,24 @@ import NewsletterForm from '@/Components/NewsletterForm.vue';
 import SectionHeading from '@/Components/SectionHeading.vue';
 import HeroSlider from '@/Components/HeroSlider.vue';
 import SocialLinks from '@/Components/SocialLinks.vue';
+import ResponsiveImage from '@/Components/ResponsiveImage.vue';
 import type { PageProps } from '@/types';
-import slider1 from '../../../images/home/slider-1.jpg';
-import slider2 from '../../../images/home/slider-2.jpg';
-import slider3 from '../../../images/home/slider-3.jpg';
+import type { Gallery } from '@/types/models';
 import kittensMontage from '../../../images/home/kittens-montage.png';
 import newsletterKitten from '../../../images/home/newsletter-kitten.png';
 import internationalKitten from '../../../images/home/international-kitten.png';
-import social1 from '../../../images/home/social/social-1.jpg';
-import social2 from '../../../images/home/social/social-2.jpg';
-import social3 from '../../../images/home/social/social-3.jpg';
-import social4 from '../../../images/home/social/social-4.jpg';
-import social5 from '../../../images/home/social/social-5.jpg';
-import social6 from '../../../images/home/social/social-6.jpg';
 
 defineProps<{
     seo: { title: string; description: string };
+    heroSlides: Gallery[];
+    socialTiles: Gallery[];
 }>();
 
-const socialTiles = [social1, social2, social3, social4, social5, social6];
 const socialLinks = usePage<PageProps>().props.socialLinks;
 
 // No dedicated page/route yet for international shipping info — placeholder.
 // The social feed tiles/CTA below use the real socialLinks.facebook URL.
 const placeholderHref = '#';
-
-const slides = [
-    slider1,
-    slider2,
-    slider3];
 </script>
 
 <template>
@@ -43,7 +32,7 @@ const slides = [
     </Head>
 
     <PublicLayout>
-        <HeroSlider :slides="slides" />
+        <HeroSlider :slides="heroSlides" />
 
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
             <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
@@ -147,9 +136,17 @@ const slides = [
         <section class="mx-auto max-w-7xl px-6 py-16 sm:py-24">
             <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
                 <div class="grid grid-cols-3 gap-2">
-                    <a v-for="(tile, index) in socialTiles" :key="index" :href="socialLinks.facebook ?? placeholderHref"
+                    <a v-for="tile in socialTiles" :key="tile.id" :href="socialLinks.facebook ?? placeholderHref"
                         target="_blank" rel="noopener" class="aspect-square overflow-hidden rounded">
-                        <img :src="tile" alt="" class="h-full w-full object-cover transition hover:scale-105" />
+                        <ResponsiveImage
+                            v-if="tile.image_url"
+                            :sm="tile.image_sm_url"
+                            :md="tile.image_md_url"
+                            :fallback="tile.image_url"
+                            alt=""
+                            sizes="33vw"
+                            class="h-full w-full object-cover transition hover:scale-105"
+                        />
                     </a>
                 </div>
                 <div>
