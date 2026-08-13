@@ -112,7 +112,7 @@ watch(
         <nav class="sticky top-0 z-50 border-b border-gray-200 bg-white">
             <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-3 md:gap-10">
                 <Link href="/">
-                    <img :src="logo" alt="Geneva Bengal" class="h-14 w-auto sm:h-16" />
+                    <img :src="logo" alt="Geneva Bengal" width="64" height="64" class="aspect-square h-14 w-auto object-contain sm:h-16" />
                 </Link>
                 <ul class="font-heading hidden items-center gap-8 text-sm font-semibold tracking-wide uppercase md:flex">
                     <li v-if="raceInfoPages.length" class="group relative py-3">
@@ -201,7 +201,7 @@ watch(
         <Transition name="panel-slide">
             <div v-if="mobileMenuOpen" class="bg-brand-ink fixed inset-y-0 left-0 z-50 w-[85vw] max-w-sm overflow-y-auto text-white md:hidden">
                 <div class="flex items-center justify-between px-6 py-4">
-                    <img :src="logo" alt="Geneva Bengal" class="h-12 w-auto" />
+                    <img :src="logo" alt="Geneva Bengal" width="48" height="48" class="aspect-square h-12 w-auto object-contain" />
                     <button type="button" class="flex h-10 w-10 items-center justify-center" :aria-label="$t('nav.close_menu')" @click="mobileMenuOpen = false">
                         <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                             <line x1="6" y1="6" x2="18" y2="18" />
@@ -314,7 +314,7 @@ watch(
             <div class="mx-auto max-w-7xl px-6 pt-16 pb-10">
                 <div class="grid grid-cols-1 gap-x-12 gap-y-12 text-center sm:grid-cols-2 sm:text-left lg:grid-cols-4">
                     <div>
-                        <img :src="logo" alt="Geneva Bengal" class="mx-auto h-24 w-auto rounded-full object-cover sm:mx-0" />
+                        <img :src="logo" alt="Geneva Bengal" width="96" height="96" class="mx-auto h-24 w-auto rounded-full object-cover sm:mx-0" />
                         <p v-if="address" class="mt-8 text-sm text-neutral-200">{{ address }}</p>
                         <p v-if="phone" class="mt-1 text-sm text-neutral-200">
                             <a :href="`tel:${phone}`" class="hover:text-brand-green">{{ phone }}</a>
@@ -325,9 +325,9 @@ watch(
                         <SocialLinks v-bind="socialLinks" class="[&_a]:hover:text-brand-green justify-center sm:justify-start" />
                     </div>
                     <div>
-                        <h5 class="font-heading flex min-h-14 items-end justify-center text-sm font-bold tracking-wide text-white uppercase sm:justify-start">
+                        <h3 class="font-heading flex min-h-14 items-end justify-center text-sm font-bold tracking-wide text-white uppercase sm:justify-start">
                             {{ $t('footer.about_heading') }}
-                        </h5>
+                        </h3>
                         <ul class="mt-3 space-y-2 text-sm">
                             <li><Link :href="route('pages.a-propos')" class="hover:text-brand-green">{{ $t('footer.our_story') }}</Link></li>
                             <li><Link :href="`${route('pages.a-propos')}#temoignages`" class="hover:text-brand-green">{{ $t('footer.testimonials') }}</Link></li>
@@ -335,9 +335,9 @@ watch(
                         </ul>
                     </div>
                     <div>
-                        <h5 class="font-heading flex min-h-14 items-end justify-center text-sm font-bold tracking-wide text-white uppercase sm:justify-start">
+                        <h3 class="font-heading flex min-h-14 items-end justify-center text-sm font-bold tracking-wide text-white uppercase sm:justify-start">
                             {{ $t('footer.race_info_heading') }}
-                        </h5>
+                        </h3>
                         <ul class="mt-3 space-y-2 text-sm">
                             <li v-for="item in raceInfoPages" :key="item.id">
                                 <Link :href="route('pages.show', item.slug)" class="hover:text-brand-green">{{ item.title }}</Link>
@@ -345,9 +345,9 @@ watch(
                         </ul>
                     </div>
                     <div>
-                        <h5 class="font-heading flex min-h-14 items-end justify-center text-sm font-bold tracking-wide text-white uppercase sm:justify-start">
+                        <h3 class="font-heading flex min-h-14 items-end justify-center text-sm font-bold tracking-wide text-white uppercase sm:justify-start">
                             {{ $t('footer.adoption_heading') }}
-                        </h5>
+                        </h3>
                         <ul class="mt-3 space-y-2 text-sm">
                             <li v-for="item in adoptionPages" :key="item.id">
                                 <Link :href="route('pages.show', item.slug)" class="hover:text-brand-green">{{ item.title }}</Link>
