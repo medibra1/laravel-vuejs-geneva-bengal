@@ -1,22 +1,22 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
-import { formatTimeAgo } from '@vueuse/core';
+import { formatTimeAgo, type UseTimeAgoMessages } from '@vueuse/core';
 import type { AppNotification } from '@/types/models';
 import type { PageProps } from '@/types';
 
-const timeAgoMessages = {
+const timeAgoMessages: UseTimeAgoMessages = {
     justNow: "à l'instant",
-    past: (n: string) => (n.match(/\d/) ? `il y a ${n}` : n),
-    future: (n: string) => (n.match(/\d/) ? `dans ${n}` : n),
+    past: (n) => (n.match(/\d/) ? `il y a ${n}` : n),
+    future: (n) => (n.match(/\d/) ? `dans ${n}` : n),
     invalid: '',
-    second: (n: number) => `${n} seconde${n > 1 ? 's' : ''}`,
-    minute: (n: number) => `${n} minute${n > 1 ? 's' : ''}`,
-    hour: (n: number) => `${n} heure${n > 1 ? 's' : ''}`,
-    day: (n: number) => `${n} jour${n > 1 ? 's' : ''}`,
-    week: (n: number) => `${n} semaine${n > 1 ? 's' : ''}`,
-    month: (n: number) => `${n} mois`,
-    year: (n: number) => `${n} an${n > 1 ? 's' : ''}`,
+    second: (n) => `${n} seconde${n > 1 ? 's' : ''}`,
+    minute: (n) => `${n} minute${n > 1 ? 's' : ''}`,
+    hour: (n) => `${n} heure${n > 1 ? 's' : ''}`,
+    day: (n) => `${n} jour${n > 1 ? 's' : ''}`,
+    week: (n) => `${n} semaine${n > 1 ? 's' : ''}`,
+    month: (n) => `${n} mois`,
+    year: (n) => `${n} an${n > 1 ? 's' : ''}`,
 };
 
 function timeAgo(notification: AppNotification): string {
