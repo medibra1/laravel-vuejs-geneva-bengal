@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Public;
 use App\Enums\DepositStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreDepositRequest;
+use App\Http\Requests\Public\TouchCheckoutHoldRequest;
 use App\Models\Cat;
 use App\Models\CheckoutHold;
 use App\Models\Deposit;
 use App\Models\SiteSetting;
 use App\Services\Payments\CheckoutData;
 use App\Services\Payments\PaymentGateway;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -89,17 +92,29 @@ class DepositController extends Controller
         // that was just created is worthless — cancelled immediately
         // rather than left dangling; it was never confirmed, so nothing
         // has been charged.
-        if ($catId !== null && ! CheckoutHold::acquire($catId, $intent->id)) {
-            $gateway->cancelAuthorization(new Deposit(['provider_reference' => $intent->id]));
+        $hold = null;
 
-            // Distinct from "already reserved" above: the cat itself is
-            // still available, another visitor is simply mid-payment for
-            // it right now. Conflating the two messages would tell this
-            // visitor the cat is gone when it might free up in minutes.
-            throw ValidationException::withMessages([
-                'cat_id' => __('Someone else is currently paying for this kitten. Please try again in a few minutes.'),
-            ]);
+        if ($catId !== null) {
+            if (! CheckoutHold::acquire($catId, $intent->id)) {
+                $gateway->cancelAuthorization(new Deposit(['provider_reference' => $intent->id]));
+
+                // Distinct from "already reserved" above: the cat itself is
+                // still available, another visitor is simply mid-payment
+                // for it right now. Conflating the two messages would tell
+                // this visitor the cat is gone when it might free up in
+                // minutes.
+                throw ValidationException::withMessages([
+                    'cat_id' => __('Someone else is currently paying for this kitten. Please try again in a few minutes.'),
+                ]);
+            }
+
+            // Re-fetched rather than built in memory: acquire() only
+            // returns a bool, and the frontend countdown needs the exact
+            // hard_expires_at it just persisted.
+            $hold = CheckoutHold::where('payment_intent_id', $intent->id)->first();
         }
+
+        $cat = $catId === null ? null : Cat::find($catId);
 
         return Inertia::render('Public/DepositPay', [
             'paymentIntentId' => $intent->id,
@@ -109,9 +124,18 @@ class DepositController extends Controller
             // move money on its own) — read from config rather than
             // hardcoded so it follows STRIPE_KEY per environment.
             'stripePublishableKey' => config('services.stripe.key'),
-            'catName' => $catId === null ? null : Cat::find($catId)?->name,
+            'catName' => $cat?->name,
+            // Used to build a "back to this kitten" link if the checkout
+            // session expires — see Public/DepositPay.vue.
+            'catSlug' => $cat?->slug,
             'amount' => $checkoutData->amount,
             'currency' => $checkoutData->currency,
+            'email' => $checkoutData->email,
+            // Null for a waiting-list checkout (no CheckoutHold exists —
+            // see CheckoutHold::acquire() above): no countdown/ping to run
+            // client-side in that case, there's no single cat's payment
+            // slot to protect.
+            'hardExpiresAt' => $hold?->hard_expires_at->toIso8601String(),
         ]);
     }
 
@@ -135,6 +159,48 @@ class DepositController extends Controller
 
         return Inertia::render('Public/DepositReturn', [
             'depositStatus' => $deposit === null ? DepositStatus::Pending : $deposit->status,
+            // Only meaningful once paid — the success screen names the
+            // address the confirmation was just sent to. Null while still
+            // pending (no Deposit exists yet — see CLAUDE.md), harmless
+            // since the template only reads it on the isPaid branch.
+            'email' => $deposit?->email,
         ]);
+    }
+
+    /**
+     * Pinged every 60s by Public/DepositPay.vue while the payment page
+     * stays open, to push CheckoutHold::extend()'s sliding expires_at
+     * forward — see CLAUDE.md and CheckoutHold's own docblock. A plain
+     * JSON endpoint rather than an Inertia page: this is a background
+     * fetch, never a navigation.
+     *
+     * ok: false (extend() returned false) means the hold is already gone —
+     * either abandoned past its sliding TTL with no ping reaching it in
+     * time, or past hard_expires_at regardless of how regularly pings
+     * arrived. The frontend treats this exactly like its own local
+     * hard_expires_at countdown reaching zero: payment button disabled,
+     * "session expired" message shown.
+     */
+    public function touchHold(TouchCheckoutHoldRequest $request): JsonResponse
+    {
+        $ok = CheckoutHold::extend($request->validated('payment_intent_id'));
+
+        return response()->json(['ok' => $ok]);
+    }
+
+    /**
+     * The visitor explicitly gave up (Cancel button) — releases the
+     * payment slot immediately rather than waiting out the sliding TTL,
+     * so the cat becomes reservable again for someone else right away.
+     * Idempotent (CheckoutHold::release() is a no-op if already gone),
+     * always 204 regardless — cancelling something already resolved
+     * (paid, or already released) is not an error from the visitor's
+     * point of view.
+     */
+    public function releaseHold(TouchCheckoutHoldRequest $request): HttpResponse
+    {
+        CheckoutHold::release($request->validated('payment_intent_id'));
+
+        return response()->noContent();
     }
 }

@@ -66,6 +66,11 @@ Route::localize(function (): void {
     // straight from the checkout page, before the webhook has necessarily
     // built one. See DepositController::show().
     Route::get('/deposits/return/{paymentIntentId}', [DepositController::class, 'show'])->name('deposits.return');
+    // Plain JSON endpoints, not Inertia pages — pinged/called from
+    // Public/DepositPay.vue while the payment page stays open. See
+    // CheckoutHold and DepositController::touchHold()/releaseHold().
+    Route::post('/deposits/hold/touch', [DepositController::class, 'touchHold'])->name('deposits.hold.touch');
+    Route::post('/deposits/hold/release', [DepositController::class, 'releaseHold'])->name('deposits.hold.release');
 });
 
 // Not locale-prefixed: Stripe doesn't know about /fr or /en, and this

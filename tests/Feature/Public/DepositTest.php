@@ -68,8 +68,13 @@ it('creates no Deposit row and renders the integrated checkout page with a Payme
         // Forced to this fixed fake value in tests/bootstrap.php.
         ->where('stripePublishableKey', 'pk_test_fake_key_for_test_suite')
         ->where('catName', null)
+        ->where('catSlug', null)
         ->where('amount', 50000)
         ->where('currency', 'CHF')
+        ->where('email', 'marie@example.com')
+        // No CheckoutHold is ever acquired for a waiting-list checkout —
+        // nothing for the frontend countdown/ping to run against.
+        ->where('hardExpiresAt', null)
     );
 });
 
@@ -107,6 +112,26 @@ it('includes the cat name in the checkout page props when the checkout is for a 
     $response->assertInertia(fn ($page) => $page
         ->component('Public/DepositPay')
         ->where('catName', 'Simba')
+    );
+});
+
+it('includes the cat slug and a hardExpiresAt matching the checkout hold when the checkout is for a specific cat', function () {
+    refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
+    $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
+    $cat = Cat::factory()->create(['name' => 'Simba']);
+
+    $response = $this->post('/fr/deposits', [
+        'name' => 'Marie Dupont',
+        'email' => 'marie@example.com',
+        'cat_id' => $cat->id,
+    ]);
+
+    $hold = CheckoutHold::query()->where('cat_id', $cat->id)->sole();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Public/DepositPay')
+        ->where('catSlug', $cat->slug)
+        ->where('hardExpiresAt', $hold->hard_expires_at->toIso8601String())
     );
 });
 
@@ -305,12 +330,13 @@ it('shows a waiting/status page for a payment intent with no deposit yet, withou
     $response->assertInertia(fn ($page) => $page
         ->component('Public/DepositReturn')
         ->where('depositStatus', 'pending')
+        ->where('email', null)
     );
 });
 
-it('shows the real deposit status once one exists for the given payment intent', function () {
+it('shows the real deposit status and email once one exists for the given payment intent', function () {
     refreshApplicationWithLocale('fr');
-    $deposit = Deposit::factory()->paid()->create(['provider_reference' => 'pi_known']);
+    $deposit = Deposit::factory()->paid()->create(['provider_reference' => 'pi_known', 'email' => 'marie@example.com']);
 
     $response = $this->get('/fr/deposits/return/pi_known?status=success');
 
@@ -318,5 +344,93 @@ it('shows the real deposit status once one exists for the given payment intent',
     $response->assertInertia(fn ($page) => $page
         ->component('Public/DepositReturn')
         ->where('depositStatus', $deposit->status->value)
+        ->where('email', 'marie@example.com')
     );
+});
+
+// --- deposits.hold.touch / deposits.hold.release --------------------------
+
+it('extends a live checkout hold when touched', function () {
+    refreshApplicationWithLocale('fr');
+    $cat = Cat::factory()->create();
+    $hold = CheckoutHold::query()->create([
+        'cat_id' => $cat->id,
+        'payment_intent_id' => 'pi_touch_me',
+        'expires_at' => now()->addSeconds(30),
+        'hard_expires_at' => now()->addMinutes(10),
+    ]);
+
+    $response = $this->postJson('/fr/deposits/hold/touch', ['payment_intent_id' => 'pi_touch_me']);
+
+    $response->assertOk();
+    $response->assertJson(['ok' => true]);
+    expect(now()->diffInSeconds($hold->fresh()->expires_at))->toBeGreaterThan(170);
+});
+
+it('reports ok: false when touching a checkout hold that no longer exists', function () {
+    refreshApplicationWithLocale('fr');
+
+    $response = $this->postJson('/fr/deposits/hold/touch', ['payment_intent_id' => 'pi_does_not_exist']);
+
+    $response->assertOk();
+    $response->assertJson(['ok' => false]);
+});
+
+it('reports ok: false when touching a checkout hold that has already crossed hard_expires_at', function () {
+    refreshApplicationWithLocale('fr');
+    $cat = Cat::factory()->create();
+    CheckoutHold::query()->create([
+        'cat_id' => $cat->id,
+        'payment_intent_id' => 'pi_hard_expired',
+        'expires_at' => now()->addMinute(),
+        'hard_expires_at' => now()->subSecond(),
+    ]);
+
+    $response = $this->postJson('/fr/deposits/hold/touch', ['payment_intent_id' => 'pi_hard_expired']);
+
+    $response->assertJson(['ok' => false]);
+});
+
+it('validates payment_intent_id is required on touch', function () {
+    refreshApplicationWithLocale('fr');
+
+    $response = $this->postJson('/fr/deposits/hold/touch', []);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['payment_intent_id']);
+});
+
+it('releases a checkout hold, freeing the cat for a new checkout', function () {
+    refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
+    $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
+    $cat = Cat::factory()->create();
+    CheckoutHold::query()->create([
+        'cat_id' => $cat->id,
+        'payment_intent_id' => 'pi_to_release',
+        'expires_at' => now()->addMinutes(3),
+        'hard_expires_at' => now()->addMinutes(15),
+    ]);
+
+    $response = $this->postJson('/fr/deposits/hold/release', ['payment_intent_id' => 'pi_to_release']);
+
+    $response->assertNoContent();
+    expect(CheckoutHold::query()->where('cat_id', $cat->id)->exists())->toBeFalse();
+
+    // The cat is immediately reservable again — release() actually freed
+    // the slot, not just returned success.
+    $second = $this->post('/fr/deposits', [
+        'name' => 'Second Visitor',
+        'email' => 'second@example.com',
+        'cat_id' => $cat->id,
+    ]);
+    $second->assertSessionDoesntHaveErrors(['cat_id']);
+});
+
+it('release is idempotent — releasing an already-gone hold is still a successful no-op', function () {
+    refreshApplicationWithLocale('fr');
+
+    $response = $this->postJson('/fr/deposits/hold/release', ['payment_intent_id' => 'pi_never_existed']);
+
+    $response->assertNoContent();
 });
