@@ -3,6 +3,7 @@
 namespace Tests\Doubles;
 
 use App\Models\Deposit;
+use App\Services\Payments\CheckoutData;
 use App\Services\Payments\PaymentGateway;
 use App\Services\Payments\PaymentIntentResult;
 use App\Services\Payments\PaymentWebhookResult;
@@ -44,14 +45,28 @@ class FakePaymentGateway implements PaymentGateway
     public array $cancelledDepositIds = [];
 
     /**
-     * Ids of every Deposit createPaymentIntent() was called for — lets a
+     * provider_reference of every cancelAuthorization() call — tracked
+     * separately from cancelledDepositIds because
+     * Public\DepositController::store() now calls this with a transient,
+     * unsaved Deposit carrying only provider_reference (a lost
+     * CheckoutHold acquisition, before any real Deposit exists — see
+     * CLAUDE.md), whose ->id is always null.
+     *
+     * @var array<int, string|null>
+     */
+    public array $cancelledProviderReferences = [];
+
+    /**
+     * Every CheckoutData createPaymentIntent() was called with — lets a
      * test assert a PaymentIntent was never created at all, e.g. when
      * Public\DepositController::store()'s own race re-check should have
-     * rejected the request before ever reaching the gateway.
+     * rejected the request before ever reaching the gateway. No Deposit
+     * exists yet at this point (see CLAUDE.md), so this tracks the
+     * checkout data itself rather than a Deposit id.
      *
-     * @var array<int, int>
+     * @var array<int, CheckoutData>
      */
-    public array $createPaymentIntentDepositIds = [];
+    public array $createPaymentIntentCalls = [];
 
     /**
      * @var array<int, int>
@@ -65,14 +80,14 @@ class FakePaymentGateway implements PaymentGateway
      */
     public bool $isCapturedResult = false;
 
-    public function createPaymentIntent(Deposit $deposit): PaymentIntentResult
+    public function createPaymentIntent(CheckoutData $checkoutData): PaymentIntentResult
     {
-        $this->createPaymentIntentDepositIds[] = $deposit->id;
+        $this->createPaymentIntentCalls[] = $checkoutData;
+        $fakeId = 'pi_test_fake_'.count($this->createPaymentIntentCalls);
 
         return new PaymentIntentResult(
-            id: 'pi_test_fake_'.$deposit->id,
-            clientSecret: 'pi_test_fake_'.$deposit->id.'_secret_test',
-            url: 'https://checkout.local/fake/'.$deposit->id,
+            id: $fakeId,
+            clientSecret: $fakeId.'_secret_test',
         );
     }
 
@@ -91,6 +106,7 @@ class FakePaymentGateway implements PaymentGateway
     public function cancelAuthorization(Deposit $deposit): bool
     {
         $this->cancelledDepositIds[] = $deposit->id;
+        $this->cancelledProviderReferences[] = $deposit->provider_reference;
 
         return true;
     }

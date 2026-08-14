@@ -35,29 +35,42 @@ class StripeGateway implements PaymentGateway
      * capture, and loseRace() checks it too before choosing
      * cancelAuthorization() (card, still just authorized) or refund()
      * (TWINT, already captured by the time we find out).
+     *
+     * Takes CheckoutData instead of a Deposit — the public checkout flow
+     * no longer creates a Deposit row before payment is confirmed (see
+     * CLAUDE.md). Every field the webhook will need to build the real
+     * Deposit rides along as PaymentIntent metadata instead, since Stripe
+     * is the only place this data lives until then.
+     *
+     * ⚠️ handleWebhook() below still reads metadata['deposit_id'], which
+     * this no longer sets — wiring the webhook to build a Deposit from
+     * this new metadata shape is deliberately left to the next prompt
+     * (see CLAUDE.md, "Ne pas les combiner"). Until then, no real Stripe
+     * webhook event is handled — known, temporary breakage.
      */
-    public function createPaymentIntent(Deposit $deposit): PaymentIntentResult
+    public function createPaymentIntent(CheckoutData $checkoutData): PaymentIntentResult
     {
         $intent = $this->client->paymentIntents->create([
-            'amount' => $deposit->amount,
-            'currency' => strtolower($deposit->currency),
+            'amount' => $checkoutData->amount,
+            'currency' => strtolower($checkoutData->currency),
             'payment_method_types' => ['card', 'twint'],
             'payment_method_options' => [
                 'card' => ['capture_method' => 'manual'],
             ],
-            // Read back on the webhook to identify which Deposit a
-            // payment_intent.amount_capturable_updated /
-            // payment_intent.succeeded event belongs to — Stripe has no
-            // other reference to our own primary key.
-            'metadata' => [
-                'deposit_id' => (string) $deposit->id,
-            ],
+            // Read back by the webhook to build the Deposit once payment
+            // is confirmed — no Deposit row exists yet at this point.
+            'metadata' => array_filter([
+                'cat_id' => $checkoutData->catId === null ? null : (string) $checkoutData->catId,
+                'name' => $checkoutData->name,
+                'email' => $checkoutData->email,
+                'phone' => $checkoutData->phone,
+                'locale' => $checkoutData->locale,
+            ], fn (?string $value) => $value !== null),
         ]);
 
         return new PaymentIntentResult(
             id: $intent->id,
             clientSecret: $intent->client_secret,
-            url: route('deposits.return', $deposit),
         );
     }
 

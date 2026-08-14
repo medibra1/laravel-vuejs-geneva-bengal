@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Public;
 use App\Enums\DepositStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreDepositRequest;
+use App\Models\Cat;
+use App\Models\CheckoutHold;
 use App\Models\Deposit;
 use App\Models\SiteSetting;
+use App\Services\Payments\CheckoutData;
 use App\Services\Payments\PaymentGateway;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -26,24 +29,27 @@ class DepositController extends Controller
      * payment client-side; no more cross-origin redirect to a
      * Stripe-hosted page, so no more Inertia::location() workaround.
      *
-     * Deliberately does *not* call DepositPaymentProcessor::reserve() —
-     * that would hold the cat (`en_attente`) the instant a visitor merely
-     * lands on the payment page, before any money has moved. That made
-     * sense back when a pending deposit itself blocked a second one (see
-     * Deposit::blocksNewReservation()'s old behavior); now that blocking
-     * only happens once a deposit is actually `paid`, holding the cat
-     * this early no longer protects anything — it would just show the
-     * cat as unavailable to every other visitor while this one is still
-     * mid-checkout, possibly never finishing. confirmPaid() (called from
-     * DepositPaymentProcessor::markPaid()) is what actually reserves the
-     * cat, exactly once payment is confirmed. Admin\DepositController's
-     * own flows still call reserve() immediately — a staff-recorded
-     * reservation is trusted the moment it's entered, unlike a public
-     * visitor who has not yet paid anything.
+     * No Deposit row is created here at all (see CLAUDE.md) — the webhook
+     * is what builds it, once payment is actually confirmed, from the
+     * checkout data carried in the PaymentIntent's own metadata (see
+     * StripeGateway::createPaymentIntent()). A visitor who abandons the
+     * checkout page therefore never leaves a `deposits` row behind.
+     *
+     * The cat itself is never held here either, for the same reason it
+     * wasn't when this method still created a pending Deposit: only a
+     * confirmed payment should make a cat unavailable to everyone else.
+     * What *does* need protecting at this point is the payment slot
+     * itself — CheckoutHold::acquire() stops a second visitor from
+     * starting a parallel payment for the same cat while this one is in
+     * flight (see CLAUDE.md and CheckoutHold's own docblock). A waiting-
+     * list checkout (no cat_id) has no such single resource to protect,
+     * so no hold is acquired for it — any number of visitors can join the
+     * waiting list in parallel.
      */
     public function store(StoreDepositRequest $request, PaymentGateway $gateway): Response
     {
         $catId = $request->validated('cat_id');
+        $catId = $catId === null ? null : (int) $catId;
 
         // CatIsAvailableForDeposit (the FormRequest rule) already checked
         // this once, but FormRequest validation runs before this method is
@@ -55,47 +61,57 @@ class DepositController extends Controller
         // DepositPaymentProcessor::markPaid()'s own atomic re-check (see
         // CLAUDE.md) is what guarantees the cat is never charged twice,
         // even if this check's own narrow window is lost.
-        if ($catId !== null && Deposit::blocksNewReservation((int) $catId)) {
+        if ($catId !== null && Deposit::blocksNewReservation($catId)) {
             throw ValidationException::withMessages([
                 'cat_id' => __('This kitten has already been reserved.'),
             ]);
         }
 
-        $deposit = Deposit::create([
-            'cat_id' => $catId,
-            'name' => $request->validated('name'),
-            'email' => $request->validated('email'),
-            'phone' => $request->validated('phone'),
-            'amount' => SiteSetting::get('deposit_amount', 50000),
-            'currency' => 'CHF',
-            'status' => DepositStatus::Pending,
-            'provider' => 'stripe',
+        $checkoutData = new CheckoutData(
+            catId: $catId,
+            name: $request->validated('name'),
+            email: $request->validated('email'),
+            phone: $request->validated('phone'),
             // Captured now — the only point where the visitor's active
-            // locale is known. DepositConfirmedNotification/
-            // DepositUnavailableNotification (triggered later by the
-            // Stripe webhook or the reconciliation job, neither in the
-            // context of this visitor's request) read it back to send the
-            // confirmation email in the right language. See CLAUDE.md.
-            'locale' => app()->getLocale(),
-        ]);
+            // locale is known. The webhook that eventually builds the
+            // Deposit from this PaymentIntent's metadata is not running in
+            // the context of any particular visitor's request. See
+            // CLAUDE.md.
+            locale: app()->getLocale(),
+            amount: SiteSetting::get('deposit_amount', 50000),
+            currency: 'CHF',
+        );
 
-        $intent = $gateway->createPaymentIntent($deposit);
+        $intent = $gateway->createPaymentIntent($checkoutData);
 
-        // Persisted immediately (not just once paid) so the reconciliation
-        // job has something to poll even if the webhook never arrives.
-        $deposit->update(['provider_reference' => $intent->id]);
+        // Needs the PaymentIntent's own id, so it can only happen after
+        // creation above. If the hold can't be acquired, the PaymentIntent
+        // that was just created is worthless — cancelled immediately
+        // rather than left dangling; it was never confirmed, so nothing
+        // has been charged.
+        if ($catId !== null && ! CheckoutHold::acquire($catId, $intent->id)) {
+            $gateway->cancelAuthorization(new Deposit(['provider_reference' => $intent->id]));
+
+            // Distinct from "already reserved" above: the cat itself is
+            // still available, another visitor is simply mid-payment for
+            // it right now. Conflating the two messages would tell this
+            // visitor the cat is gone when it might free up in minutes.
+            throw ValidationException::withMessages([
+                'cat_id' => __('Someone else is currently paying for this kitten. Please try again in a few minutes.'),
+            ]);
+        }
 
         return Inertia::render('Public/DepositPay', [
-            'depositId' => $deposit->id,
+            'paymentIntentId' => $intent->id,
             'clientSecret' => $intent->clientSecret,
             // The publishable key is safe to expose client-side by design
             // (it can only create PaymentIntents/confirm payments, never
             // move money on its own) — read from config rather than
             // hardcoded so it follows STRIPE_KEY per environment.
             'stripePublishableKey' => config('services.stripe.key'),
-            'catName' => $deposit->cat?->name,
-            'amount' => $deposit->amount,
-            'currency' => $deposit->currency,
+            'catName' => $catId === null ? null : Cat::find($catId)?->name,
+            'amount' => $checkoutData->amount,
+            'currency' => $checkoutData->currency,
         ]);
     }
 
@@ -106,11 +122,19 @@ class DepositController extends Controller
      * Public\StripeWebhookController) is the only source of truth for
      * whether the Deposit actually got paid, never this page's own state.
      * See CLAUDE.md.
+     *
+     * Keyed on the PaymentIntent id rather than a Deposit id: store() no
+     * longer creates a Deposit up front (see CLAUDE.md), so the webhook
+     * may not have built one yet by the time the visitor lands here —
+     * reported as "pending" in that case, same as any other in-flight
+     * checkout, rather than a 404.
      */
-    public function show(Deposit $deposit): Response
+    public function show(string $paymentIntentId): Response
     {
+        $deposit = Deposit::where('provider_reference', $paymentIntentId)->first();
+
         return Inertia::render('Public/DepositReturn', [
-            'depositStatus' => $deposit->status,
+            'depositStatus' => $deposit === null ? DepositStatus::Pending : $deposit->status,
         ]);
     }
 }

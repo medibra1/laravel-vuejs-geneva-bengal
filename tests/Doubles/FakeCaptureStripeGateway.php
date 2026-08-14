@@ -3,6 +3,7 @@
 namespace Tests\Doubles;
 
 use App\Models\Deposit;
+use App\Services\Payments\CheckoutData;
 use App\Services\Payments\PaymentIntentResult;
 use App\Services\Payments\StripeGateway;
 
@@ -40,12 +41,19 @@ class FakeCaptureStripeGateway extends StripeGateway
      */
     public bool $isCapturedResult = false;
 
-    public function createPaymentIntent(Deposit $deposit): PaymentIntentResult
+    /**
+     * @var array<int, CheckoutData>
+     */
+    public array $createPaymentIntentCalls = [];
+
+    public function createPaymentIntent(CheckoutData $checkoutData): PaymentIntentResult
     {
+        $this->createPaymentIntentCalls[] = $checkoutData;
+        $fakeId = 'pi_test_fake_'.count($this->createPaymentIntentCalls);
+
         return new PaymentIntentResult(
-            id: 'pi_test_fake_'.$deposit->id,
-            clientSecret: 'pi_test_fake_'.$deposit->id.'_secret_test',
-            url: 'https://checkout.local/fake/'.$deposit->id,
+            id: $fakeId,
+            clientSecret: $fakeId.'_secret_test',
         );
     }
 

@@ -3,6 +3,7 @@
 use App\Enums\CatStatus;
 use App\Enums\DepositStatus;
 use App\Models\Cat;
+use App\Models\CheckoutHold;
 use App\Models\Deposit;
 use App\Models\SiteSetting;
 use App\Models\User;
@@ -28,10 +29,11 @@ beforeEach(function () {
     Role::findOrCreate('admin');
 });
 
-it('creates a pending deposit and renders the integrated checkout page with a PaymentIntent client secret', function () {
+it('creates no Deposit row and renders the integrated checkout page with a PaymentIntent client secret', function () {
     refreshApplicationWithLocale('fr');
     config(['honeypot.enabled' => false]);
-    $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
+    $gateway = new FakePaymentGateway;
+    $this->app->instance(PaymentGateway::class, $gateway);
     SiteSetting::set('deposit_amount', 50000);
 
     $response = $this->post('/fr/deposits', [
@@ -40,12 +42,20 @@ it('creates a pending deposit and renders the integrated checkout page with a Pa
         'phone' => '+41 79 000 00 00',
     ]);
 
-    $deposit = Deposit::sole();
-    expect($deposit->status)->toBe(DepositStatus::Pending);
-    expect($deposit->amount)->toBe(50000);
-    expect($deposit->currency)->toBe('CHF');
-    expect($deposit->provider_reference)->toBe('pi_test_fake_'.$deposit->id);
-    expect($deposit->locale)->toBe('fr');
+    // No Deposit exists at all at this point — it's only built later by
+    // the webhook, from the checkout data carried in the PaymentIntent's
+    // own metadata (see CLAUDE.md). An abandoned checkout therefore never
+    // leaves a row behind.
+    expect(Deposit::count())->toBe(0);
+    expect($gateway->createPaymentIntentCalls)->toHaveCount(1);
+    $checkoutData = $gateway->createPaymentIntentCalls[0];
+    expect($checkoutData->catId)->toBeNull();
+    expect($checkoutData->name)->toBe('Marie Dupont');
+    expect($checkoutData->email)->toBe('marie@example.com');
+    expect($checkoutData->phone)->toBe('+41 79 000 00 00');
+    expect($checkoutData->locale)->toBe('fr');
+    expect($checkoutData->amount)->toBe(50000);
+    expect($checkoutData->currency)->toBe('CHF');
 
     // No more cross-origin redirect to a Stripe-hosted page — the
     // PaymentIntent is confirmed client-side, on this same response, via
@@ -53,8 +63,8 @@ it('creates a pending deposit and renders the integrated checkout page with a Pa
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('Public/DepositPay')
-        ->where('depositId', $deposit->id)
-        ->where('clientSecret', 'pi_test_fake_'.$deposit->id.'_secret_test')
+        ->where('paymentIntentId', 'pi_test_fake_1')
+        ->where('clientSecret', 'pi_test_fake_1_secret_test')
         // Forced to this fixed fake value in tests/bootstrap.php.
         ->where('stripePublishableKey', 'pk_test_fake_key_for_test_suite')
         ->where('catName', null)
@@ -63,10 +73,11 @@ it('creates a pending deposit and renders the integrated checkout page with a Pa
     );
 });
 
-it('captures the visitor\'s active locale on the deposit for later use by the confirmation email', function () {
+it('passes the visitor\'s active locale to the gateway as checkout data', function () {
     refreshApplicationWithLocale('en');
     config(['honeypot.enabled' => false]);
-    $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
+    $gateway = new FakePaymentGateway;
+    $this->app->instance(PaymentGateway::class, $gateway);
 
     $this->post('/en/deposits', [
         'name' => 'John Smith',
@@ -74,13 +85,14 @@ it('captures the visitor\'s active locale on the deposit for later use by the co
     ]);
 
     // Neither the Stripe webhook nor the daily reconciliation job that
-    // eventually trigger DepositConfirmedNotification have any notion of
-    // "the current visitor's language" — this is the only point where it's
-    // known, see Public\DepositController::store().
-    expect(Deposit::sole()->locale)->toBe('en');
+    // eventually confirm payment have any notion of "the current
+    // visitor's language" — this is the only point where it's known, see
+    // Public\DepositController::store(). Carried in PaymentIntent
+    // metadata now, not a Deposit column read back later.
+    expect($gateway->createPaymentIntentCalls[0]->locale)->toBe('en');
 });
 
-it('includes the cat name in the checkout page props when the deposit is for a specific cat', function () {
+it('includes the cat name in the checkout page props when the checkout is for a specific cat', function () {
     refreshApplicationWithLocale('fr');
     config(['honeypot.enabled' => false]);
     $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
@@ -98,7 +110,23 @@ it('includes the cat name in the checkout page props when the deposit is for a s
     );
 });
 
-it('links a deposit to a specific cat when one is given', function () {
+it('passes the chosen cat_id to the gateway as checkout data', function () {
+    refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
+    $gateway = new FakePaymentGateway;
+    $this->app->instance(PaymentGateway::class, $gateway);
+    $cat = Cat::factory()->create();
+
+    $this->post('/fr/deposits', [
+        'name' => 'Marie Dupont',
+        'email' => 'marie@example.com',
+        'cat_id' => $cat->id,
+    ]);
+
+    expect($gateway->createPaymentIntentCalls[0]->catId)->toBe($cat->id);
+});
+
+it('acquires a checkout hold on the cat when one is given', function () {
     refreshApplicationWithLocale('fr');
     config(['honeypot.enabled' => false]);
     $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
@@ -110,10 +138,24 @@ it('links a deposit to a specific cat when one is given', function () {
         'cat_id' => $cat->id,
     ]);
 
-    expect(Deposit::sole()->cat_id)->toBe($cat->id);
+    $hold = CheckoutHold::query()->where('cat_id', $cat->id)->sole();
+    expect($hold->payment_intent_id)->toBe('pi_test_fake_1');
 });
 
-it('leaves the cat disponible when the deposit is created — it is only held once payment is actually confirmed', function () {
+it('does not acquire any checkout hold for a waiting-list checkout — there is no single cat to protect', function () {
+    refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
+    $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
+
+    $this->post('/fr/deposits', [
+        'name' => 'Marie Dupont',
+        'email' => 'marie@example.com',
+    ]);
+
+    expect(CheckoutHold::query()->count())->toBe(0);
+});
+
+it('leaves the cat disponible — it is only held once payment is actually confirmed', function () {
     refreshApplicationWithLocale('fr');
     config(['honeypot.enabled' => false]);
     $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
@@ -126,18 +168,51 @@ it('leaves the cat disponible when the deposit is created — it is only held on
         'cat_id' => $cat->id,
     ]);
 
-    // A pending deposit no longer blocks another one anyway (see
-    // Deposit::blocksNewReservation()), so holding the cat this early no
-    // longer protects anything — it would just show the cat as
-    // unavailable to every other visitor while this one is still
-    // mid-checkout. DepositPaymentProcessor::confirmPaid() (via
-    // markPaid()) is what actually reserves it, exactly once paid — see
-    // the "moves the linked cat to en_attente" test in
-    // StripeWebhookTest.php for that half of the flow.
+    // CheckoutHold protects the payment slot, not the cat's public
+    // availability (see CheckoutHold's own docblock and CLAUDE.md) —
+    // DepositPaymentProcessor::confirmPaid() (via the webhook) is what
+    // actually reserves the cat, exactly once paid.
     expect($cat->fresh()->status)->toBe(CatStatus::Available->value);
 });
 
-it('allows a new deposit for a cat that already has a pending (not yet paid) deposit — only a paid deposit blocks a reservation', function () {
+it('refuses a second checkout for a cat that already has a live checkout hold, cancels its PaymentIntent, and creates no extra hold', function () {
+    refreshApplicationWithLocale('fr');
+    config(['honeypot.enabled' => false]);
+    $gateway = new FakePaymentGateway;
+    $this->app->instance(PaymentGateway::class, $gateway);
+    $cat = Cat::factory()->create();
+
+    $first = $this->post('/fr/deposits', [
+        'name' => 'First Visitor',
+        'email' => 'first@example.com',
+        'cat_id' => $cat->id,
+    ]);
+    $first->assertOk();
+
+    $second = $this->post('/fr/deposits', [
+        'name' => 'Second Visitor',
+        'email' => 'second@example.com',
+        'cat_id' => $cat->id,
+    ]);
+
+    $second->assertSessionHasErrors(['cat_id']);
+    // Distinct message from "already reserved" — the cat itself is still
+    // available, someone else is simply mid-payment for it right now.
+    // French because the request went through /fr/deposits — see
+    // lang/fr.json.
+    expect(session('errors')->get('cat_id')[0])
+        ->toBe('Une autre personne est en train de payer pour ce chaton. Veuillez réessayer dans quelques minutes.');
+    // A PaymentIntent was created for the second attempt (the hold can
+    // only be checked once it exists, see Public\DepositController::store())
+    // but immediately cancelled — never left dangling, never confirmable.
+    expect($gateway->createPaymentIntentCalls)->toHaveCount(2);
+    expect($gateway->cancelledProviderReferences)->toBe(['pi_test_fake_2']);
+    // Still exactly one live hold — the first visitor's.
+    expect(CheckoutHold::query()->where('cat_id', $cat->id)->count())->toBe(1);
+    expect(CheckoutHold::query()->where('payment_intent_id', 'pi_test_fake_1')->exists())->toBeTrue();
+});
+
+it('allows a new checkout for a cat whose only existing deposit is pending (not yet paid) — only a paid deposit blocks a reservation', function () {
     refreshApplicationWithLocale('fr');
     config(['honeypot.enabled' => false]);
     $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
@@ -151,10 +226,10 @@ it('allows a new deposit for a cat that already has a pending (not yet paid) dep
     ]);
 
     $response->assertSessionDoesntHaveErrors(['cat_id']);
-    expect(Deposit::where('email', 'second@example.com')->exists())->toBeTrue();
+    $response->assertOk();
 });
 
-it('refuses a new deposit for a cat that already has one paid, without ever creating a PaymentIntent for it', function () {
+it('refuses a checkout for a cat that already has one paid deposit, without ever creating a PaymentIntent for it', function () {
     refreshApplicationWithLocale('fr');
     config(['honeypot.enabled' => false]);
     $gateway = new FakePaymentGateway;
@@ -169,11 +244,12 @@ it('refuses a new deposit for a cat that already has one paid, without ever crea
     ]);
 
     $response->assertSessionHasErrors(['cat_id']);
-    expect(Deposit::where('email', 'second@example.com')->exists())->toBeFalse();
+    expect(session('errors')->get('cat_id')[0])->toBe('Ce chaton a déjà été réservé.');
     // Public\DepositController::store()'s own re-check (see CLAUDE.md)
     // rejects before ever calling the gateway — no PaymentIntent wasted on
     // a reservation that was already doomed.
-    expect($gateway->createPaymentIntentDepositIds)->toBeEmpty();
+    expect($gateway->createPaymentIntentCalls)->toBeEmpty();
+    expect(CheckoutHold::query()->count())->toBe(0);
 });
 
 it('validates required fields', function () {
@@ -200,7 +276,7 @@ it('silently discards spam submissions caught by the honeypot', function () {
     expect(Deposit::count())->toBe(0);
 });
 
-it('does not notify staff when a public visitor merely creates a deposit — nothing has been paid yet', function () {
+it('does not notify staff when a public visitor merely starts a checkout — nothing has been paid yet', function () {
     refreshApplicationWithLocale('fr');
     config(['honeypot.enabled' => false]);
     $this->app->bind(PaymentGateway::class, FakePaymentGateway::class);
@@ -213,19 +289,30 @@ it('does not notify staff when a public visitor merely creates a deposit — not
         'email' => 'marie@example.com',
     ]);
 
-    // store() deliberately doesn't call
-    // DepositPaymentProcessor::reserve() (see its own docblock) — unlike
-    // an admin-recorded reservation, a public deposit isn't trustworthy
-    // enough to alert staff about until it's actually paid, and nothing
-    // currently re-sends this notification once it is (see CLAUDE.md).
+    // store() never calls DepositPaymentProcessor::reserve() and doesn't
+    // even create a Deposit — unlike an admin-recorded reservation, a
+    // public checkout isn't trustworthy enough to alert staff about until
+    // it's actually paid (see CLAUDE.md).
     Notification::assertNotSentTo($activeAdmin, NewDepositCreatedNotification::class);
 });
 
-it('shows a waiting/status page without ever trusting the redirect alone', function () {
+it('shows a waiting/status page for a payment intent with no deposit yet, without ever trusting the redirect alone', function () {
     refreshApplicationWithLocale('fr');
-    $deposit = Deposit::factory()->create();
 
-    $response = $this->get("/fr/deposits/{$deposit->id}?status=success");
+    $response = $this->get('/fr/deposits/return/pi_unknown?status=success');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('Public/DepositReturn')
+        ->where('depositStatus', 'pending')
+    );
+});
+
+it('shows the real deposit status once one exists for the given payment intent', function () {
+    refreshApplicationWithLocale('fr');
+    $deposit = Deposit::factory()->paid()->create(['provider_reference' => 'pi_known']);
+
+    $response = $this->get('/fr/deposits/return/pi_known?status=success');
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page

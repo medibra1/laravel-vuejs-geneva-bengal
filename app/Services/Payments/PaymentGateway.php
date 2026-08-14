@@ -7,7 +7,14 @@ use Illuminate\Http\Request;
 
 interface PaymentGateway
 {
-    public function createPaymentIntent(Deposit $deposit): PaymentIntentResult;
+    /**
+     * Takes checkout form data rather than a Deposit — the public checkout
+     * flow (Public\DepositController::store()) no longer creates one up
+     * front (see CLAUDE.md). $checkoutData rides along as PaymentIntent
+     * metadata so the webhook can build the real Deposit once payment is
+     * confirmed.
+     */
+    public function createPaymentIntent(CheckoutData $checkoutData): PaymentIntentResult;
 
     public function handleWebhook(Request $request): PaymentWebhookResult;
 

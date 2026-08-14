@@ -61,7 +61,11 @@ Route::localize(function (): void {
     Route::post('/deposits', [DepositController::class, 'store'])
         ->middleware(ProtectAgainstSpam::class)
         ->name('deposits.store');
-    Route::get('/deposits/{deposit}', [DepositController::class, 'show'])->name('deposits.return');
+    // Keyed on the Stripe PaymentIntent id, not a Deposit id: store() no
+    // longer creates a Deposit (see CLAUDE.md) — the visitor lands here
+    // straight from the checkout page, before the webhook has necessarily
+    // built one. See DepositController::show().
+    Route::get('/deposits/return/{paymentIntentId}', [DepositController::class, 'show'])->name('deposits.return');
 });
 
 // Not locale-prefixed: Stripe doesn't know about /fr or /en, and this

@@ -126,10 +126,16 @@ it('marks a deposit paid and captures its PaymentIntent on a validly signed paym
 /**
  * End-to-end version of the two tests above: unlike them (which start
  * from a Deposit::factory()->create() and fire the webhook in isolation),
- * this one goes through the real public creation endpoint first, so the
- * PaymentIntent id it webhooks back in is whatever
+ * this one used to go through the real public creation endpoint first, so
+ * the PaymentIntent id it webhooked back in was whatever
  * Public\DepositController::store() actually persisted as
  * provider_reference — not a value the test made up itself.
+ *
+ * Skipped: store() no longer creates a Deposit at all (see CLAUDE.md) — a
+ * PaymentIntent's checkout data now rides along as Stripe metadata instead,
+ * read back only once handleWebhook() is rewritten to build the Deposit
+ * from it (deliberately left to a following prompt, "ne pas les
+ * combiner"). Re-enable and rewrite once that lands.
  */
 it('covers the full public flow — deposit creation through webhook-confirmed capture and cat status change', function () {
     refreshApplicationWithLocale('fr');
@@ -193,7 +199,7 @@ it('covers the full public flow — deposit creation through webhook-confirmed c
         fn (DepositConfirmedNotification $notification) => $notification->locale === 'fr',
     );
     Notification::assertSentTo($admin, DepositPaidNotification::class);
-});
+})->skip('store() no longer creates a Deposit — rewrite once handleWebhook() reads checkout data from PaymentIntent metadata instead.');
 
 it('moves the linked cat to en_attente once its deposit is paid', function () {
     Notification::fake();
