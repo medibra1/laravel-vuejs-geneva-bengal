@@ -5,6 +5,12 @@ import PublicLayout from '@/Layouts/PublicLayout.vue';
 
 const props = defineProps<{
     depositStatus: string;
+    // Only meaningful once paid (see Public\DepositController::show()) —
+    // the success screen names the address the confirmation was just sent
+    // to. Persists across the polling reloads below since only
+    // depositStatus is re-requested (Inertia's partial reload keeps every
+    // other prop from the initial response).
+    email: string | null;
 }>();
 
 // Purely cosmetic — which leg of the Stripe Checkout redirect brought the
@@ -82,7 +88,7 @@ onBeforeUnmount(stopPolling);
                 <i class="pi pi-check-circle text-5xl text-emerald-600" />
                 <h1 class="mt-6 text-2xl font-semibold text-neutral-900">{{ $t('depositReturn.paid_heading') }}</h1>
                 <p class="mt-4 text-neutral-600">
-                    {{ $t('depositReturn.paid_body') }}
+                    {{ $t('depositReturn.paid_body', { email }) }}
                 </p>
             </template>
 

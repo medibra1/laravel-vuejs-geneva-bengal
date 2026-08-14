@@ -151,7 +151,7 @@
     "depositReturn": {
         "meta_title": "Votre acompte — Geneva Bengal",
         "paid_heading": "Merci, votre acompte a bien été reçu !",
-        "paid_body": "Un e-mail de confirmation vient de vous être envoyé. Nous reviendrons vers vous très prochainement.",
+        "paid_body": "Un e-mail de confirmation vient de vous être envoyé à {email}. Nous reviendrons vers vous très prochainement.",
         "cancelled_heading": "Paiement non finalisé",
         "cancelled_body": "Vous avez annulé le paiement, aucun montant n'a été débité. Vous pouvez réessayer à tout moment depuis la fiche du chaton.",
         "unavailable_heading": "Ce chaton vient d'être réservé",
@@ -159,7 +159,7 @@
         "pending_heading": "Nous traitons votre paiement",
         "pending_body": "Cela ne devrait prendre qu'un instant. Vous recevrez un e-mail de confirmation dès que le paiement sera validé — inutile de rester sur cette page.",
         "timeout_heading": "Cela prend plus de temps que prévu",
-        "timeout_body": "Votre paiement est en cours de traitement mais la confirmation tarde à arriver. Pas d'inquiétude : si le paiement a bien été effectué, vous recevrez un e-mail de confirmation dès qu'il sera validé — vous pouvez fermer cette page en toute sécurité. Si rien ne se passe d'ici quelques minutes, contactez-nous.",
+        "timeout_body": "Votre paiement est en cours de traitement mais la confirmation tarde à arriver. Pas d'inquiétude : si le paiement a bien été effectué, vous recevrez un e-mail de confirmation sous 15 minutes maximum — aucune action n'est requise de votre part, vous pouvez fermer cette page en toute sécurité. Si rien ne se passe au-delà de ce délai, contactez-nous.",
         "back_link": "Retour aux chatons disponibles"
     },
     "newsletterUnsubscribed": {
@@ -213,7 +213,10 @@
         "generic_error": "Une erreur est survenue pendant le paiement. Veuillez réessayer.",
         "pay_button": "Payer",
         "paying_button": "Paiement en cours…",
-        "cancel_link": "Annuler et revenir en arrière"
+        "cancel_link": "Annuler et revenir en arrière",
+        "countdown_label": "Temps restant pour finaliser le paiement : {time}",
+        "session_expired": "Votre session de paiement a expiré. Merci de reprendre votre réservation.",
+        "back_to_cat_link": "Retour aux chatons disponibles"
     },
     "hero": {
         "tagline_script": "Éleveur de chats",
