@@ -256,14 +256,30 @@ class DepositPaymentProcessor
      * retry a confirmation that previously failed to send, without
      * re-notifying staff a second time about a Deposit they already got
      * DepositPaidNotification for when it was first created.
+     *
+     * Notification::sendNow() rather than ->notify()/Notification::send():
+     * DepositConfirmedNotification implements ShouldQueue, so a plain
+     * notify() only ever confirms the job was *dispatched* — in
+     * production (QUEUE_CONNECTION=sync, see CLAUDE.md) that happens to
+     * run inline and this distinction is invisible, but with any real
+     * async queue driver (e.g. dev's QUEUE_CONNECTION=database, worked by
+     * a separate process) the dispatch itself always "succeeds" even if
+     * the actual SMTP send later fails in the worker — this try/catch
+     * would never see that failure, and confirmation_sent_at would be
+     * marked true for an email that was never actually delivered.
+     * sendNow() forces the notification through synchronously,
+     * bypassing the queue entirely, so this method's own try/catch is
+     * always the one that sees a real delivery failure.
      */
     public function sendClientConfirmation(Deposit $deposit): void
     {
         $deposit->increment('confirmation_attempts');
 
         try {
-            Notification::route('mail', $deposit->email)
-                ->notify((new DepositConfirmedNotification($deposit))->locale($deposit->locale));
+            Notification::sendNow(
+                Notification::route('mail', $deposit->email),
+                (new DepositConfirmedNotification($deposit))->locale($deposit->locale),
+            );
 
             $deposit->update(['confirmation_sent_at' => now()]);
         } catch (Throwable $e) {
