@@ -238,19 +238,7 @@ class DepositPaymentProcessor
      */
     private function sendConfirmationNotifications(Deposit $deposit): void
     {
-        $deposit->increment('confirmation_attempts');
-
-        try {
-            Notification::route('mail', $deposit->email)
-                ->notify((new DepositConfirmedNotification($deposit))->locale($deposit->locale));
-
-            $deposit->update(['confirmation_sent_at' => now()]);
-        } catch (Throwable $e) {
-            Log::error('Failed to send DepositConfirmedNotification', [
-                'deposit_id' => $deposit->id,
-                'exception' => $e->getMessage(),
-            ]);
-        }
+        $this->sendClientConfirmation($deposit);
 
         try {
             Notification::send($this->activeStaff(), new DepositPaidNotification($deposit));
@@ -263,23 +251,26 @@ class DepositPaymentProcessor
     }
 
     /**
-     * A pending deposit whose PaymentIntent authorization has gone past its
-     * own expiry (see Deposit::PENDING_EXPIRY_HOURS) can never be paid
-     * anymore — release the cat it was holding back to `disponible`.
-     * Guarded on the cat still being `en_attente` so this never clobbers a
-     * status set by something else in the meantime (e.g. already finalized
-     * to `adopte`).
+     * Just the client-facing half of sendConfirmationNotifications() above
+     * — also called directly by ReconcileCheckouts (see CLAUDE.md) to
+     * retry a confirmation that previously failed to send, without
+     * re-notifying staff a second time about a Deposit they already got
+     * DepositPaidNotification for when it was first created.
      */
-    public function expire(Deposit $deposit): void
+    public function sendClientConfirmation(Deposit $deposit): void
     {
-        if ($deposit->status !== DepositStatus::Pending) {
-            return;
-        }
+        $deposit->increment('confirmation_attempts');
 
-        $deposit->update(['status' => DepositStatus::Cancelled]);
+        try {
+            Notification::route('mail', $deposit->email)
+                ->notify((new DepositConfirmedNotification($deposit))->locale($deposit->locale));
 
-        if ($deposit->cat_id !== null && $deposit->cat->status === CatStatus::Pending->value) {
-            $deposit->cat->setStatus(CatStatus::Available->value);
+            $deposit->update(['confirmation_sent_at' => now()]);
+        } catch (Throwable $e) {
+            Log::error('Failed to send DepositConfirmedNotification', [
+                'deposit_id' => $deposit->id,
+                'exception' => $e->getMessage(),
+            ]);
         }
     }
 

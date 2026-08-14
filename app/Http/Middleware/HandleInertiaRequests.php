@@ -150,7 +150,6 @@ class HandleInertiaRequests extends Middleware
                     'title' => $notification->data['title'] ?? null,
                     'message' => $notification->data['message'] ?? null,
                     'url' => $notification->data['url'] ?? null,
-                    'reason' => $notification->data['reason'] ?? null,
                     'read_at' => $notification->read_at,
                     'created_at' => $notification->created_at,
                 ])

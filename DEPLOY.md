@@ -50,8 +50,8 @@ inertia:start-ssr` (qui lance `node bootstrap/ssr/ssr.js`) n'est utilisé
 qu'en dev via `docker-compose.yml` (service `ssr`, redémarré par Docker si
 besoin) ; en prod classique PHP/Apache, rien ne garderait ce process actif
 ni ne le relancerait après un crash ou un redémarrage serveur. Même
-problème pour la queue : **les 7 classes `app/Notifications/*` et le job
-`ReconcilePendingDeposits` implémentent toutes `ShouldQueue`** — sans un
+problème pour la queue : **les classes `app/Notifications/*` et le job
+`ReconcileCheckouts` implémentent toutes `ShouldQueue`** — sans un
 worker qui tourne, aucune notification (confirmation d'acompte, contact,
 newsletter...) n'est jamais réellement envoyée, les jobs restent en base
 dans la table `jobs` indéfiniment.
@@ -138,7 +138,7 @@ logique `!-f` de chaque règle en dessous.
 
 ## 4. Tâche planifiée (job de réconciliation Stripe)
 
-`routes/console.php` : `Schedule::job(new ReconcilePendingDeposits)->daily();`
+`routes/console.php` : `Schedule::job(new ReconcileCheckouts)->everyFifteenMinutes();`
 — syntaxe Laravel 11+ (pas de `app/Console/Kernel.php` dans ce repo, ce
 projet est en Laravel 13). Le déclenchement lui-même est déjà correct,
 rien à changer côté code — mais **rien n'exécute jamais ce planificateur**

@@ -2,31 +2,31 @@
 
 namespace App\Notifications;
 
-use App\Models\Deposit;
+use App\Models\CheckoutHold;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Covers two distinct situations ReconcilePendingDeposits can hit while
- * polling Stripe for a deposit whose webhook never arrived — see
- * CLAUDE.md. `reason` picks which one this instance is about:
+ * Sent by ReconcileCheckouts when Stripe itself can't be reached/errors out
+ * while checking the status of an expired CheckoutHold's PaymentIntent —
+ * see CLAUDE.md. A technical problem that needs a quick look, not
+ * necessarily urgent: the hold stays in place (neither released nor
+ * resolved into a Deposit) until the next run tries again.
  *
- * - 'error': isCheckoutPaid() itself blew up (network/API error) — a
- *   technical problem that needs a quick look, not necessarily urgent.
- * - 'expired': the deposit's own 24h checkout window passed with no
- *   payment confirmed — informative, the cat it held has already been
- *   released back to available by the caller.
+ * No Deposit exists at this point — CheckoutHold only carries cat_id and
+ * payment_intent_id, not the visitor's name/email (those only reach us
+ * once the PaymentIntent's own metadata is actually readable, which is
+ * exactly what failed here).
  */
 class StripeReconciliationIssueNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
     public function __construct(
-        public Deposit $deposit,
-        public string $reason,
-        public ?string $errorMessage = null,
+        public CheckoutHold $checkoutHold,
+        public string $errorMessage,
     ) {}
 
     /**
@@ -39,14 +39,17 @@ class StripeReconciliationIssueNotification extends Notification implements Shou
 
     public function toMail(object $notifiable): MailMessage
     {
-        return $this->reason === 'error' ? $this->errorMail() : $this->expiredMail();
+        return (new MailMessage)
+            ->subject('Problème technique lors de la vérification d\'un paiement Stripe — Geneva Bengal')
+            ->line("La vérification automatique du PaymentIntent {$this->checkoutHold->payment_intent_id} (chat #{$this->checkoutHold->cat_id}) auprès de Stripe a échoué.")
+            ->line("Erreur : {$this->errorMessage}");
     }
 
     /**
      * Consumed by NotificationBell.vue via HandleInertiaRequests' shared
-     * prop — `reason` lets it tell the two apart visually (warning icon
-     * for 'error', neutral for 'expired'). No `show` route exists for a
-     * single deposit, so the link goes to the list.
+     * prop. No `show` route exists for a single checkout hold, so the
+     * link goes to the deposits list — the closest equivalent screen once
+     * (if) this PaymentIntent eventually resolves into one.
      *
      * @return array<string, string>
      */
@@ -54,37 +57,9 @@ class StripeReconciliationIssueNotification extends Notification implements Shou
     {
         return [
             'type' => 'stripe_issue',
-            'reason' => $this->reason,
-            'title' => $this->reason === 'error'
-                ? 'Problème technique lors de la vérification d\'un paiement Stripe'
-                : 'Réservation expirée sans paiement confirmé',
-            'message' => $this->reason === 'error'
-                ? "Dépôt #{$this->deposit->id} : {$this->errorMessage}"
-                : "{$this->deposit->name} — {$this->catReleasedLine()}",
+            'title' => 'Problème technique lors de la vérification d\'un paiement Stripe',
+            'message' => "PaymentIntent {$this->checkoutHold->payment_intent_id} : {$this->errorMessage}",
             'url' => route('admin.deposits.index'),
         ];
-    }
-
-    private function errorMail(): MailMessage
-    {
-        return (new MailMessage)
-            ->subject('Problème technique lors de la vérification d\'un paiement Stripe — Geneva Bengal')
-            ->line("La vérification automatique du dépôt #{$this->deposit->id} auprès de Stripe a échoué.")
-            ->line("Erreur : {$this->errorMessage}");
-    }
-
-    private function expiredMail(): MailMessage
-    {
-        return (new MailMessage)
-            ->subject('Réservation expirée sans paiement confirmé — Geneva Bengal')
-            ->line("La réservation de {$this->deposit->name} a expiré sans confirmation de paiement.")
-            ->line($this->catReleasedLine());
-    }
-
-    private function catReleasedLine(): string
-    {
-        return $this->deposit->cat_id !== null
-            ? "Le chat {$this->deposit->cat->name} a été libéré et est de nouveau disponible."
-            : "Il s'agissait d'une inscription en liste d'attente.";
     }
 }

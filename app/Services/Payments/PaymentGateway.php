@@ -19,6 +19,14 @@ interface PaymentGateway
     public function handleWebhook(Request $request): PaymentWebhookResult;
 
     /**
+     * Polled by ReconcileCheckouts (see CLAUDE.md) for an expired
+     * CheckoutHold whose webhook never arrived — same "handled" shape as
+     * handleWebhook(), built directly from a retrieve() rather than a
+     * signed event, since there is no event to verify here.
+     */
+    public function retrieveCheckoutData(string $paymentIntentId): PaymentWebhookResult;
+
+    /**
      * Actually debits the client for a PaymentIntent authorized under
      * capture_method: manual — only ever called from
      * DepositPaymentProcessor::markPaid(), after the atomic re-check that

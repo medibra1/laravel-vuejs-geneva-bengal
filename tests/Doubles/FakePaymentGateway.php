@@ -25,15 +25,30 @@ class FakePaymentGateway implements PaymentGateway
 
     /**
      * Set to simulate isCheckoutPaid() blowing up (network error, Stripe
-     * API error, ...) — see ReconcilePendingDeposits' try/catch.
+     * API error, ...) — see ReconcileCheckouts' try/catch.
      */
     public ?\Throwable $checkoutPaidException = null;
+
+    /**
+     * What retrieveCheckoutData() returns for a given payment_intent_id —
+     * lets a test control ReconcileCheckouts' volet 1 (paid/unpaid/error)
+     * without a real Stripe call. Defaults to "not handled" (unpaid).
+     *
+     * @var array<string, PaymentWebhookResult>
+     */
+    public array $checkoutDataResults = [];
+
+    /**
+     * Set to simulate retrieveCheckoutData() blowing up (network error,
+     * Stripe API error, ...) — see ReconcileCheckouts' try/catch.
+     */
+    public ?\Throwable $retrieveCheckoutDataException = null;
 
     /**
      * Ids of every Deposit capture()/cancelAuthorization() was called for
      * — lets a test assert a PaymentIntent was (or wasn't) actually
      * charged/released, without a real Stripe call. See the "lost the
-     * race" tests in ReconcilePendingDepositsTest.
+     * race" tests in ReconcileCheckoutsTest.
      *
      * @var array<int, int>
      */
@@ -105,6 +120,15 @@ class FakePaymentGateway implements PaymentGateway
     public function handleWebhook(Request $request): PaymentWebhookResult
     {
         return new PaymentWebhookResult(handled: false);
+    }
+
+    public function retrieveCheckoutData(string $paymentIntentId): PaymentWebhookResult
+    {
+        if ($this->retrieveCheckoutDataException !== null) {
+            throw $this->retrieveCheckoutDataException;
+        }
+
+        return $this->checkoutDataResults[$paymentIntentId] ?? new PaymentWebhookResult(handled: false);
     }
 
     public function capture(Deposit $deposit): bool

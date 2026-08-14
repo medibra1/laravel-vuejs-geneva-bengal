@@ -16,7 +16,7 @@ class StripeWebhookController extends Controller
      * Artisan::call('queue:work', ...)) — Stripe expects a fast 2xx and
      * will retry aggressively if this endpoint is slow, and a queue:work
      * call here would also process unrelated jobs (newsletter/contact
-     * emails, ReconcilePendingDeposits, ...) on a webhook request's
+     * emails, ReconcileCheckouts, ...) on a webhook request's
      * budget. In production QUEUE_CONNECTION=sync (see DEPLOY.md §1/§2 —
      * no daemon worker possible on Infomaniak's shared hosting), so
      * DepositPaymentProcessor::createFromPayment()'s own notifications

@@ -40,10 +40,7 @@ onMounted(() => document.addEventListener('keydown', closeOnEscape));
 onUnmounted(() => document.removeEventListener('keydown', closeOnEscape));
 
 function iconFor(notification: AppNotification): string {
-    if (notification.type === 'stripe_issue') {
-        return notification.reason === 'error' ? 'pi-exclamation-triangle' : 'pi-info-circle';
-    }
-
+    if (notification.type === 'stripe_issue' || notification.type === 'confirmation_undelivered') return 'pi-exclamation-triangle';
     if (notification.type === 'deposit_created') return 'pi-wallet';
     if (notification.type === 'newsletter_subscriber') return 'pi-send';
 
@@ -51,12 +48,11 @@ function iconFor(notification: AppNotification): string {
 }
 
 function iconColorClass(notification: AppNotification): string {
-    if (notification.type === 'stripe_issue') {
-        // Technical error needs a quick look, an expired reservation is
-        // just informative — see CLAUDE.md's notification spec.
-        return notification.reason === 'error'
-            ? 'bg-orange-100 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400'
-            : 'bg-neutral-100 text-neutral-500 dark:bg-white/5 dark:text-neutral-400';
+    // Both need a quick look — a technical error checking Stripe, or a
+    // client confirmation email that never got through — see CLAUDE.md's
+    // notification spec.
+    if (notification.type === 'stripe_issue' || notification.type === 'confirmation_undelivered') {
+        return 'bg-orange-100 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400';
     }
 
     return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400';

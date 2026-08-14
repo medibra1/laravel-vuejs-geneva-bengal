@@ -30,16 +30,6 @@ class Deposit extends Model
     /** @use HasFactory<DepositFactory> */
     use HasFactory;
 
-    /**
-     * A pending deposit older than this is considered an abandoned
-     * checkout — its PaymentIntent authorization (card holds typically last
-     * up to 7 days on Stripe, TWINT much less) is assumed dead and the cat
-     * it was holding is released. Used by ReconcilePendingDeposits'
-     * expiry check only — no longer relevant to blocksNewReservation()
-     * below, which stopped caring about `pending` deposits entirely.
-     */
-    public const PENDING_EXPIRY_HOURS = 24;
-
     protected function casts(): array
     {
         return [

@@ -93,11 +93,8 @@ class StripeGateway implements PaymentGateway
      *
      * No Deposit exists yet at this point (see CLAUDE.md) — everything
      * the caller needs to build one (checkout data, amount, currency)
-     * comes straight off the PaymentIntent itself, not a database lookup.
-     * name/email are the two fields a Deposit can't exist without;
-     * missing either means this PaymentIntent wasn't created by our own
-     * createPaymentIntent() (or Stripe truncated metadata some other way)
-     * — treated as unhandled rather than building a broken Deposit.
+     * comes straight off the PaymentIntent itself, not a database lookup —
+     * see buildResultFromIntent().
      */
     public function handleWebhook(Request $request): PaymentWebhookResult
     {
@@ -117,6 +114,39 @@ class StripeGateway implements PaymentGateway
 
         /** @var PaymentIntent $intent */
         $intent = $event->data->object;
+
+        return $this->buildResultFromIntent($intent);
+    }
+
+    /**
+     * Polled by ReconcileCheckouts (see CLAUDE.md) for an expired
+     * CheckoutHold — catches a webhook that never arrived: if Stripe
+     * itself reports the PaymentIntent as paid, the checkout data needed
+     * to build the Deposit (same shape handleWebhook() returns) comes
+     * straight off this single retrieve() rather than a second round
+     * trip. requires_capture/succeeded is the same "paid" criterion
+     * handleWebhook() reacts to — a card authorization awaiting capture,
+     * or a TWINT payment already auto-captured.
+     */
+    public function retrieveCheckoutData(string $paymentIntentId): PaymentWebhookResult
+    {
+        $intent = $this->client->paymentIntents->retrieve($paymentIntentId);
+
+        if (! in_array($intent->status, ['requires_capture', 'succeeded'], true)) {
+            return new PaymentWebhookResult(handled: false);
+        }
+
+        return $this->buildResultFromIntent($intent);
+    }
+
+    /**
+     * name/email are the two fields a Deposit can't exist without;
+     * missing either means this PaymentIntent wasn't created by our own
+     * createPaymentIntent() (or Stripe truncated metadata some other way)
+     * — treated as unhandled rather than building a broken Deposit.
+     */
+    private function buildResultFromIntent(PaymentIntent $intent): PaymentWebhookResult
+    {
         $metadata = $intent->metadata->toArray();
 
         if (! isset($metadata['name'], $metadata['email'])) {
