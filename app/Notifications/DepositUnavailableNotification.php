@@ -88,9 +88,22 @@ class DepositUnavailableNotification extends Notification implements ShouldQueue
             ? 'Paiement TWINT (auto-capturé, pas de simple annulation possible) débité puis remboursé.'
             : 'Autorisation carte annulée, aucun débit n\'a eu lieu.';
 
+        // Since DepositPaymentProcessor::createFromPayment() never
+        // persists a Deposit for the losing side of a race (see CLAUDE.md
+        // — "aucun Deposit créé pour le perdant"), $this->deposit here is
+        // often a transient, unsaved instance with no id — referencing
+        // the PaymentIntent instead, always present either way. Checked
+        // via ->exists (Eloquent's own bool flag for "has this been
+        // persisted") rather than ->id !== null: the id column is
+        // int-typed, never nullable, on a persisted row, so Larastan
+        // would otherwise flag that null check as always-true dead code.
+        $reference = $this->deposit->exists
+            ? "dépôt #{$this->deposit->id}"
+            : "PaymentIntent {$this->deposit->provider_reference}";
+
         return (new MailMessage)
             ->subject('Réservation en double détectée et résolue — Geneva Bengal')
-            ->line("Deux dépôts concurrents visaient le même chat ; celui de {$this->deposit->name} (dépôt #{$this->deposit->id}) a perdu la course.")
+            ->line("Deux dépôts concurrents visaient le même chat ; celui de {$this->deposit->name} ({$reference}) a perdu la course.")
             ->line("Chat concerné : {$this->deposit->cat->name}. Le client a été informé. {$outcomeLine}");
     }
 }

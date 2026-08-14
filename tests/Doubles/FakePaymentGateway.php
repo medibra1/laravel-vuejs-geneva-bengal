@@ -74,6 +74,17 @@ class FakePaymentGateway implements PaymentGateway
     public array $refundedDepositIds = [];
 
     /**
+     * provider_reference of every refund() call — same reasoning as
+     * cancelledProviderReferences above: DepositPaymentProcessor::createFromPayment()'s
+     * lost-race branch calls this with a transient, unsaved Deposit
+     * (never persisted for the loser, see CLAUDE.md), whose ->id is
+     * always null.
+     *
+     * @var array<int, string|null>
+     */
+    public array $refundedProviderReferences = [];
+
+    /**
      * What isCaptured() reports — set true to simulate a TWINT PaymentIntent
      * (auto-captured, see CLAUDE.md) instead of the default card one
      * (still just authorized under capture_method: manual).
@@ -114,6 +125,7 @@ class FakePaymentGateway implements PaymentGateway
     public function refund(Deposit $deposit): bool
     {
         $this->refundedDepositIds[] = $deposit->id;
+        $this->refundedProviderReferences[] = $deposit->provider_reference;
 
         return $this->refundResult;
     }

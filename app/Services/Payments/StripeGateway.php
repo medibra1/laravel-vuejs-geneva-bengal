@@ -2,7 +2,6 @@
 
 namespace App\Services\Payments;
 
-use App\Enums\DepositStatus;
 use App\Models\Deposit;
 use Illuminate\Http\Request;
 use Stripe\Exception\SignatureVerificationException;
@@ -87,9 +86,18 @@ class StripeGateway implements PaymentGateway
      *   confirmed in the app (TWINT doesn't support manual capture at
      *   all, see createPaymentIntent()) — there's no "awaiting capture"
      *   step for it, this *is* its "payment done" signal. Also fires a
-     *   second time, harmlessly, right after markPaid() itself captures a
-     *   card PaymentIntent — markPaid() is idempotent, so that repeat
-     *   delivery is just a no-op.
+     *   second time, harmlessly, right after DepositPaymentProcessor
+     *   itself captures a card PaymentIntent — createFromPayment() is
+     *   idempotent (keyed on provider_reference), so that repeat delivery
+     *   is just a no-op.
+     *
+     * No Deposit exists yet at this point (see CLAUDE.md) — everything
+     * the caller needs to build one (checkout data, amount, currency)
+     * comes straight off the PaymentIntent itself, not a database lookup.
+     * name/email are the two fields a Deposit can't exist without;
+     * missing either means this PaymentIntent wasn't created by our own
+     * createPaymentIntent() (or Stripe truncated metadata some other way)
+     * — treated as unhandled rather than building a broken Deposit.
      */
     public function handleWebhook(Request $request): PaymentWebhookResult
     {
@@ -109,17 +117,18 @@ class StripeGateway implements PaymentGateway
 
         /** @var PaymentIntent $intent */
         $intent = $event->data->object;
-        $depositId = $intent->metadata['deposit_id'] ?? null;
+        $metadata = $intent->metadata->toArray();
 
-        if ($depositId === null) {
+        if (! isset($metadata['name'], $metadata['email'])) {
             return new PaymentWebhookResult(handled: false);
         }
 
         return new PaymentWebhookResult(
             handled: true,
-            depositId: (int) $depositId,
-            providerReference: $intent->id,
-            status: DepositStatus::Paid,
+            paymentIntentId: $intent->id,
+            metadata: $metadata,
+            amount: $intent->amount,
+            currency: strtoupper($intent->currency),
         );
     }
 

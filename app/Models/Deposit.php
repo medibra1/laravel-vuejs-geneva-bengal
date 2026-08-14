@@ -16,11 +16,14 @@ use Illuminate\Support\Carbon;
  * @property ?PaymentMethod $payment_method Nullable — an admin-recorded reservation can be created with the method "to be defined later". Larastan doesn't infer enum casts declared via the casts(): array method syntax either way.
  * @property Carbon|null $paid_at
  * @property Carbon|null $finalized_at
+ * @property Carbon|null $confirmation_sent_at
+ * @property int $confirmation_attempts
  */
 #[Fillable([
     'cat_id', 'owner_id', 'name', 'email', 'phone', 'amount', 'currency',
     'status', 'provider', 'locale', 'provider_reference', 'payment_link_url',
     'payment_method', 'created_by', 'paid_at', 'finalized_at',
+    'confirmation_sent_at', 'confirmation_attempts',
 ])]
 class Deposit extends Model
 {
@@ -44,6 +47,7 @@ class Deposit extends Model
             'payment_method' => PaymentMethod::class,
             'paid_at' => 'datetime',
             'finalized_at' => 'datetime',
+            'confirmation_sent_at' => 'datetime',
         ];
     }
 
