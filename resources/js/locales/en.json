@@ -200,7 +200,8 @@
         "label_phone": "Phone (optional)",
         "continue_button": "Continue to payment",
         "cancel": "Cancel",
-        "cat_unavailable_error": "This kitten has just been reserved — please refresh the page."
+        "cat_unavailable_error": "This kitten has just been reserved — please refresh the page.",
+        "cat_checkout_in_progress": "Someone else is currently paying for this kitten. Please try again in a few minutes."
     },
     "depositPay": {
         "meta_title": "Pay your deposit — Geneva Bengal",

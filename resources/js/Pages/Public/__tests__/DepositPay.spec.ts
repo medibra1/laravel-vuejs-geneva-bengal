@@ -89,7 +89,7 @@ function mountDepositPay() {
             },
         },
         props: {
-            depositId: 42,
+            paymentIntentId: 'pi_test_123',
             clientSecret: 'pi_test_secret',
             stripePublishableKey: 'pk_test_123',
             catName: 'Simba',

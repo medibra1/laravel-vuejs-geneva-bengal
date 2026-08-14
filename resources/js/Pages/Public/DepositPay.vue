@@ -7,7 +7,7 @@ import type { Stripe, StripeElements, StripePaymentElement } from '@stripe/strip
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 
 const props = defineProps<{
-    depositId: number;
+    paymentIntentId: string;
     clientSecret: string;
     stripePublishableKey: string;
     catName: string | null;
@@ -36,9 +36,10 @@ const formattedAmount = computed(() =>
 // it doesn't, submitPayment() sends the visitor here itself once
 // confirmPayment() resolves. DepositReturn.vue (unchanged) reads the
 // deposit's real status from the database, never from this query string —
-// see CLAUDE.md.
-const returnUrl = computed(() => route('deposits.return', { deposit: props.depositId, status: 'success' }));
-const cancelHref = computed(() => route('deposits.return', { deposit: props.depositId, status: 'cancelled' }));
+// see CLAUDE.md. Keyed on the PaymentIntent id, not a deposit id: no
+// Deposit row exists yet at this point (see Public\DepositController).
+const returnUrl = computed(() => route('deposits.return', { paymentIntentId: props.paymentIntentId, status: 'success' }));
+const cancelHref = computed(() => route('deposits.return', { paymentIntentId: props.paymentIntentId, status: 'cancelled' }));
 
 onMounted(async () => {
     const stripeInstance = await loadStripe(props.stripePublishableKey);
