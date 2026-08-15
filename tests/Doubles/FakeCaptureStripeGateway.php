@@ -3,6 +3,7 @@
 namespace Tests\Doubles;
 
 use App\Models\Deposit;
+use App\Services\Payments\CheckoutData;
 use App\Services\Payments\PaymentIntentResult;
 use App\Services\Payments\StripeGateway;
 
@@ -12,8 +13,8 @@ use App\Services\Payments\StripeGateway;
  * crypto, no network call, so it's worth testing for real (see CLAUDE.md)
  * — while overriding every method that would otherwise hit the Stripe API
  * with a fake. Lets StripeWebhookTest exercise
- * DepositPaymentProcessor::markPaid()'s capture()/cancelAuthorization()
- * side effects (now triggered on every paid webhook, see CLAUDE.md) without
+ * DepositPaymentProcessor::createFromPayment()'s capture()/cancelAuthorization()
+ * side effects (triggered on every paid webhook, see CLAUDE.md) without
  * ever making a real Stripe call with the test suite's fake API key.
  */
 class FakeCaptureStripeGateway extends StripeGateway
@@ -34,18 +35,40 @@ class FakeCaptureStripeGateway extends StripeGateway
     public array $refundedDepositIds = [];
 
     /**
+     * provider_reference of every cancelAuthorization()/refund() call —
+     * DepositPaymentProcessor::createFromPayment()'s lost-race branch
+     * calls these with a transient, unsaved Deposit (never persisted for
+     * the loser, see CLAUDE.md), whose ->id is always null.
+     *
+     * @var array<int, string|null>
+     */
+    public array $cancelledProviderReferences = [];
+
+    /**
+     * @var array<int, string|null>
+     */
+    public array $refundedProviderReferences = [];
+
+    /**
      * What isCaptured() reports — set true to simulate a TWINT
      * PaymentIntent (auto-captured, see CLAUDE.md) instead of the default
      * card one (still just authorized under capture_method: manual).
      */
     public bool $isCapturedResult = false;
 
-    public function createPaymentIntent(Deposit $deposit): PaymentIntentResult
+    /**
+     * @var array<int, CheckoutData>
+     */
+    public array $createPaymentIntentCalls = [];
+
+    public function createPaymentIntent(CheckoutData $checkoutData): PaymentIntentResult
     {
+        $this->createPaymentIntentCalls[] = $checkoutData;
+        $fakeId = 'pi_test_fake_'.count($this->createPaymentIntentCalls);
+
         return new PaymentIntentResult(
-            id: 'pi_test_fake_'.$deposit->id,
-            clientSecret: 'pi_test_fake_'.$deposit->id.'_secret_test',
-            url: 'https://checkout.local/fake/'.$deposit->id,
+            id: $fakeId,
+            clientSecret: $fakeId.'_secret_test',
         );
     }
 
@@ -59,6 +82,7 @@ class FakeCaptureStripeGateway extends StripeGateway
     public function cancelAuthorization(Deposit $deposit): bool
     {
         $this->cancelledDepositIds[] = $deposit->id;
+        $this->cancelledProviderReferences[] = $deposit->provider_reference;
 
         return true;
     }
@@ -66,6 +90,7 @@ class FakeCaptureStripeGateway extends StripeGateway
     public function refund(Deposit $deposit): bool
     {
         $this->refundedDepositIds[] = $deposit->id;
+        $this->refundedProviderReferences[] = $deposit->provider_reference;
 
         return true;
     }

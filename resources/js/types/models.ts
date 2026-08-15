@@ -246,15 +246,14 @@ export interface AdminUser {
     last_login_at: string | null;
 }
 
-// `type`/`reason` mirror the `data` payload each App\Notifications\*
-// class writes via toDatabase() — see HandleInertiaRequests::notifications().
+// `type` mirrors the `data` payload each App\Notifications\* class writes
+// via toDatabase() — see HandleInertiaRequests::notifications().
 export interface AppNotification {
     id: string;
-    type: 'contact_request' | 'deposit_created' | 'stripe_issue' | 'newsletter_subscriber' | null;
+    type: 'contact_request' | 'deposit_created' | 'stripe_issue' | 'confirmation_undelivered' | 'newsletter_subscriber' | null;
     title: string | null;
     message: string | null;
     url: string | null;
-    reason: 'error' | 'expired' | null;
     read_at: string | null;
     created_at: string;
 }

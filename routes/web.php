@@ -11,6 +11,7 @@ use App\Http\Controllers\Public\NewsletterController;
 use App\Http\Controllers\Public\PageController;
 use App\Http\Controllers\Public\SitemapController;
 use App\Http\Controllers\Public\StripeWebhookController;
+use App\Jobs\ReconcileCheckouts;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
@@ -61,7 +62,25 @@ Route::localize(function (): void {
     Route::post('/deposits', [DepositController::class, 'store'])
         ->middleware(ProtectAgainstSpam::class)
         ->name('deposits.store');
-    Route::get('/deposits/{deposit}', [DepositController::class, 'show'])->name('deposits.return');
+    // store() needs the form data (name/email/cat_id) that only exists on
+    // the POST request that got the visitor here — a raw GET (browser
+    // reload, bookmarked/shared URL) has none of that to render the
+    // checkout page with, so there's nothing valid to show. Redirects to
+    // the kittens list rather than 405ing, so an accidental reload sends
+    // the visitor somewhere they can actually restart a reservation from.
+    Route::get('/deposits', fn () => redirect()->route('cats.index'));
+    // Called from Public/DepositPay.vue at the "Pay" click, not on page
+    // load — see DepositController::confirmIntent() and CLAUDE.md. A plain
+    // JSON endpoint, not an Inertia page: this is a background fetch that
+    // returns a client_secret, never a navigation.
+    Route::post('/deposits/confirm-intent', [DepositController::class, 'confirmIntent'])
+        ->middleware(ProtectAgainstSpam::class)
+        ->name('deposits.confirm-intent');
+    // Keyed on the Stripe PaymentIntent id, not a Deposit id: no Deposit is
+    // created up front (see CLAUDE.md) — the visitor lands here straight
+    // from the checkout page, before the webhook has necessarily built one.
+    // See DepositController::show().
+    Route::get('/deposits/return/{paymentIntentId}', [DepositController::class, 'show'])->name('deposits.return');
 });
 
 // Not locale-prefixed: Stripe doesn't know about /fr or /en, and this
@@ -86,6 +105,21 @@ Route::get('/cron/run', function (Request $request) {
 
     Artisan::call('schedule:run');
     Artisan::call('queue:work', ['--stop-when-empty' => true, '--max-time' => 50]);
+
+    // schedule:run only actually executes ReconcileCheckouts when this
+    // request happens to land on one of its fixed :00/:15/:30/:45 slots
+    // (Schedule::job(...)->everyFifteenMinutes(), see routes/console.php)
+    // — every other minute it's a silent no-op that still answers "OK",
+    // which is indistinguishable from a real run without checking the
+    // database. Infomaniak's task scheduler (see DEPLOY.md §4) only
+    // guarantees calling this URL at least every 15 minutes, not at those
+    // exact slots, so relying on schedule:run alone left up to ~15 minutes
+    // where a stale PaymentIntentTracking row sat unresolved even once its
+    // own grace period had passed. Dispatched directly here as well so
+    // every call to this endpoint actually reconciles, not just the ones
+    // that happen to align with the schedule's slots — safe to run this
+    // often since the job is idempotent (see CLAUDE.md).
+    dispatch_sync(new ReconcileCheckouts);
 
     return response('OK', 200);
 })->middleware('throttle:10,1')->name('cron.run');

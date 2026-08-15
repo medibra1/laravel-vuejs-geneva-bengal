@@ -151,7 +151,7 @@
     "depositReturn": {
         "meta_title": "Your deposit — Geneva Bengal",
         "paid_heading": "Thank you, your deposit has been received!",
-        "paid_body": "A confirmation email has just been sent to you. We'll get back to you very soon.",
+        "paid_body": "A confirmation email has just been sent to {email}. We'll get back to you very soon.",
         "cancelled_heading": "Payment not completed",
         "cancelled_body": "You cancelled the payment, no amount was charged. You can try again at any time from the kitten's page.",
         "unavailable_heading": "This kitten was just reserved",
@@ -159,7 +159,7 @@
         "pending_heading": "We're processing your payment",
         "pending_body": "This should only take a moment. You'll receive a confirmation email as soon as the payment is validated — no need to stay on this page.",
         "timeout_heading": "This is taking longer than expected",
-        "timeout_body": "Your payment is being processed but confirmation is taking a while. Don't worry: if the payment went through, you'll receive a confirmation email as soon as it's validated — you can safely close this page. If nothing happens within a few minutes, please contact us.",
+        "timeout_body": "Your payment is being processed but confirmation is taking a while. Don't worry: if the payment went through, you'll receive a confirmation email within 15 minutes at most — no action is required on your part, you can safely close this page. If nothing happens beyond that, please contact us.",
         "back_link": "Back to available kittens"
     },
     "newsletterUnsubscribed": {
@@ -212,7 +212,9 @@
         "generic_error": "Something went wrong during payment. Please try again.",
         "pay_button": "Pay",
         "paying_button": "Processing payment…",
-        "cancel_link": "Cancel and go back"
+        "cancel_link": "Cancel and go back",
+        "cat_unavailable": "This kitten has just been reserved by someone else. No payment was taken.",
+        "back_to_cat_link": "Back to available kittens"
     },
     "hero": {
         "tagline_script": "Cat breeder",

@@ -31,7 +31,7 @@ juste les noms de clé et ce qu'elles doivent contenir) :
 | `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` | lues une seule fois par `SuperAdminSeeder` au premier `migrate --seed` — changer le mot de passe ensuite depuis l'admin, ne pas garder cette valeur en tête |
 | `INERTIA_SSR_ENABLED` / `INERTIA_SSR_URL` | voir §2 — dépend de comment le process SSR est exposé en prod |
 | `CRON_SECRET` | voir §4 — protège l'endpoint qui remplace le cron classique sur l'hébergement mutualisé |
-| `QUEUE_CONNECTION` | voir §2 — `sync` recommandé sur mutualisé, `database` si un vrai worker tourne (Cloud Server) |
+| `QUEUE_CONNECTION` | **`sync`** sur mutualisé (voir §2 — décision ferme, pas une option parmi d'autres) ; `database` seulement si un vrai worker tourne (Cloud Server) |
 
 Point vérifié et **volontairement absent** de cette liste : **Sanctum**
 (`laravel/sanctum` est une dépendance Composer héritée de Breeze, mais
@@ -50,8 +50,8 @@ inertia:start-ssr` (qui lance `node bootstrap/ssr/ssr.js`) n'est utilisé
 qu'en dev via `docker-compose.yml` (service `ssr`, redémarré par Docker si
 besoin) ; en prod classique PHP/Apache, rien ne garderait ce process actif
 ni ne le relancerait après un crash ou un redémarrage serveur. Même
-problème pour la queue : **les 7 classes `app/Notifications/*` et le job
-`ReconcilePendingDeposits` implémentent toutes `ShouldQueue`** — sans un
+problème pour la queue : **les classes `app/Notifications/*` et le job
+`ReconcileCheckouts` implémentent toutes `ShouldQueue`** — sans un
 worker qui tourne, aucune notification (confirmation d'acompte, contact,
 newsletter...) n'est jamais réellement envoyée, les jobs restent en base
 dans la table `jobs` indéfiniment.
@@ -77,16 +77,30 @@ disponible sur ce palier) :
   site reste fonctionnel, juste sans le bénéfice SEO du SSR (voir Phase 8
   du projet, CLAUDE.md).
 - **Queue** : pas de process daemon possible du tout sur ce palier.
-  Recommandé : `QUEUE_CONNECTION=sync` en prod — chaque notification part
-  immédiatement, dans la requête HTTP qui la déclenche (formulaire de
-  contact, webhook Stripe...), sans worker à maintenir. Coût réel : la
-  requête attend l'envoi SMTP avant de répondre — acceptable pour le
-  volume d'un site vitrine d'élevage, pas un problème de débit. Alternative
-  si `QUEUE_CONNECTION=database` est gardé : déclencher
-  `php artisan queue:work --stop-when-empty --max-time=50` via la même
-  tâche planifiée que le scheduler (§4) plutôt qu'un vrai daemon — un
-  "worker" qui se relance toutes les 15 minutes et vide la file du moment,
-  pas un vrai temps réel mais fonctionnel sur ce palier.
+  **Décision ferme (pas une option parmi d'autres)** : `QUEUE_CONNECTION=sync`
+  en prod — chaque notification part immédiatement, dans la requête HTTP
+  qui la déclenche (formulaire de contact, webhook Stripe...), sans
+  worker à maintenir. `database` sans worker empilerait les jobs dans la
+  table `jobs` sans jamais les traiter. Coût réel : la requête attend
+  l'envoi SMTP avant de répondre — acceptable pour le volume d'un site
+  vitrine d'élevage, pas un problème de débit. Le dev Docker garde
+  `QUEUE_CONNECTION=database` (voir `docker-compose.yml`) : le container
+  `queue` y fait réellement tourner un worker, donc rien à changer côté
+  dev.
+  - Conséquence directe sur `DepositPaymentProcessor::createFromPayment()`
+    (voir CLAUDE.md) : en `sync`, l'envoi de
+    `DepositConfirmedNotification`/`DepositPaidNotification` est
+    synchrone dans la requête webhook Stripe — un échec SMTP n'est donc
+    **pas** rejoué automatiquement par un worker. `deposits.confirmation_sent_at`/
+    `confirmation_attempts` existent précisément pour ça : un `Deposit`
+    payé dont la confirmation n'est jamais partie reste détectable et
+    rattrapable (voir le job de rattrapage prévu séparément), plutôt que
+    silencieusement perdu.
+  - ⚠️ Piège à vérifier au premier test réel : `MAIL_FROM_ADDRESS` doit
+    correspondre exactement au compte SMTP authentifié Infomaniak — sinon
+    l'anti-spoofing rejette l'envoi, et sans le `Log::error` explicite de
+    `createFromPayment()`, l'erreur disparaîtrait silencieusement dans le
+    try/catch.
 
 ### Sur Cloud Server (VPS, accès root/SSH)
 
@@ -124,7 +138,7 @@ logique `!-f` de chaque règle en dessous.
 
 ## 4. Tâche planifiée (job de réconciliation Stripe)
 
-`routes/console.php` : `Schedule::job(new ReconcilePendingDeposits)->daily();`
+`routes/console.php` : `Schedule::job(new ReconcileCheckouts)->everyFifteenMinutes();`
 — syntaxe Laravel 11+ (pas de `app/Console/Kernel.php` dans ce repo, ce
 projet est en Laravel 13). Le déclenchement lui-même est déjà correct,
 rien à changer côté code — mais **rien n'exécute jamais ce planificateur**

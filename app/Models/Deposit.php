@@ -16,26 +16,19 @@ use Illuminate\Support\Carbon;
  * @property ?PaymentMethod $payment_method Nullable — an admin-recorded reservation can be created with the method "to be defined later". Larastan doesn't infer enum casts declared via the casts(): array method syntax either way.
  * @property Carbon|null $paid_at
  * @property Carbon|null $finalized_at
+ * @property Carbon|null $confirmation_sent_at
+ * @property int $confirmation_attempts
  */
 #[Fillable([
     'cat_id', 'owner_id', 'name', 'email', 'phone', 'amount', 'currency',
     'status', 'provider', 'locale', 'provider_reference', 'payment_link_url',
     'payment_method', 'created_by', 'paid_at', 'finalized_at',
+    'confirmation_sent_at', 'confirmation_attempts',
 ])]
 class Deposit extends Model
 {
     /** @use HasFactory<DepositFactory> */
     use HasFactory;
-
-    /**
-     * A pending deposit older than this is considered an abandoned
-     * checkout — its PaymentIntent authorization (card holds typically last
-     * up to 7 days on Stripe, TWINT much less) is assumed dead and the cat
-     * it was holding is released. Used by ReconcilePendingDeposits'
-     * expiry check only — no longer relevant to blocksNewReservation()
-     * below, which stopped caring about `pending` deposits entirely.
-     */
-    public const PENDING_EXPIRY_HOURS = 24;
 
     protected function casts(): array
     {
@@ -44,6 +37,7 @@ class Deposit extends Model
             'payment_method' => PaymentMethod::class,
             'paid_at' => 'datetime',
             'finalized_at' => 'datetime',
+            'confirmation_sent_at' => 'datetime',
         ];
     }
 

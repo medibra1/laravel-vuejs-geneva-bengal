@@ -2,7 +2,6 @@
 
 namespace App\Services\Payments;
 
-use App\Enums\DepositStatus;
 use App\Models\Deposit;
 use Illuminate\Http\Request;
 use Stripe\Exception\SignatureVerificationException;
@@ -35,29 +34,40 @@ class StripeGateway implements PaymentGateway
      * capture, and loseRace() checks it too before choosing
      * cancelAuthorization() (card, still just authorized) or refund()
      * (TWINT, already captured by the time we find out).
+     *
+     * Takes CheckoutData instead of a Deposit — the public checkout flow
+     * no longer creates a Deposit row before payment is confirmed (see
+     * CLAUDE.md). Every field the webhook will need to build the real
+     * Deposit rides along as PaymentIntent metadata instead, since Stripe
+     * is the only place this data lives until then.
+     *
+     * Called only from Public\DepositController::confirmIntent(), at the
+     * "Pay" click — never on page load (see CLAUDE.md: no PaymentIntent,
+     * no Stripe call at all, until the visitor actually commits to paying).
      */
-    public function createPaymentIntent(Deposit $deposit): PaymentIntentResult
+    public function createPaymentIntent(CheckoutData $checkoutData): PaymentIntentResult
     {
         $intent = $this->client->paymentIntents->create([
-            'amount' => $deposit->amount,
-            'currency' => strtolower($deposit->currency),
+            'amount' => $checkoutData->amount,
+            'currency' => strtolower($checkoutData->currency),
             'payment_method_types' => ['card', 'twint'],
             'payment_method_options' => [
                 'card' => ['capture_method' => 'manual'],
             ],
-            // Read back on the webhook to identify which Deposit a
-            // payment_intent.amount_capturable_updated /
-            // payment_intent.succeeded event belongs to — Stripe has no
-            // other reference to our own primary key.
-            'metadata' => [
-                'deposit_id' => (string) $deposit->id,
-            ],
+            // Read back by the webhook to build the Deposit once payment
+            // is confirmed — no Deposit row exists yet at this point.
+            'metadata' => array_filter([
+                'cat_id' => $checkoutData->catId === null ? null : (string) $checkoutData->catId,
+                'name' => $checkoutData->name,
+                'email' => $checkoutData->email,
+                'phone' => $checkoutData->phone,
+                'locale' => $checkoutData->locale,
+            ], fn (?string $value) => $value !== null),
         ]);
 
         return new PaymentIntentResult(
             id: $intent->id,
             clientSecret: $intent->client_secret,
-            url: route('deposits.return', $deposit),
         );
     }
 
@@ -74,9 +84,15 @@ class StripeGateway implements PaymentGateway
      *   confirmed in the app (TWINT doesn't support manual capture at
      *   all, see createPaymentIntent()) — there's no "awaiting capture"
      *   step for it, this *is* its "payment done" signal. Also fires a
-     *   second time, harmlessly, right after markPaid() itself captures a
-     *   card PaymentIntent — markPaid() is idempotent, so that repeat
-     *   delivery is just a no-op.
+     *   second time, harmlessly, right after DepositPaymentProcessor
+     *   itself captures a card PaymentIntent — createFromPayment() is
+     *   idempotent (keyed on provider_reference), so that repeat delivery
+     *   is just a no-op.
+     *
+     * No Deposit exists yet at this point (see CLAUDE.md) — everything
+     * the caller needs to build one (checkout data, amount, currency)
+     * comes straight off the PaymentIntent itself, not a database lookup —
+     * see buildResultFromIntent().
      */
     public function handleWebhook(Request $request): PaymentWebhookResult
     {
@@ -96,17 +112,51 @@ class StripeGateway implements PaymentGateway
 
         /** @var PaymentIntent $intent */
         $intent = $event->data->object;
-        $depositId = $intent->metadata['deposit_id'] ?? null;
 
-        if ($depositId === null) {
+        return $this->buildResultFromIntent($intent);
+    }
+
+    /**
+     * Polled by ReconcileCheckouts (see CLAUDE.md) for a stale
+     * PaymentIntentTracking row — catches a webhook that never arrived: if
+     * Stripe itself reports the PaymentIntent as paid, the checkout data
+     * needed to build the Deposit (same shape handleWebhook() returns)
+     * comes straight off this single retrieve() rather than a second round
+     * trip. requires_capture/succeeded is the same "paid" criterion
+     * handleWebhook() reacts to — a card authorization awaiting capture,
+     * or a TWINT payment already auto-captured.
+     */
+    public function retrieveCheckoutData(string $paymentIntentId): PaymentWebhookResult
+    {
+        $intent = $this->client->paymentIntents->retrieve($paymentIntentId);
+
+        if (! in_array($intent->status, ['requires_capture', 'succeeded'], true)) {
+            return new PaymentWebhookResult(handled: false);
+        }
+
+        return $this->buildResultFromIntent($intent);
+    }
+
+    /**
+     * name/email are the two fields a Deposit can't exist without;
+     * missing either means this PaymentIntent wasn't created by our own
+     * createPaymentIntent() (or Stripe truncated metadata some other way)
+     * — treated as unhandled rather than building a broken Deposit.
+     */
+    private function buildResultFromIntent(PaymentIntent $intent): PaymentWebhookResult
+    {
+        $metadata = $intent->metadata->toArray();
+
+        if (! isset($metadata['name'], $metadata['email'])) {
             return new PaymentWebhookResult(handled: false);
         }
 
         return new PaymentWebhookResult(
             handled: true,
-            depositId: (int) $depositId,
-            providerReference: $intent->id,
-            status: DepositStatus::Paid,
+            paymentIntentId: $intent->id,
+            metadata: $metadata,
+            amount: $intent->amount,
+            currency: strtoupper($intent->currency),
         );
     }
 

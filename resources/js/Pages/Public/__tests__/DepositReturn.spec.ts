@@ -32,7 +32,7 @@ const messages = {
         depositReturn: {
             meta_title: 'Votre acompte — Geneva Bengal',
             paid_heading: 'Merci, votre acompte a bien été reçu !',
-            paid_body: 'Un e-mail de confirmation vient de vous être envoyé.',
+            paid_body: 'Un e-mail de confirmation vient de vous être envoyé à {email}.',
             cancelled_heading: 'Paiement non finalisé',
             cancelled_body: "Vous avez annulé le paiement, aucun montant n'a été débité.",
             unavailable_heading: "Ce chaton vient d'être réservé",
@@ -48,7 +48,7 @@ const messages = {
 
 const i18n = createI18n({ legacy: false, locale: 'fr', messages });
 
-function mountReturn(depositStatus: string) {
+function mountReturn(depositStatus: string, email: string | null = 'marie@example.com') {
     return mount(DepositReturn, {
         global: {
             plugins: [i18n],
@@ -69,7 +69,7 @@ function mountReturn(depositStatus: string) {
                 Link: true,
             },
         },
-        props: { depositStatus },
+        props: { depositStatus, email },
     });
 }
 
@@ -120,6 +120,14 @@ describe('DepositReturn polling', () => {
         await vi.advanceTimersByTimeAsync(3500 * 5);
         expect(routerReload).toHaveBeenCalledTimes(1);
 
+        vi.useRealTimers();
+    });
+
+    it('names the address the confirmation email was sent to on the paid screen', () => {
+        vi.useFakeTimers();
+        const wrapper = mountReturn('paid', 'marie@example.com');
+
+        expect(wrapper.text()).toContain('marie@example.com');
         vi.useRealTimers();
     });
 

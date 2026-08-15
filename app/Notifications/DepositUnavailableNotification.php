@@ -3,8 +3,6 @@
 namespace App\Notifications;
 
 use App\Models\Deposit;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -30,11 +28,22 @@ use Illuminate\Notifications\Notification;
  * client confirms in the app, so by the time this fires it may already
  * have been charged and had to be refunded instead. The wording must not
  * claim "you were never charged" in that case.
+ *
+ * Deliberately *not* ShouldQueue — $this->deposit is often a transient,
+ * never-saved Deposit (see loseRace()'s own docblock: the losing side of a
+ * race is never persisted). Laravel serializes every queued job/notification
+ * via SerializesModels before dispatch, even under QUEUE_CONNECTION=sync —
+ * that serialization re-resolves any Eloquent model by id on the other end,
+ * which throws ModelNotFoundException for a model that was never saved and
+ * has no id. That exception previously surfaced *after* loseRace() had
+ * already called the (irreversible) Stripe refund/cancelAuthorization,
+ * rolling back the enclosing DB transaction and leaving the PaymentIntent
+ * refunded on Stripe's side but with no trace of that on ours — see
+ * CLAUDE.md. Sending synchronously sidesteps the serialization step
+ * entirely.
  */
-class DepositUnavailableNotification extends Notification implements ShouldQueue
+class DepositUnavailableNotification extends Notification
 {
-    use Queueable;
-
     public function __construct(
         public Deposit $deposit,
         public bool $refunded = false,
@@ -88,9 +97,22 @@ class DepositUnavailableNotification extends Notification implements ShouldQueue
             ? 'Paiement TWINT (auto-capturé, pas de simple annulation possible) débité puis remboursé.'
             : 'Autorisation carte annulée, aucun débit n\'a eu lieu.';
 
+        // Since DepositPaymentProcessor::createFromPayment() never
+        // persists a Deposit for the losing side of a race (see CLAUDE.md
+        // — "aucun Deposit créé pour le perdant"), $this->deposit here is
+        // often a transient, unsaved instance with no id — referencing
+        // the PaymentIntent instead, always present either way. Checked
+        // via ->exists (Eloquent's own bool flag for "has this been
+        // persisted") rather than ->id !== null: the id column is
+        // int-typed, never nullable, on a persisted row, so Larastan
+        // would otherwise flag that null check as always-true dead code.
+        $reference = $this->deposit->exists
+            ? "dépôt #{$this->deposit->id}"
+            : "PaymentIntent {$this->deposit->provider_reference}";
+
         return (new MailMessage)
             ->subject('Réservation en double détectée et résolue — Geneva Bengal')
-            ->line("Deux dépôts concurrents visaient le même chat ; celui de {$this->deposit->name} (dépôt #{$this->deposit->id}) a perdu la course.")
+            ->line("Deux dépôts concurrents visaient le même chat ; celui de {$this->deposit->name} ({$reference}) a perdu la course.")
             ->line("Chat concerné : {$this->deposit->cat->name}. Le client a été informé. {$outcomeLine}");
     }
 }

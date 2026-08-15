@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useForm, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { useForm, usePage } from '@inertiajs/vue3';
 import type { PageProps } from '@/types';
 
 const props = defineProps<{
@@ -23,8 +23,8 @@ const form = useForm({
 
 function submit(): void {
     // A normal Inertia visit — the response renders Public/DepositPay.vue
-    // directly, with the PaymentIntent's client_secret as a prop (see
-    // CLAUDE.md), no full-page redirect involved.
+    // directly (see CLAUDE.md), no PaymentIntent is created yet at this
+    // point, no full-page redirect involved.
     form.post(route('deposits.store'));
 }
 </script>
@@ -62,11 +62,15 @@ function submit(): void {
                 {{ $t('deposit.stripe_notice') }}
             </p>
 
-            <!-- cat_id only ever has one possible validation error (see
-                 CatIsAvailableForDeposit / Public\DepositController::store()'s
-                 own re-check) — shown as a friendly translated message
-                 rather than the raw backend string, which has no French
-                 translation (see CLAUDE.md on the three i18n layers). -->
+            <!-- The only validation error cat_id can carry at this stage is
+                 CatIsAvailableForDeposit's own "already reserved" — the
+                 backend's own text (translated per locale via lang/*.json,
+                 see CLAUDE.md on the three i18n layers) is never displayed
+                 directly, this friendly vue-i18n message is shown instead.
+                 A "someone else is paying right now" collision can no
+                 longer happen here — no PaymentIntent exists yet at this
+                 point, only confirm-intent's own re-check (surfaced on
+                 Public/DepositPay.vue) can ever hit that race. -->
             <p v-if="form.errors.cat_id" class="text-sm text-red-600">{{ $t('deposit.cat_unavailable_error') }}</p>
 
             <div>

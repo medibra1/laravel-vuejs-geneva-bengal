@@ -7,13 +7,16 @@ use App\Enums\DepositStatus;
 use App\Models\Cat;
 use App\Models\Deposit;
 use App\Models\Owner;
+use App\Models\PaymentIntentTracking;
 use App\Notifications\Concerns\NotifiesStaff;
 use App\Notifications\DepositConfirmedNotification;
 use App\Notifications\DepositPaidNotification;
 use App\Notifications\DepositUnavailableNotification;
 use App\Notifications\NewDepositCreatedNotification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Throwable;
 
 /**
  * Shared by the webhook (normal path), the daily reconciliation job
@@ -106,23 +109,197 @@ class DepositPaymentProcessor
     }
 
     /**
-     * A pending deposit whose PaymentIntent authorization has gone past its
-     * own expiry (see Deposit::PENDING_EXPIRY_HOURS) can never be paid
-     * anymore — release the cat it was holding back to `disponible`.
-     * Guarded on the cat still being `en_attente` so this never clobbers a
-     * status set by something else in the meantime (e.g. already finalized
-     * to `adopte`).
+     * Builds the Deposit itself — the webhook (Public\StripeWebhookController)
+     * no longer has one to update, since Public\DepositController::store()
+     * stopped creating one up front (see CLAUDE.md). Everything needed
+     * rides along as PaymentIntent metadata instead (see CheckoutData /
+     * StripeGateway::createPaymentIntent()).
+     *
+     * This is now the *sole* arbitration point between two visitors who
+     * both confirm a payment for the same cat — nothing upstream blocks
+     * that from happening (see CLAUDE.md: a PaymentIntent is created freely
+     * for any visitor who clicks "Pay", no preliminary hold). Same
+     * lock-then-recheck shape as markPaid() above, but there is no existing
+     * Deposit row to lock for the cat this PaymentIntent is racing against
+     * — locks the Cat row itself instead, which serializes two concurrent
+     * createFromPayment() calls for the same cat.
+     *
+     * Lost race (more common than before this hold-free flow, though still
+     * expected to be rare in practice — two visitors would need to both
+     * complete payment for the same cat before either webhook lands):
+     * the exact same cancel/refund + DepositUnavailableNotification
+     * handling as markPaid()'s own loseRace() below, reused as-is.
+     * Deliberately builds a transient, never-saved Deposit to hand it
+     * rather than persisting one for the loser: update() on an unsaved
+     * model is a harmless no-op (Eloquent checks $this->exists first), so
+     * loseRace()'s own ->update(['status' => Unavailable]) call simply
+     * does nothing here, while its gateway calls and notifications still
+     * fire correctly off the transient instance's attributes.
+     *
+     * The client/staff confirmation emails (DepositConfirmedNotification/
+     * DepositPaidNotification) are sent after this transaction commits,
+     * never from inside it: the Stripe capture above is not reversible
+     * from our side, but a DB transaction is — if a mail failure inside
+     * DB::transaction() rolled it back, the client would be charged with
+     * no Deposit row to show for it. See CLAUDE.md.
+     *
+     * QUEUE_CONNECTION=sync in production (see DEPLOY.md §1/§2 — no
+     * daemon worker possible on Infomaniak's shared hosting), so these
+     * notifications are not fire-and-forget: each one is its own
+     * try/catch, logged on failure rather than left to bubble up and
+     * turn a successful payment into a 5xx response to Stripe (which
+     * would only cause a retry — createFromPayment() is idempotent via
+     * provider_reference, so the retry would just find the Deposit
+     * already there and never get a second chance to send the mail).
+     * Client mail first, staff mail after: Infomaniak's SMTP costs
+     * roughly 1-2s per message (an HTTP API would be a few hundred ms),
+     * and staff mail goes out once per active admin — if the time budget
+     * gets tight, staff waits, not the payer.
+     *
+     * @param  array<string, string>  $metadata
      */
-    public function expire(Deposit $deposit): void
+    public function createFromPayment(array $metadata, string $paymentIntentId, ?int $amount, ?string $currency): ?Deposit
     {
-        if ($deposit->status !== DepositStatus::Pending) {
-            return;
+        $catId = isset($metadata['cat_id']) ? (int) $metadata['cat_id'] : null;
+
+        $deposit = DB::transaction(function () use ($metadata, $paymentIntentId, $amount, $currency, $catId): ?Deposit {
+            if ($catId !== null) {
+                Cat::whereKey($catId)->lockForUpdate()->first();
+
+                $lostRace = Deposit::query()
+                    ->where('cat_id', $catId)
+                    ->where('status', DepositStatus::Paid)
+                    ->lockForUpdate()
+                    ->exists();
+
+                if ($lostRace) {
+                    $this->loseRace(new Deposit([
+                        'cat_id' => $catId,
+                        'name' => $metadata['name'] ?? '',
+                        'email' => $metadata['email'] ?? '',
+                        'provider_reference' => $paymentIntentId,
+                        'locale' => $metadata['locale'] ?? null,
+                    ]));
+
+                    // Same reasoning as the winning branch below: nothing
+                    // left to track once this PaymentIntent is resolved,
+                    // one way or the other. Missing here previously meant
+                    // ReconcileCheckouts kept re-processing an already-lost
+                    // PaymentIntent on every run — refund()/cancelAuthorization()
+                    // called a second time on an already-refunded/cancelled
+                    // PaymentIntent throws on Stripe's side ("cannot refund
+                    // amount=0"), which went uncaught and aborted the whole
+                    // batch, silently starving every other stale row behind
+                    // it in the same run. See CLAUDE.md.
+                    PaymentIntentTracking::query()->where('payment_intent_id', $paymentIntentId)->delete();
+
+                    return null;
+                }
+            }
+
+            $created = Deposit::create([
+                'cat_id' => $catId,
+                'name' => $metadata['name'] ?? '',
+                'email' => $metadata['email'] ?? '',
+                'phone' => $metadata['phone'] ?? null,
+                'amount' => $amount,
+                'currency' => $currency,
+                'status' => DepositStatus::Paid,
+                'provider' => 'stripe',
+                'provider_reference' => $paymentIntentId,
+                'locale' => $metadata['locale'] ?? null,
+                'paid_at' => now(),
+            ]);
+
+            // TWINT auto-captures (no capture_method: manual support — see
+            // StripeGateway::createPaymentIntent()), so by the time this
+            // runs it may already be captured; a card authorization never
+            // is yet at this point. Calling capture() on an
+            // already-captured PaymentIntent would itself fail on
+            // Stripe's side.
+            if (! $this->gateway->isCaptured($created)) {
+                $this->gateway->capture($created);
+            }
+
+            if ($catId !== null) {
+                $created->cat->setStatus(CatStatus::Pending->value);
+            }
+
+            // The tracking row is no longer needed once a real Deposit
+            // exists to represent this PaymentIntent — see
+            // PaymentIntentTracking's own docblock.
+            PaymentIntentTracking::query()->where('payment_intent_id', $paymentIntentId)->delete();
+
+            return $created;
+        });
+
+        if ($deposit !== null) {
+            $this->sendConfirmationNotifications($deposit);
         }
 
-        $deposit->update(['status' => DepositStatus::Cancelled]);
+        return $deposit;
+    }
 
-        if ($deposit->cat_id !== null && $deposit->cat->status === CatStatus::Pending->value) {
-            $deposit->cat->setStatus(CatStatus::Available->value);
+    /**
+     * One try/catch per send, not a single one around both — a failure on
+     * the staff mail must never suppress the client's own confirmation,
+     * and vice versa. Logged explicitly on failure: a misconfigured
+     * MAIL_FROM_ADDRESS (must match the authenticated Infomaniak SMTP
+     * account, or anti-spoofing silently rejects the send) would
+     * otherwise disappear into this catch block without a trace. See
+     * CLAUDE.md.
+     */
+    private function sendConfirmationNotifications(Deposit $deposit): void
+    {
+        $this->sendClientConfirmation($deposit);
+
+        try {
+            Notification::send($this->activeStaff(), new DepositPaidNotification($deposit));
+        } catch (Throwable $e) {
+            Log::error('Failed to send DepositPaidNotification', [
+                'deposit_id' => $deposit->id,
+                'exception' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Just the client-facing half of sendConfirmationNotifications() above
+     * — also called directly by ReconcileCheckouts (see CLAUDE.md) to
+     * retry a confirmation that previously failed to send, without
+     * re-notifying staff a second time about a Deposit they already got
+     * DepositPaidNotification for when it was first created.
+     *
+     * Notification::sendNow() rather than ->notify()/Notification::send():
+     * DepositConfirmedNotification implements ShouldQueue, so a plain
+     * notify() only ever confirms the job was *dispatched* — in
+     * production (QUEUE_CONNECTION=sync, see CLAUDE.md) that happens to
+     * run inline and this distinction is invisible, but with any real
+     * async queue driver (e.g. dev's QUEUE_CONNECTION=database, worked by
+     * a separate process) the dispatch itself always "succeeds" even if
+     * the actual SMTP send later fails in the worker — this try/catch
+     * would never see that failure, and confirmation_sent_at would be
+     * marked true for an email that was never actually delivered.
+     * sendNow() forces the notification through synchronously,
+     * bypassing the queue entirely, so this method's own try/catch is
+     * always the one that sees a real delivery failure.
+     */
+    public function sendClientConfirmation(Deposit $deposit): void
+    {
+        $deposit->increment('confirmation_attempts');
+
+        try {
+            Notification::sendNow(
+                Notification::route('mail', $deposit->email),
+                (new DepositConfirmedNotification($deposit))->locale($deposit->locale),
+            );
+
+            $deposit->update(['confirmation_sent_at' => now()]);
+        } catch (Throwable $e) {
+            Log::error('Failed to send DepositConfirmedNotification', [
+                'deposit_id' => $deposit->id,
+                'exception' => $e->getMessage(),
+            ]);
         }
     }
 

@@ -3,6 +3,7 @@
 namespace Tests\Doubles;
 
 use App\Models\Deposit;
+use App\Services\Payments\CheckoutData;
 use App\Services\Payments\PaymentGateway;
 use App\Services\Payments\PaymentIntentResult;
 use App\Services\Payments\PaymentWebhookResult;
@@ -24,15 +25,30 @@ class FakePaymentGateway implements PaymentGateway
 
     /**
      * Set to simulate isCheckoutPaid() blowing up (network error, Stripe
-     * API error, ...) — see ReconcilePendingDeposits' try/catch.
+     * API error, ...) — see ReconcileCheckouts' try/catch.
      */
     public ?\Throwable $checkoutPaidException = null;
+
+    /**
+     * What retrieveCheckoutData() returns for a given payment_intent_id —
+     * lets a test control ReconcileCheckouts' volet 1 (paid/unpaid/error)
+     * without a real Stripe call. Defaults to "not handled" (unpaid).
+     *
+     * @var array<string, PaymentWebhookResult>
+     */
+    public array $checkoutDataResults = [];
+
+    /**
+     * Set to simulate retrieveCheckoutData() blowing up (network error,
+     * Stripe API error, ...) — see ReconcileCheckouts' try/catch.
+     */
+    public ?\Throwable $retrieveCheckoutDataException = null;
 
     /**
      * Ids of every Deposit capture()/cancelAuthorization() was called for
      * — lets a test assert a PaymentIntent was (or wasn't) actually
      * charged/released, without a real Stripe call. See the "lost the
-     * race" tests in ReconcilePendingDepositsTest.
+     * race" tests in ReconcileCheckoutsTest.
      *
      * @var array<int, int>
      */
@@ -44,19 +60,44 @@ class FakePaymentGateway implements PaymentGateway
     public array $cancelledDepositIds = [];
 
     /**
-     * Ids of every Deposit createPaymentIntent() was called for — lets a
+     * provider_reference of every cancelAuthorization() call — tracked
+     * separately from cancelledDepositIds because
+     * Public\DepositController::store() now calls this with a transient,
+     * unsaved Deposit carrying only provider_reference (a lost
+     * CheckoutHold acquisition, before any real Deposit exists — see
+     * CLAUDE.md), whose ->id is always null.
+     *
+     * @var array<int, string|null>
+     */
+    public array $cancelledProviderReferences = [];
+
+    /**
+     * Every CheckoutData createPaymentIntent() was called with — lets a
      * test assert a PaymentIntent was never created at all, e.g. when
      * Public\DepositController::store()'s own race re-check should have
-     * rejected the request before ever reaching the gateway.
+     * rejected the request before ever reaching the gateway. No Deposit
+     * exists yet at this point (see CLAUDE.md), so this tracks the
+     * checkout data itself rather than a Deposit id.
      *
-     * @var array<int, int>
+     * @var array<int, CheckoutData>
      */
-    public array $createPaymentIntentDepositIds = [];
+    public array $createPaymentIntentCalls = [];
 
     /**
      * @var array<int, int>
      */
     public array $refundedDepositIds = [];
+
+    /**
+     * provider_reference of every refund() call — same reasoning as
+     * cancelledProviderReferences above: DepositPaymentProcessor::createFromPayment()'s
+     * lost-race branch calls this with a transient, unsaved Deposit
+     * (never persisted for the loser, see CLAUDE.md), whose ->id is
+     * always null.
+     *
+     * @var array<int, string|null>
+     */
+    public array $refundedProviderReferences = [];
 
     /**
      * What isCaptured() reports — set true to simulate a TWINT PaymentIntent
@@ -65,14 +106,25 @@ class FakePaymentGateway implements PaymentGateway
      */
     public bool $isCapturedResult = false;
 
-    public function createPaymentIntent(Deposit $deposit): PaymentIntentResult
+    /**
+     * Set to simulate capture() blowing up (network error, Stripe API
+     * error, ...) — lets a test exercise ReconcileCheckouts' per-row
+     * resilience: one row throwing must never abort the rest of the batch.
+     * One-shot (cleared to null right after throwing once) rather than a
+     * persistent flag: this gateway instance is shared across every row in
+     * a batch, so a persistent exception would fail *every* row's
+     * capture(), not just the one a test means to simulate as broken.
+     */
+    public ?\Throwable $captureException = null;
+
+    public function createPaymentIntent(CheckoutData $checkoutData): PaymentIntentResult
     {
-        $this->createPaymentIntentDepositIds[] = $deposit->id;
+        $this->createPaymentIntentCalls[] = $checkoutData;
+        $fakeId = 'pi_test_fake_'.count($this->createPaymentIntentCalls);
 
         return new PaymentIntentResult(
-            id: 'pi_test_fake_'.$deposit->id,
-            clientSecret: 'pi_test_fake_'.$deposit->id.'_secret_test',
-            url: 'https://checkout.local/fake/'.$deposit->id,
+            id: $fakeId,
+            clientSecret: $fakeId.'_secret_test',
         );
     }
 
@@ -81,8 +133,24 @@ class FakePaymentGateway implements PaymentGateway
         return new PaymentWebhookResult(handled: false);
     }
 
+    public function retrieveCheckoutData(string $paymentIntentId): PaymentWebhookResult
+    {
+        if ($this->retrieveCheckoutDataException !== null) {
+            throw $this->retrieveCheckoutDataException;
+        }
+
+        return $this->checkoutDataResults[$paymentIntentId] ?? new PaymentWebhookResult(handled: false);
+    }
+
     public function capture(Deposit $deposit): bool
     {
+        if ($this->captureException !== null) {
+            $exception = $this->captureException;
+            $this->captureException = null;
+
+            throw $exception;
+        }
+
         $this->capturedDepositIds[] = $deposit->id;
 
         return true;
@@ -91,6 +159,7 @@ class FakePaymentGateway implements PaymentGateway
     public function cancelAuthorization(Deposit $deposit): bool
     {
         $this->cancelledDepositIds[] = $deposit->id;
+        $this->cancelledProviderReferences[] = $deposit->provider_reference;
 
         return true;
     }
@@ -98,6 +167,7 @@ class FakePaymentGateway implements PaymentGateway
     public function refund(Deposit $deposit): bool
     {
         $this->refundedDepositIds[] = $deposit->id;
+        $this->refundedProviderReferences[] = $deposit->provider_reference;
 
         return $this->refundResult;
     }

@@ -159,11 +159,16 @@ class DepositController extends Controller
     }
 
     /**
-     * On-demand counterpart to the webhook and ReconcilePendingDeposits'
-     * daily poll — lets an admin check right now instead of waiting for
-     * either, e.g. when a client says they paid but the webhook seems
-     * stuck. Only meaningful for a still-pending Stripe deposit: any other
-     * combination is already resolved one way or another.
+     * On-demand counterpart to the webhook — lets an admin check right now
+     * instead of waiting for it, e.g. when a client says they paid but the
+     * webhook seems stuck. Only meaningful for a still-pending Stripe
+     * deposit: any other combination is already resolved one way or
+     * another. Distinct from ReconcileCheckouts (see CLAUDE.md), which no
+     * longer polls Deposit rows for the public flow at all — it reconciles
+     * stale PaymentIntentTracking rows instead, since the public checkout
+     * doesn't create a pending Stripe Deposit anymore. This action still
+     * operates on a historical Deposit row (payment_method = stripe,
+     * created before that option was removed from the admin form).
      */
     public function verifyStripe(Deposit $deposit, PaymentGateway $gateway, DepositPaymentProcessor $processor): RedirectResponse
     {

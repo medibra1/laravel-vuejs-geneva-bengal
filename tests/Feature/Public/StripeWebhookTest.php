@@ -4,14 +4,19 @@ use App\Enums\CatStatus;
 use App\Enums\DepositStatus;
 use App\Models\Cat;
 use App\Models\Deposit;
+use App\Models\PaymentIntentTracking;
 use App\Models\User;
 use App\Notifications\DepositConfirmedNotification;
 use App\Notifications\DepositPaidNotification;
 use App\Notifications\DepositUnavailableNotification;
 use App\Services\Payments\PaymentGateway;
+use Illuminate\Notifications\Channels\MailChannel;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Testing\TestResponse;
 use Spatie\Permission\Models\Role;
 use Stripe\StripeClient;
+use Tests\Doubles\FailingMailChannel;
 use Tests\Doubles\FakeCaptureStripeGateway;
 
 /**
@@ -29,16 +34,14 @@ function signedStripeWebhookHeader(string $payload, string $secret): string
 }
 
 /**
- * amount_capturable_updated is the manual-capture equivalent of "payment
- * succeeded" for a card PaymentIntent — see StripeGateway::handleWebhook()
- * and CLAUDE.md.
+ * @param  array<string, string>  $metadata
  */
-function paymentIntentAmountCapturableUpdatedPayload(string $paymentIntentId, string $depositId, string $status = 'requires_capture'): string
+function paymentIntentPayload(string $type, string $paymentIntentId, array $metadata, string $status = 'requires_capture'): string
 {
     return json_encode([
         'id' => 'evt_test_'.$paymentIntentId,
         'object' => 'event',
-        'type' => 'payment_intent.amount_capturable_updated',
+        'type' => $type,
         'data' => [
             'object' => [
                 'id' => $paymentIntentId,
@@ -46,10 +49,22 @@ function paymentIntentAmountCapturableUpdatedPayload(string $paymentIntentId, st
                 'status' => $status,
                 'amount' => 50000,
                 'currency' => 'chf',
-                'metadata' => ['deposit_id' => $depositId],
+                'metadata' => $metadata,
             ],
         ],
     ]);
+}
+
+/**
+ * amount_capturable_updated is the manual-capture equivalent of "payment
+ * succeeded" for a card PaymentIntent — see StripeGateway::handleWebhook()
+ * and CLAUDE.md.
+ *
+ * @param  array<string, string>  $metadata
+ */
+function cardAuthorizedPayload(string $paymentIntentId, array $metadata): string
+{
+    return paymentIntentPayload('payment_intent.amount_capturable_updated', $paymentIntentId, $metadata, 'requires_capture');
 }
 
 /**
@@ -57,24 +72,35 @@ function paymentIntentAmountCapturableUpdatedPayload(string $paymentIntentId, st
  * StripeGateway::createPaymentIntent() and CLAUDE.md) — it auto-captures
  * the instant the client confirms in the app, so succeeded (not
  * amount_capturable_updated) is its "payment done" signal.
+ *
+ * @param  array<string, string>  $metadata
  */
-function paymentIntentSucceededPayload(string $paymentIntentId, string $depositId): string
+function twintSucceededPayload(string $paymentIntentId, array $metadata): string
 {
-    return json_encode([
-        'id' => 'evt_test_'.$paymentIntentId,
-        'object' => 'event',
-        'type' => 'payment_intent.succeeded',
-        'data' => [
-            'object' => [
-                'id' => $paymentIntentId,
-                'object' => 'payment_intent',
-                'status' => 'succeeded',
-                'amount' => 50000,
-                'currency' => 'chf',
-                'metadata' => ['deposit_id' => $depositId],
-            ],
-        ],
-    ]);
+    return paymentIntentPayload('payment_intent.succeeded', $paymentIntentId, $metadata, 'succeeded');
+}
+
+/**
+ * @return array<string, string>
+ */
+function checkoutMetadata(?int $catId = null, string $name = 'Marie Dupont', string $email = 'marie@example.com', ?string $locale = 'fr'): array
+{
+    return array_filter([
+        'cat_id' => $catId === null ? null : (string) $catId,
+        'name' => $name,
+        'email' => $email,
+        'locale' => $locale,
+    ], fn (?string $value) => $value !== null);
+}
+
+function postSignedWebhook(string $payload, string $secret = 'whsec_test_secret'): TestResponse
+{
+    $header = signedStripeWebhookHeader($payload, $secret);
+
+    return test()->call('POST', '/webhooks/stripe', [], [], [], [
+        'HTTP_Stripe-Signature' => $header,
+        'CONTENT_TYPE' => 'application/json',
+    ], $payload);
 }
 
 beforeEach(function () {
@@ -97,141 +123,58 @@ beforeEach(function () {
     $this->app->instance(PaymentGateway::class, $this->gateway);
 });
 
-it('marks a deposit paid and captures its PaymentIntent on a validly signed payment_intent.amount_capturable_updated event', function () {
-    Notification::fake();
-    $admin = User::factory()->create(['is_active' => true]);
-    $admin->assignRole('admin');
-    $deposit = Deposit::factory()->create([
-        'status' => DepositStatus::Pending,
-        'provider_reference' => 'pi_test_123',
-    ]);
-
-    $payload = paymentIntentAmountCapturableUpdatedPayload('pi_test_123', (string) $deposit->id);
-    $header = signedStripeWebhookHeader($payload, 'whsec_test_secret');
-
-    $response = $this->call('POST', '/webhooks/stripe', [], [], [], [
-        'HTTP_Stripe-Signature' => $header,
-        'CONTENT_TYPE' => 'application/json',
-    ], $payload);
-
-    $response->assertNoContent();
-    expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
-    expect($deposit->fresh()->provider_reference)->toBe('pi_test_123');
-    expect($deposit->fresh()->paid_at)->not->toBeNull();
-    expect($this->gateway->capturedDepositIds)->toBe([$deposit->id]);
-    Notification::assertSentOnDemand(DepositConfirmedNotification::class);
-    Notification::assertSentTo($admin, DepositPaidNotification::class);
-});
-
-/**
- * End-to-end version of the two tests above: unlike them (which start
- * from a Deposit::factory()->create() and fire the webhook in isolation),
- * this one goes through the real public creation endpoint first, so the
- * PaymentIntent id it webhooks back in is whatever
- * Public\DepositController::store() actually persisted as
- * provider_reference — not a value the test made up itself.
- */
-it('covers the full public flow — deposit creation through webhook-confirmed capture and cat status change', function () {
-    refreshApplicationWithLocale('fr');
-    config([
-        'honeypot.enabled' => false,
-        'services.stripe.webhook_secret' => 'whsec_test_secret',
-    ]);
-    // refreshApplicationWithLocale() rebuilds the whole application
-    // container, discarding this file's own beforeEach() bindings — see
-    // the same pattern/comment in Public/DepositTest.php.
-    Role::findOrCreate('admin');
-    Role::findOrCreate('super_admin');
-    $gateway = new FakeCaptureStripeGateway(
-        new StripeClient('sk_test_fake_key_for_test_suite'),
-        'whsec_test_secret',
-    );
-    $this->app->instance(PaymentGateway::class, $gateway);
+it('creates a paid deposit, captures the PaymentIntent, reserves the cat, sends the confirmation, and clears the tracking row on a card event', function () {
     Notification::fake();
     $admin = User::factory()->create(['is_active' => true]);
     $admin->assignRole('admin');
     $cat = Cat::factory()->create();
     $cat->setStatus(CatStatus::Available->value);
+    PaymentIntentTracking::query()->create(['payment_intent_id' => 'pi_test_123']);
 
-    $createResponse = $this->post('/fr/deposits', [
-        'name' => 'Marie Dupont',
-        'email' => 'marie@example.com',
-        'cat_id' => $cat->id,
-    ]);
+    $payload = cardAuthorizedPayload('pi_test_123', checkoutMetadata(catId: $cat->id));
+    $response = postSignedWebhook($payload);
 
-    $createResponse->assertOk();
+    $response->assertNoContent();
     $deposit = Deposit::sole();
-    expect($deposit->status)->toBe(DepositStatus::Pending);
-    expect($deposit->provider_reference)->toBe('pi_test_fake_'.$deposit->id);
-    // Public\DepositController::store() deliberately doesn't reserve the
-    // cat — see its own docblock and Public/DepositTest.php's "leaves the
-    // cat disponible..." test. Only the webhook below does, via
-    // confirmPaid().
-    expect($cat->fresh()->status)->toBe(CatStatus::Available->value);
-
-    $payload = paymentIntentAmountCapturableUpdatedPayload($deposit->provider_reference, (string) $deposit->id);
-    $header = signedStripeWebhookHeader($payload, 'whsec_test_secret');
-
-    $webhookResponse = $this->call('POST', '/webhooks/stripe', [], [], [], [
-        'HTTP_Stripe-Signature' => $header,
-        'CONTENT_TYPE' => 'application/json',
-    ], $payload);
-
-    $webhookResponse->assertNoContent();
-    expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
-    expect($deposit->fresh()->paid_at)->not->toBeNull();
+    expect($deposit->status)->toBe(DepositStatus::Paid);
+    expect($deposit->provider_reference)->toBe('pi_test_123');
+    expect($deposit->provider)->toBe('stripe');
+    expect($deposit->cat_id)->toBe($cat->id);
+    expect($deposit->amount)->toBe(50000);
+    expect($deposit->currency)->toBe('CHF');
+    expect($deposit->locale)->toBe('fr');
+    expect($deposit->paid_at)->not->toBeNull();
     expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
-    expect($gateway->capturedDepositIds)->toBe([$deposit->id]);
-    // The webhook request itself has no notion of "the visitor's
-    // language" — the deposit's own locale (captured at creation, see
-    // Public\DepositController::store()) is what confirmPaid() must carry
-    // over via ->locale() so this email doesn't default to French for an
-    // English-speaking visitor. See CLAUDE.md.
-    expect($deposit->fresh()->locale)->toBe('fr');
-    Notification::assertSentOnDemand(
-        DepositConfirmedNotification::class,
-        fn (DepositConfirmedNotification $notification) => $notification->locale === 'fr',
-    );
+    expect($this->gateway->capturedDepositIds)->toBe([$deposit->id]);
+    expect(PaymentIntentTracking::query()->where('payment_intent_id', 'pi_test_123')->exists())->toBeFalse();
+    expect($deposit->confirmation_sent_at)->not->toBeNull();
+    expect($deposit->confirmation_attempts)->toBe(1);
+    Notification::assertSentOnDemand(DepositConfirmedNotification::class);
     Notification::assertSentTo($admin, DepositPaidNotification::class);
 });
 
-it('moves the linked cat to en_attente once its deposit is paid', function () {
+it('is idempotent — a replayed webhook for the same PaymentIntent creates no duplicate deposit', function () {
     Notification::fake();
     $cat = Cat::factory()->create();
-    $deposit = Deposit::factory()->create([
-        'cat_id' => $cat->id,
-        'status' => DepositStatus::Pending,
-        'provider_reference' => 'pi_test_cat',
-    ]);
+    $cat->setStatus(CatStatus::Available->value);
 
-    $payload = paymentIntentAmountCapturableUpdatedPayload('pi_test_cat', (string) $deposit->id);
-    $header = signedStripeWebhookHeader($payload, 'whsec_test_secret');
+    $payload = cardAuthorizedPayload('pi_test_replay', checkoutMetadata(catId: $cat->id));
+    postSignedWebhook($payload)->assertNoContent();
 
-    $this->call('POST', '/webhooks/stripe', [], [], [], [
-        'HTTP_Stripe-Signature' => $header,
-        'CONTENT_TYPE' => 'application/json',
-    ], $payload);
+    expect(Deposit::count())->toBe(1);
+    // The first call already captured it once — captured here so the
+    // replay assertion below can confirm no *second* capture happened,
+    // rather than asserting an empty array (which would be true only by
+    // never having captured at all).
+    $capturedAfterFirstCall = $this->gateway->capturedDepositIds;
+    Notification::fake(); // reset call log before the replay
 
-    expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
-});
-
-it('rejects a request with an invalid signature and leaves the deposit untouched', function () {
-    $deposit = Deposit::factory()->create([
-        'status' => DepositStatus::Pending,
-        'provider_reference' => 'pi_test_bad',
-    ]);
-
-    $payload = paymentIntentAmountCapturableUpdatedPayload('pi_test_bad', (string) $deposit->id);
-    $header = signedStripeWebhookHeader($payload, 'wrong_secret');
-
-    $response = $this->call('POST', '/webhooks/stripe', [], [], [], [
-        'HTTP_Stripe-Signature' => $header,
-        'CONTENT_TYPE' => 'application/json',
-    ], $payload);
+    $response = postSignedWebhook($payload);
 
     $response->assertNoContent();
-    expect($deposit->fresh()->status)->toBe(DepositStatus::Pending);
-    expect($this->gateway->capturedDepositIds)->toBeEmpty();
+    expect(Deposit::count())->toBe(1);
+    expect($this->gateway->capturedDepositIds)->toBe($capturedAfterFirstCall);
+    Notification::assertNothingSent();
 });
 
 it('marks a TWINT deposit paid without calling capture() — it was already auto-captured', function () {
@@ -239,22 +182,14 @@ it('marks a TWINT deposit paid without calling capture() — it was already auto
     $this->gateway->isCapturedResult = true;
     $admin = User::factory()->create(['is_active' => true]);
     $admin->assignRole('admin');
-    $deposit = Deposit::factory()->create([
-        'status' => DepositStatus::Pending,
-        'provider_reference' => 'pi_test_twint',
-    ]);
 
-    $payload = paymentIntentSucceededPayload('pi_test_twint', (string) $deposit->id);
-    $header = signedStripeWebhookHeader($payload, 'whsec_test_secret');
-
-    $response = $this->call('POST', '/webhooks/stripe', [], [], [], [
-        'HTTP_Stripe-Signature' => $header,
-        'CONTENT_TYPE' => 'application/json',
-    ], $payload);
+    $payload = twintSucceededPayload('pi_test_twint', checkoutMetadata());
+    $response = postSignedWebhook($payload);
 
     $response->assertNoContent();
-    expect($deposit->fresh()->status)->toBe(DepositStatus::Paid);
-    expect($deposit->fresh()->paid_at)->not->toBeNull();
+    $deposit = Deposit::sole();
+    expect($deposit->status)->toBe(DepositStatus::Paid);
+    expect($deposit->cat_id)->toBeNull();
     // Already captured by Stripe itself — calling capture() again would
     // fail on Stripe's side, see StripeGateway::capture()'s docblock.
     expect($this->gateway->capturedDepositIds)->toBeEmpty();
@@ -262,79 +197,119 @@ it('marks a TWINT deposit paid without calling capture() — it was already auto
     Notification::assertSentTo($admin, DepositPaidNotification::class);
 });
 
-it('sends the losing deposit\'s client email in the locale captured at checkout, regardless of the app default', function () {
+it('still creates the deposit when the confirmation email fails to send, with confirmation_sent_at left null', function () {
+    $this->app->bind(MailChannel::class, FailingMailChannel::class);
+    Log::spy();
+    $admin = User::factory()->create(['is_active' => true]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create();
+    $cat->setStatus(CatStatus::Available->value);
+
+    $payload = cardAuthorizedPayload('pi_test_mail_fail', checkoutMetadata(catId: $cat->id));
+    $response = postSignedWebhook($payload);
+
+    // The webhook still responds 200 regardless of the mail outcome — a
+    // non-2xx would make Stripe retry, and the idempotency check by
+    // provider_reference would then find the Deposit already there and
+    // never get a second chance to send the mail (see CLAUDE.md).
+    $response->assertNoContent();
+    $deposit = Deposit::sole();
+    expect($deposit->status)->toBe(DepositStatus::Paid);
+    expect($deposit->confirmation_sent_at)->toBeNull();
+    expect($deposit->confirmation_attempts)->toBe(1);
+    // The Stripe capture is not reversible from our side, unlike a DB
+    // transaction — a failed mail send must never roll back the Deposit
+    // that records a payment that has already actually happened.
+    expect($this->gateway->capturedDepositIds)->toBe([$deposit->id]);
+    Log::shouldHaveReceived('error')
+        ->once()
+        ->withArgs(fn (string $message) => $message === 'Failed to send DepositConfirmedNotification');
+    // Staff mail is unaffected by the client mail's own failure — sent
+    // via the real MailChannel, only DepositConfirmedNotification is
+    // intercepted by FailingMailChannel.
+    expect($admin->fresh()->notifications()->where('type', DepositPaidNotification::class)->exists())->toBeTrue();
+});
+
+it('rejects a request with an invalid signature and creates no deposit', function () {
+    $payload = cardAuthorizedPayload('pi_test_bad', checkoutMetadata());
+
+    $response = postSignedWebhook($payload, 'wrong_secret');
+
+    $response->assertNoContent();
+    expect(Deposit::count())->toBe(0);
+    expect($this->gateway->capturedDepositIds)->toBeEmpty();
+});
+
+it('ignores an event with no name/email in its metadata', function () {
+    $payload = cardAuthorizedPayload('pi_test_no_metadata', []);
+
+    $response = postSignedWebhook($payload);
+
+    $response->assertNoContent();
+    expect(Deposit::count())->toBe(0);
+});
+
+it('cancels a losing card PaymentIntent instead of capturing it, notifies client and staff, and creates no deposit for the loser', function () {
     Notification::fake();
     $admin = User::factory()->create(['is_active' => true]);
     $admin->assignRole('admin');
     $cat = Cat::factory()->create();
-    $winningDeposit = Deposit::factory()->paid()->create([
+    // Simulates the state the winning payment's own createFromPayment()
+    // already left behind — loseRace() must never touch cat status
+    // itself, whatever it is.
+    $cat->setStatus(CatStatus::Pending->value);
+    Deposit::factory()->paid()->create([
         'cat_id' => $cat->id,
-        'provider_reference' => 'pi_test_locale_winner',
-    ]);
-    $losingDeposit = Deposit::factory()->create([
-        'cat_id' => $cat->id,
-        'status' => DepositStatus::Pending,
-        'provider_reference' => 'pi_test_locale_loser',
-        'locale' => 'en',
+        'provider_reference' => 'pi_test_winner',
     ]);
 
-    $payload = paymentIntentAmountCapturableUpdatedPayload('pi_test_locale_loser', (string) $losingDeposit->id);
-    $header = signedStripeWebhookHeader($payload, 'whsec_test_secret');
+    $payload = cardAuthorizedPayload('pi_test_loser', checkoutMetadata(catId: $cat->id, name: 'Second Visitor', email: 'second@example.com', locale: 'en'));
+    $response = postSignedWebhook($payload);
 
-    $this->call('POST', '/webhooks/stripe', [], [], [], [
-        'HTTP_Stripe-Signature' => $header,
-        'CONTENT_TYPE' => 'application/json',
-    ], $payload)->assertNoContent();
-
-    expect($losingDeposit->fresh()->status)->toBe(DepositStatus::Unavailable);
-    // The client email must follow the deposit's own captured locale...
+    $response->assertNoContent();
+    // The entire point of this path: no Deposit row exists for the loser.
+    expect(Deposit::where('email', 'second@example.com')->exists())->toBeFalse();
+    expect(Deposit::count())->toBe(1);
+    expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
+    // Never charged: cancelled, not captured.
+    expect($this->gateway->cancelledProviderReferences)->toBe(['pi_test_loser']);
+    expect($this->gateway->capturedDepositIds)->toBeEmpty();
+    expect($this->gateway->refundedProviderReferences)->toBeEmpty();
     Notification::assertSentOnDemand(
         DepositUnavailableNotification::class,
-        fn (DepositUnavailableNotification $notification) => $notification->locale === 'en',
+        fn (DepositUnavailableNotification $notification) => $notification->refunded === false
+            && $notification->locale === 'en',
     );
-    // ...while staff always gets the French version — no ->locale() call
-    // on that instance, see DepositPaymentProcessor::loseRace().
     Notification::assertSentTo(
         $admin,
         DepositUnavailableNotification::class,
-        fn (DepositUnavailableNotification $notification) => $notification->locale === null,
+        fn (DepositUnavailableNotification $notification) => $notification->refunded === false,
     );
 });
 
-it('refunds instead of cancelling a losing TWINT PaymentIntent, since it was already auto-captured', function () {
+it('refunds instead of cancelling a losing TWINT PaymentIntent, since it was already auto-captured, and creates no deposit for the loser', function () {
     Notification::fake();
     $this->gateway->isCapturedResult = true;
     $admin = User::factory()->create(['is_active' => true]);
     $admin->assignRole('admin');
     $cat = Cat::factory()->create();
     $cat->setStatus(CatStatus::Pending->value);
-    $winningDeposit = Deposit::factory()->paid()->create([
+    Deposit::factory()->paid()->create([
         'cat_id' => $cat->id,
         'provider_reference' => 'pi_test_twint_winner',
     ]);
-    $losingDeposit = Deposit::factory()->create([
-        'cat_id' => $cat->id,
-        'status' => DepositStatus::Pending,
-        'provider_reference' => 'pi_test_twint_loser',
-    ]);
 
-    $payload = paymentIntentSucceededPayload('pi_test_twint_loser', (string) $losingDeposit->id);
-    $header = signedStripeWebhookHeader($payload, 'whsec_test_secret');
-
-    $response = $this->call('POST', '/webhooks/stripe', [], [], [], [
-        'HTTP_Stripe-Signature' => $header,
-        'CONTENT_TYPE' => 'application/json',
-    ], $payload);
+    $payload = twintSucceededPayload('pi_test_twint_loser', checkoutMetadata(catId: $cat->id, name: 'Second Visitor', email: 'second@example.com'));
+    $response = postSignedWebhook($payload);
 
     $response->assertNoContent();
-    expect($losingDeposit->fresh()->status)->toBe(DepositStatus::Unavailable);
-    expect($winningDeposit->fresh()->status)->toBe(DepositStatus::Paid);
+    expect(Deposit::where('email', 'second@example.com')->exists())->toBeFalse();
+    expect(Deposit::count())->toBe(1);
     expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
     // No uncaptured authorization to release — TWINT had already moved
     // the money, so it's refunded rather than cancelled.
-    expect($this->gateway->refundedDepositIds)->toBe([$losingDeposit->id]);
-    expect($this->gateway->cancelledDepositIds)->toBeEmpty();
-    // Wording must not claim "you were never charged" for this case.
+    expect($this->gateway->refundedProviderReferences)->toBe(['pi_test_twint_loser']);
+    expect($this->gateway->cancelledProviderReferences)->toBeEmpty();
     Notification::assertSentOnDemand(
         DepositUnavailableNotification::class,
         fn (DepositUnavailableNotification $notification) => $notification->refunded === true,
@@ -343,86 +318,5 @@ it('refunds instead of cancelling a losing TWINT PaymentIntent, since it was alr
         $admin,
         DepositUnavailableNotification::class,
         fn (DepositUnavailableNotification $notification) => $notification->refunded === true,
-    );
-});
-
-it('is idempotent — a retried webhook for an already-paid deposit does not notify or capture twice', function () {
-    Notification::fake();
-    $deposit = Deposit::factory()->paid()->create([
-        'provider_reference' => 'pi_test_already',
-    ]);
-
-    $payload = paymentIntentAmountCapturableUpdatedPayload('pi_test_already', (string) $deposit->id);
-    $header = signedStripeWebhookHeader($payload, 'whsec_test_secret');
-
-    $response = $this->call('POST', '/webhooks/stripe', [], [], [], [
-        'HTTP_Stripe-Signature' => $header,
-        'CONTENT_TYPE' => 'application/json',
-    ], $payload);
-
-    $response->assertNoContent();
-    Notification::assertNothingSent();
-    expect($this->gateway->capturedDepositIds)->toBeEmpty();
-});
-
-it('ignores an event for an unknown deposit id', function () {
-    $payload = paymentIntentAmountCapturableUpdatedPayload('pi_test_unknown', '999999');
-    $header = signedStripeWebhookHeader($payload, 'whsec_test_secret');
-
-    $response = $this->call('POST', '/webhooks/stripe', [], [], [], [
-        'HTTP_Stripe-Signature' => $header,
-        'CONTENT_TYPE' => 'application/json',
-    ], $payload);
-
-    $response->assertNoContent();
-});
-
-it('cancels the losing deposit\'s PaymentIntent instead of capturing it, notifies client and staff, and leaves the cat status exactly as the winner left it', function () {
-    Notification::fake();
-    $admin = User::factory()->create(['is_active' => true]);
-    $admin->assignRole('admin');
-    $cat = Cat::factory()->create();
-    // Simulates the state the winning deposit's own confirmPaid() already
-    // left behind (see DepositPaymentProcessor) — loseRace() must never
-    // touch cat status itself, whatever it is.
-    $cat->setStatus(CatStatus::Pending->value);
-    $winningDeposit = Deposit::factory()->paid()->create([
-        'cat_id' => $cat->id,
-        'provider_reference' => 'pi_test_winner',
-    ]);
-    $losingDeposit = Deposit::factory()->create([
-        'cat_id' => $cat->id,
-        'status' => DepositStatus::Pending,
-        'provider_reference' => 'pi_test_loser',
-    ]);
-
-    $payload = paymentIntentAmountCapturableUpdatedPayload('pi_test_loser', (string) $losingDeposit->id);
-    $header = signedStripeWebhookHeader($payload, 'whsec_test_secret');
-
-    $response = $this->call('POST', '/webhooks/stripe', [], [], [], [
-        'HTTP_Stripe-Signature' => $header,
-        'CONTENT_TYPE' => 'application/json',
-    ], $payload);
-
-    $response->assertNoContent();
-    expect($losingDeposit->fresh()->status)->toBe(DepositStatus::Unavailable);
-    expect($winningDeposit->fresh()->status)->toBe(DepositStatus::Paid);
-    expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
-    // Never charged: cancelled, not captured.
-    expect($this->gateway->cancelledDepositIds)->toBe([$losingDeposit->id]);
-    expect($this->gateway->capturedDepositIds)->toBeEmpty();
-    expect($this->gateway->refundedDepositIds)->toBeEmpty();
-    // Both audiences notified — the client (on-demand, mail only) and
-    // staff (mail + database, surfaced in NotificationBell.vue) — with a
-    // "never charged" wording (refunded: false), since a card
-    // authorization was simply released, not captured then refunded.
-    Notification::assertSentOnDemand(
-        DepositUnavailableNotification::class,
-        fn (DepositUnavailableNotification $notification) => $notification->refunded === false,
-    );
-    Notification::assertSentTo(
-        $admin,
-        DepositUnavailableNotification::class,
-        fn (DepositUnavailableNotification $notification) => $notification->refunded === false,
     );
 });
