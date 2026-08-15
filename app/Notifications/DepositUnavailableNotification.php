@@ -3,8 +3,6 @@
 namespace App\Notifications;
 
 use App\Models\Deposit;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -30,11 +28,22 @@ use Illuminate\Notifications\Notification;
  * client confirms in the app, so by the time this fires it may already
  * have been charged and had to be refunded instead. The wording must not
  * claim "you were never charged" in that case.
+ *
+ * Deliberately *not* ShouldQueue — $this->deposit is often a transient,
+ * never-saved Deposit (see loseRace()'s own docblock: the losing side of a
+ * race is never persisted). Laravel serializes every queued job/notification
+ * via SerializesModels before dispatch, even under QUEUE_CONNECTION=sync —
+ * that serialization re-resolves any Eloquent model by id on the other end,
+ * which throws ModelNotFoundException for a model that was never saved and
+ * has no id. That exception previously surfaced *after* loseRace() had
+ * already called the (irreversible) Stripe refund/cancelAuthorization,
+ * rolling back the enclosing DB transaction and leaving the PaymentIntent
+ * refunded on Stripe's side but with no trace of that on ours — see
+ * CLAUDE.md. Sending synchronously sidesteps the serialization step
+ * entirely.
  */
-class DepositUnavailableNotification extends Notification implements ShouldQueue
+class DepositUnavailableNotification extends Notification
 {
-    use Queueable;
-
     public function __construct(
         public Deposit $deposit,
         public bool $refunded = false,

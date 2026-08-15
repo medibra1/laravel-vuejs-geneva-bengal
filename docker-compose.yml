@@ -135,6 +135,17 @@ services:
     # without rewriting it — the container's npm version otherwise
     # touches the host's lock file on every `docker compose up`.
     command: sh -c "npm ci && npm run dev -- --host --port 5273"
+    environment:
+      # Read by vite.config.js's server.origin — matches the --port above
+      # so the browser-facing URL Vite advertises for @vite/client/HMR
+      # actually points somewhere reachable. Not derived from --port
+      # automatically: Vite's CLI doesn't expose the port it was started
+      # with as an env var, so this has to be kept in sync by hand with
+      # the port above and the "5273:5273" mapping below if either ever
+      # changes. Unset when running `npm run dev` directly on the host
+      # (outside Docker) — vite.config.js falls back to Vite's own default
+      # port (5173) in that case. See CLAUDE.md.
+      VITE_DEV_PORT: 5273
     ports:
       - "5273:5273"
     volumes:

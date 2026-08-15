@@ -3,8 +3,8 @@
 namespace App\Jobs;
 
 use App\Enums\DepositStatus;
-use App\Models\CheckoutHold;
 use App\Models\Deposit;
+use App\Models\PaymentIntentTracking;
 use App\Notifications\Concerns\NotifiesStaff;
 use App\Notifications\DepositConfirmationUndeliveredNotification;
 use App\Notifications\StripeReconciliationIssueNotification;
@@ -17,20 +17,16 @@ use Throwable;
 
 /**
  * Scheduled every 15 minutes (see routes/console.php). Two unrelated
- * safety nets, both needed because store() no longer creates a Deposit up
- * front and the webhook is now the only normal path that does (see
- * CLAUDE.md) — renamed from ReconcilePendingDeposits, which described a
- * mechanism (polling `deposits` rows stuck at `pending`) that no longer
- * exists on the public flow: nothing creates a pending Deposit with a
- * Stripe provider_reference anymore (confirmed by grep — the admin flow
- * only ever offers cash/bank_transfer/twint_manual, see
- * Admin\StoreDepositRequest), so Deposit::expire()/PENDING_EXPIRY_HOURS
- * were removed rather than kept around unused.
+ * safety nets:
  *
- * 1. Expired CheckoutHold: the webhook that should have resolved it
- *    (paid or not) never arrived. Only holds actually past expiry are
- *    touched — a hold still within its TTL is simply mid-checkout, not
- *    stuck.
+ * 1. Stale PaymentIntentTracking rows: a PaymentIntent was created (see
+ *    Public\DepositController::confirmIntent()) but neither the webhook nor
+ *    this job has resolved it yet — could mean the webhook is genuinely
+ *    lost, or simply that the visitor hasn't finished paying yet (see
+ *    CLAUDE.md: no lock/TTL on this table, unlike the CheckoutHold it
+ *    replaced). GRACE_PERIOD_MINUTES exists precisely to tell those two
+ *    apart — only a row old enough that a normal payment would have
+ *    resolved it by now is treated as possibly stuck.
  * 2. Paid Deposit whose confirmation email never went out: in production
  *    QUEUE_CONNECTION=sync (see DEPLOY.md #1/#2), a failed SMTP send
  *    inside DepositPaymentProcessor::sendClientConfirmation() is not
@@ -42,59 +38,87 @@ class ReconcileCheckouts implements ShouldQueue
     use NotifiesStaff, Queueable;
 
     /**
+     * A normal payment resolves (webhook arrives) within seconds — this is
+     * a generous margin before treating a still-unresolved PaymentIntent as
+     * possibly stuck rather than simply mid-checkout. Lowered from 30 to 5
+     * minutes (2026-08-15): a paid-but-orphaned PaymentIntent (webhook
+     * missed entirely — e.g. `stripe listen` not running) leaves the cat
+     * unavailable to a second payer with no Deposit to show for it and no
+     * refund/cancel issued until this job catches up — 30 minutes was too
+     * long a window for that to sit unresolved, both in practice and for
+     * manually testing the reconciliation path itself. Still runs every 15
+     * minutes (see routes/console.php) — this only controls which rows are
+     * *eligible* once the job does run, not how often it runs.
+     */
+    private const GRACE_PERIOD_MINUTES = 1;
+
+    /**
      * Above this many failed attempts, an address is treated as
      * persistently bad rather than retried forever every 15 minutes —
      * staff is notified once instead, to reach the client directly.
      */
-    private const CONFIRMATION_MAX_ATTEMPTS = 5;
+    private const CONFIRMATION_MAX_ATTEMPTS = 10;
 
     public function handle(PaymentGateway $gateway, DepositPaymentProcessor $processor): void
     {
-        $this->reconcileExpiredHolds($gateway, $processor);
+        $this->reconcileStaleTracking($gateway, $processor);
         $this->retryFailedConfirmations($processor);
     }
 
-    private function reconcileExpiredHolds(PaymentGateway $gateway, DepositPaymentProcessor $processor): void
+    private function reconcileStaleTracking(PaymentGateway $gateway, DepositPaymentProcessor $processor): void
     {
-        $now = now();
+        PaymentIntentTracking::query()
+            ->where('created_at', '<=', now()->subMinutes(self::GRACE_PERIOD_MINUTES))
+            ->each(function (PaymentIntentTracking $tracking) use ($gateway, $processor): void {
+                // The webhook may have arrived between this row going stale
+                // and this job running — same idempotency guard as the
+                // webhook itself. createFromPayment() deletes this tracking
+                // row once it builds the Deposit, so ordinarily this branch
+                // wouldn't even see the row again — kept as defense in
+                // depth against any ordering where the row outlives the
+                // Deposit it tracks.
+                if (Deposit::where('provider_reference', $tracking->payment_intent_id)->exists()) {
+                    $tracking->delete();
 
-        CheckoutHold::query()
-            ->where(function ($query) use ($now) {
-                $query->where('expires_at', '<=', $now)
-                    ->orWhere('hard_expires_at', '<=', $now);
-            })
-            ->each(function (CheckoutHold $hold) use ($gateway, $processor): void {
+                    return;
+                }
+
+                // Wraps both the Stripe read (retrieveCheckoutData) and the
+                // write side (createFromPayment, which can itself call
+                // Stripe again via capture()/refund()/cancelAuthorization())
+                // in one try/catch — a Throwable from either previously
+                // escaped each()'s callback uncaught, which aborts the
+                // *entire* chunk/batch (see BuildsQueries::chunk()'s plain
+                // do/while loop, no per-row isolation), silently starving
+                // every other stale row queued behind the failing one in
+                // the same run. See CLAUDE.md — this is what let one bad
+                // row (an already-refunded PaymentIntent retried because
+                // its tracking row was never cleared) block reconciliation
+                // for everything after it, run after run.
                 try {
-                    $result = $gateway->retrieveCheckoutData($hold->payment_intent_id);
+                    $result = $gateway->retrieveCheckoutData($tracking->payment_intent_id);
+
+                    if ($result->handled) {
+                        // createFromPayment() deletes the tracking row
+                        // itself once the PaymentIntent is resolved, won or
+                        // lost — see CLAUDE.md.
+                        $processor->createFromPayment($result->metadata, $tracking->payment_intent_id, $result->amount, $result->currency);
+
+                        return;
+                    }
                 } catch (Throwable $e) {
                     Notification::send(
                         $this->activeStaff(),
-                        new StripeReconciliationIssueNotification($hold, $e->getMessage()),
+                        new StripeReconciliationIssueNotification($tracking, $e->getMessage()),
                     );
 
                     return;
                 }
 
-                if ($result->handled) {
-                    // The webhook that should have done this got lost —
-                    // same idempotency guard as the webhook itself: if a
-                    // Deposit already exists for this PaymentIntent (e.g.
-                    // the webhook actually did arrive between this hold
-                    // expiring and this job running), do nothing.
-                    if (Deposit::where('provider_reference', $hold->payment_intent_id)->exists()) {
-                        return;
-                    }
-
-                    $processor->createFromPayment($result->metadata, $hold->payment_intent_id, $result->amount, $result->currency);
-
-                    return;
-                }
-
-                // Never paid — the cat is immediately reservable again for
-                // someone else. No notification: an abandoned checkout is
-                // the expected, common case, not something staff needs to
-                // see every 15 minutes.
-                $hold->delete();
+                // Never paid — most likely an abandoned checkout, the
+                // expected, common case. No notification, and the row is
+                // simply removed: nothing further to track.
+                $tracking->delete();
             });
     }
 

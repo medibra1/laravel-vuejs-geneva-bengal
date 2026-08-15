@@ -164,11 +164,11 @@ class DepositController extends Controller
      * webhook seems stuck. Only meaningful for a still-pending Stripe
      * deposit: any other combination is already resolved one way or
      * another. Distinct from ReconcileCheckouts (see CLAUDE.md), which no
-     * longer polls Deposit rows at all — it reconciles expired
-     * CheckoutHolds instead, since nothing creates a pending Stripe
-     * Deposit anymore. This action still operates on a historical
-     * Deposit row (payment_method = stripe, created before that option
-     * was removed from the admin form).
+     * longer polls Deposit rows for the public flow at all — it reconciles
+     * stale PaymentIntentTracking rows instead, since the public checkout
+     * doesn't create a pending Stripe Deposit anymore. This action still
+     * operates on a historical Deposit row (payment_method = stripe,
+     * created before that option was removed from the admin form).
      */
     public function verifyStripe(Deposit $deposit, PaymentGateway $gateway, DepositPaymentProcessor $processor): RedirectResponse
     {

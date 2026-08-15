@@ -19,10 +19,10 @@ interface PaymentGateway
     public function handleWebhook(Request $request): PaymentWebhookResult;
 
     /**
-     * Polled by ReconcileCheckouts (see CLAUDE.md) for an expired
-     * CheckoutHold whose webhook never arrived — same "handled" shape as
-     * handleWebhook(), built directly from a retrieve() rather than a
-     * signed event, since there is no event to verify here.
+     * Polled by ReconcileCheckouts (see CLAUDE.md) for a stale
+     * PaymentIntentTracking row whose webhook never arrived — same
+     * "handled" shape as handleWebhook(), built directly from a retrieve()
+     * rather than a signed event, since there is no event to verify here.
      */
     public function retrieveCheckoutData(string $paymentIntentId): PaymentWebhookResult;
 

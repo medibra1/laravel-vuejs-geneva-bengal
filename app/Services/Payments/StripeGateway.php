@@ -41,11 +41,9 @@ class StripeGateway implements PaymentGateway
      * Deposit rides along as PaymentIntent metadata instead, since Stripe
      * is the only place this data lives until then.
      *
-     * ⚠️ handleWebhook() below still reads metadata['deposit_id'], which
-     * this no longer sets — wiring the webhook to build a Deposit from
-     * this new metadata shape is deliberately left to the next prompt
-     * (see CLAUDE.md, "Ne pas les combiner"). Until then, no real Stripe
-     * webhook event is handled — known, temporary breakage.
+     * Called only from Public\DepositController::confirmIntent(), at the
+     * "Pay" click — never on page load (see CLAUDE.md: no PaymentIntent,
+     * no Stripe call at all, until the visitor actually commits to paying).
      */
     public function createPaymentIntent(CheckoutData $checkoutData): PaymentIntentResult
     {
@@ -119,11 +117,11 @@ class StripeGateway implements PaymentGateway
     }
 
     /**
-     * Polled by ReconcileCheckouts (see CLAUDE.md) for an expired
-     * CheckoutHold — catches a webhook that never arrived: if Stripe
-     * itself reports the PaymentIntent as paid, the checkout data needed
-     * to build the Deposit (same shape handleWebhook() returns) comes
-     * straight off this single retrieve() rather than a second round
+     * Polled by ReconcileCheckouts (see CLAUDE.md) for a stale
+     * PaymentIntentTracking row — catches a webhook that never arrived: if
+     * Stripe itself reports the PaymentIntent as paid, the checkout data
+     * needed to build the Deposit (same shape handleWebhook() returns)
+     * comes straight off this single retrieve() rather than a second round
      * trip. requires_capture/succeeded is the same "paid" criterion
      * handleWebhook() reacts to — a card authorization awaiting capture,
      * or a TWINT payment already auto-captured.

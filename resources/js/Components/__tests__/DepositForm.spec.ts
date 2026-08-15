@@ -49,7 +49,6 @@ const messages = {
             continue_button: 'Continuer vers le paiement',
             cancel: 'Annuler',
             cat_unavailable_error: "Ce chaton vient d'être réservé, veuillez rafraîchir la page.",
-            cat_checkout_in_progress: 'Une autre personne est en train de payer pour ce chaton. Veuillez réessayer dans quelques minutes.',
         },
     },
 };
@@ -87,26 +86,10 @@ describe('DepositForm', () => {
         expect(wrapper.text()).not.toContain('Ce chaton a déjà été réservé.');
     });
 
-    it('shows a distinct friendly message when the backend rejects cat_id as a checkout already in progress', async () => {
-        const wrapper = mountForm();
-        await wrapper.find('button').trigger('click');
-
-        // CheckoutHold::acquire() failing (see Public\DepositController::store())
-        // — the cat itself is still available, someone else is simply
-        // mid-payment for it right now, so this must not show the same
-        // message as the "already reserved" case above.
-        mockForm.errors = { cat_id: 'Une autre personne est en train de payer pour ce chaton. Veuillez réessayer dans quelques minutes.' };
-        await wrapper.vm.$nextTick();
-
-        expect(wrapper.text()).toContain('Une autre personne est en train de payer pour ce chaton. Veuillez réessayer dans quelques minutes.');
-        expect(wrapper.text()).not.toContain("Ce chaton vient d'être réservé, veuillez rafraîchir la page.");
-    });
-
     it('shows no cat_id error when the form has none', async () => {
         const wrapper = mountForm();
         await wrapper.find('button').trigger('click');
 
         expect(wrapper.text()).not.toContain("Ce chaton vient d'être réservé");
-        expect(wrapper.text()).not.toContain('Une autre personne est en train de payer');
     });
 });

@@ -4,8 +4,8 @@ use App\Enums\CatStatus;
 use App\Enums\DepositStatus;
 use App\Jobs\ReconcileCheckouts;
 use App\Models\Cat;
-use App\Models\CheckoutHold;
 use App\Models\Deposit;
+use App\Models\PaymentIntentTracking;
 use App\Models\User;
 use App\Notifications\DepositConfirmationUndeliveredNotification;
 use App\Notifications\DepositConfirmedNotification;
@@ -29,32 +29,26 @@ beforeEach(function () {
     Role::findOrCreate('super_admin');
 });
 
-function expiredCheckoutHold(?int $catId, string $paymentIntentId): CheckoutHold
+function staleTracking(string $paymentIntentId): PaymentIntentTracking
 {
-    return CheckoutHold::query()->create([
-        'cat_id' => $catId,
-        'payment_intent_id' => $paymentIntentId,
-        'expires_at' => now()->subMinute(),
-        'hard_expires_at' => now()->addMinutes(10),
-    ]);
+    $tracking = PaymentIntentTracking::query()->create(['payment_intent_id' => $paymentIntentId]);
+    // created_at has no factory/mutator to backdate through — set directly,
+    // past ReconcileCheckouts::GRACE_PERIOD_MINUTES (5).
+    $tracking->forceFill(['created_at' => now()->subMinutes(6)])->save();
+
+    return $tracking;
 }
 
-// --- Volet 1: expired CheckoutHolds ---------------------------------------
+// --- Volet 1: stale PaymentIntentTracking rows -----------------------------
 
-it('never touches a checkout hold still within its TTL', function () {
+it('never touches a tracking row still within its grace period', function () {
     $gateway = new FakePaymentGateway;
     $this->app->instance(PaymentGateway::class, $gateway);
-    $cat = Cat::factory()->create();
-    CheckoutHold::query()->create([
-        'cat_id' => $cat->id,
-        'payment_intent_id' => 'pi_fresh',
-        'expires_at' => now()->addMinutes(2),
-        'hard_expires_at' => now()->addMinutes(10),
-    ]);
+    PaymentIntentTracking::query()->create(['payment_intent_id' => 'pi_fresh']);
 
     (new ReconcileCheckouts)->handle($gateway, app(DepositPaymentProcessor::class));
 
-    expect(CheckoutHold::query()->where('payment_intent_id', 'pi_fresh')->exists())->toBeTrue();
+    expect(PaymentIntentTracking::query()->where('payment_intent_id', 'pi_fresh')->exists())->toBeTrue();
     expect(Deposit::count())->toBe(0);
 });
 
@@ -64,7 +58,7 @@ it('replays a lost webhook and creates the Deposit when Stripe reports the Payme
     $admin->assignRole('admin');
     $cat = Cat::factory()->create();
     $cat->setStatus(CatStatus::Available->value);
-    $hold = expiredCheckoutHold($cat->id, 'pi_lost_webhook');
+    $tracking = staleTracking('pi_lost_webhook');
     $gateway = new FakePaymentGateway;
     $gateway->checkoutDataResults['pi_lost_webhook'] = new PaymentWebhookResult(
         handled: true,
@@ -82,41 +76,33 @@ it('replays a lost webhook and creates the Deposit when Stripe reports the Payme
     expect($deposit->provider_reference)->toBe('pi_lost_webhook');
     expect($deposit->cat_id)->toBe($cat->id);
     expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
-    expect(CheckoutHold::query()->whereKey($hold->id)->exists())->toBeFalse();
+    expect(PaymentIntentTracking::query()->whereKey($tracking->id)->exists())->toBeFalse();
     Notification::assertSentOnDemand(DepositConfirmedNotification::class);
     Notification::assertSentTo($admin, DepositPaidNotification::class);
 });
 
-it('does not duplicate the deposit when a webhook actually did arrive between the hold expiring and this job running', function () {
+it('does not duplicate the deposit when a webhook actually did arrive between the row going stale and this job running', function () {
     Notification::fake();
     $cat = Cat::factory()->create();
-    $hold = expiredCheckoutHold($cat->id, 'pi_already_processed');
+    $tracking = staleTracking('pi_already_processed');
     Deposit::factory()->paid()->create(['cat_id' => $cat->id, 'provider_reference' => 'pi_already_processed']);
     $gateway = new FakePaymentGateway;
-    $gateway->checkoutDataResults['pi_already_processed'] = new PaymentWebhookResult(
-        handled: true,
-        paymentIntentId: 'pi_already_processed',
-        metadata: ['name' => 'Marie Dupont', 'email' => 'marie@example.com'],
-        amount: 50000,
-        currency: 'CHF',
-    );
     $this->app->instance(PaymentGateway::class, $gateway);
 
     (new ReconcileCheckouts)->handle($gateway, app(DepositPaymentProcessor::class));
 
     expect(Deposit::where('provider_reference', 'pi_already_processed')->count())->toBe(1);
-    expect(CheckoutHold::query()->whereKey($hold->id)->exists())->toBeTrue();
+    expect(PaymentIntentTracking::query()->whereKey($tracking->id)->exists())->toBeFalse();
 });
 
-it('deletes the checkout hold, freeing the cat, when Stripe reports the PaymentIntent as never paid', function () {
-    $cat = Cat::factory()->create();
-    $hold = expiredCheckoutHold($cat->id, 'pi_never_paid');
+it('deletes the tracking row when Stripe reports the PaymentIntent as never paid', function () {
+    $tracking = staleTracking('pi_never_paid');
     $gateway = new FakePaymentGateway;
     $this->app->instance(PaymentGateway::class, $gateway);
 
     (new ReconcileCheckouts)->handle($gateway, app(DepositPaymentProcessor::class));
 
-    expect(CheckoutHold::query()->whereKey($hold->id)->exists())->toBeFalse();
+    expect(PaymentIntentTracking::query()->whereKey($tracking->id)->exists())->toBeFalse();
     expect(Deposit::count())->toBe(0);
 });
 
@@ -124,10 +110,8 @@ it('notifies staff and keeps processing the rest of the batch when Stripe itself
     Notification::fake();
     $admin = User::factory()->create(['is_active' => true]);
     $admin->assignRole('admin');
-    $firstCat = Cat::factory()->create();
-    $firstHold = expiredCheckoutHold($firstCat->id, 'pi_error_a');
-    $secondCat = Cat::factory()->create();
-    $secondHold = expiredCheckoutHold($secondCat->id, 'pi_error_b');
+    $firstTracking = staleTracking('pi_error_a');
+    $secondTracking = staleTracking('pi_error_b');
     $gateway = new FakePaymentGateway;
     $gateway->retrieveCheckoutDataException = new RuntimeException('Stripe API unreachable');
     $this->app->instance(PaymentGateway::class, $gateway);
@@ -135,18 +119,18 @@ it('notifies staff and keeps processing the rest of the batch when Stripe itself
     (new ReconcileCheckouts)->handle($gateway, app(DepositPaymentProcessor::class));
 
     // Untouched — a failed check is not a resolved outcome either way.
-    expect(CheckoutHold::query()->whereKey($firstHold->id)->exists())->toBeTrue();
-    expect(CheckoutHold::query()->whereKey($secondHold->id)->exists())->toBeTrue();
+    expect(PaymentIntentTracking::query()->whereKey($firstTracking->id)->exists())->toBeTrue();
+    expect(PaymentIntentTracking::query()->whereKey($secondTracking->id)->exists())->toBeTrue();
     Notification::assertSentTo(
         $admin,
         StripeReconciliationIssueNotification::class,
         fn (StripeReconciliationIssueNotification $notification) => $notification->errorMessage === 'Stripe API unreachable'
-            && $notification->checkoutHold->is($firstHold),
+            && $notification->tracking->is($firstTracking),
     );
     Notification::assertSentTo(
         $admin,
         StripeReconciliationIssueNotification::class,
-        fn (StripeReconciliationIssueNotification $notification) => $notification->checkoutHold->is($secondHold),
+        fn (StripeReconciliationIssueNotification $notification) => $notification->tracking->is($secondTracking),
     );
 });
 
@@ -157,7 +141,7 @@ it('cancels a losing card PaymentIntent replayed via reconciliation, creating no
     $cat = Cat::factory()->create();
     $cat->setStatus(CatStatus::Pending->value);
     Deposit::factory()->paid()->create(['cat_id' => $cat->id, 'provider_reference' => 'pi_winner']);
-    expiredCheckoutHold($cat->id, 'pi_loser');
+    staleTracking('pi_loser');
     $gateway = new FakePaymentGateway;
     $gateway->checkoutDataResults['pi_loser'] = new PaymentWebhookResult(
         handled: true,
@@ -174,6 +158,75 @@ it('cancels a losing card PaymentIntent replayed via reconciliation, creating no
     expect(Deposit::count())->toBe(1);
     expect($gateway->cancelledProviderReferences)->toBe(['pi_loser']);
     Notification::assertSentOnDemand(DepositUnavailableNotification::class);
+});
+
+it('clears the tracking row for a losing PaymentIntent and does not retry it on a later run', function () {
+    // Deliberately no Notification::fake() here — the whole point of this
+    // test is to exercise DepositUnavailableNotification's real send path.
+    // Notification::fake() intercepts before any serialization happens,
+    // which is exactly what let a real bug slip through: the notification
+    // used to implement ShouldQueue while carrying a transient, never-saved
+    // Deposit (the losing side of a race is never persisted, see
+    // DepositPaymentProcessor::createFromPayment()) — even under
+    // QUEUE_CONNECTION=sync, Laravel serializes queued notifications via
+    // SerializesModels before "dispatching" them, and re-resolving an
+    // unsaved model by its null id threw ModelNotFoundException *after*
+    // the real (irreversible) Stripe refund had already gone through,
+    // aborting the transaction and leaving the tracking row uncleared. A
+    // second reconciliation run then retried the same already-refunded
+    // PaymentIntent and failed again on Stripe's side ("cannot refund
+    // amount=0"), which — uncaught by each()'s per-row try/catch at the
+    // time — aborted the whole batch and starved every other stale row
+    // queued behind it. See CLAUDE.md.
+    $admin = User::factory()->create(['is_active' => true]);
+    $admin->assignRole('admin');
+    $cat = Cat::factory()->create();
+    $cat->setStatus(CatStatus::Pending->value);
+    Deposit::factory()->paid()->create(['cat_id' => $cat->id, 'provider_reference' => 'pi_winner']);
+    $tracking = staleTracking('pi_loser');
+    $gateway = new FakePaymentGateway;
+    $gateway->checkoutDataResults['pi_loser'] = new PaymentWebhookResult(
+        handled: true,
+        paymentIntentId: 'pi_loser',
+        metadata: ['cat_id' => (string) $cat->id, 'name' => 'Second Visitor', 'email' => 'second@example.com'],
+        amount: 50000,
+        currency: 'CHF',
+    );
+    $this->app->instance(PaymentGateway::class, $gateway);
+
+    (new ReconcileCheckouts)->handle($gateway, app(DepositPaymentProcessor::class));
+
+    expect(PaymentIntentTracking::query()->whereKey($tracking->id)->exists())->toBeFalse();
+    expect($gateway->cancelledProviderReferences)->toBe(['pi_loser']);
+
+    // A second run must never touch 'pi_loser' again — nothing left to
+    // track, and the fake gateway's cancelledProviderReferences would grow
+    // to two entries if it were retried.
+    (new ReconcileCheckouts)->handle($gateway, app(DepositPaymentProcessor::class));
+
+    expect($gateway->cancelledProviderReferences)->toBe(['pi_loser']);
+});
+
+it('keeps processing the rest of the batch when one row throws — a per-row failure must not abort the whole run', function () {
+    $admin = User::factory()->create(['is_active' => true]);
+    $admin->assignRole('admin');
+    $failingCat = Cat::factory()->create();
+    $healthyCat = Cat::factory()->create();
+    $healthyCat->setStatus(CatStatus::Available->value);
+    staleTracking('pi_throws');
+    staleTracking('pi_after');
+    $gateway = new FakePaymentGateway;
+    $gateway->checkoutDataResults['pi_throws'] = new PaymentWebhookResult(handled: true, paymentIntentId: 'pi_throws', metadata: ['cat_id' => (string) $failingCat->id, 'name' => 'A', 'email' => 'a@example.com'], amount: 50000, currency: 'CHF');
+    $gateway->checkoutDataResults['pi_after'] = new PaymentWebhookResult(handled: true, paymentIntentId: 'pi_after', metadata: ['cat_id' => (string) $healthyCat->id, 'name' => 'B', 'email' => 'b@example.com'], amount: 50000, currency: 'CHF');
+    $gateway->captureException = new RuntimeException('simulated Stripe failure on this row only');
+    $this->app->instance(PaymentGateway::class, $gateway);
+
+    (new ReconcileCheckouts)->handle($gateway, app(DepositPaymentProcessor::class));
+
+    // pi_after must still have been reached and resolved into a real
+    // deposit, even though pi_throws (processed first, alphabetically/by
+    // insertion order) blew up.
+    expect(Deposit::where('provider_reference', 'pi_after')->exists())->toBeTrue();
 });
 
 // --- Volet 2: failed confirmation emails -----------------------------------
@@ -225,7 +278,7 @@ it('never retries a deposit that is not paid', function () {
     Notification::assertNothingSent();
 });
 
-it('stops retrying and notifies staff once a confirmation email has failed 5 times', function () {
+it('stops retrying and notifies staff once a confirmation email has failed 10 times', function () {
     // Not Notification::fake() here: FailingMailChannel must actually run
     // for real (this test's whole point is to make
     // sendClientConfirmation() genuinely fail) — a full fake would
@@ -238,14 +291,14 @@ it('stops retrying and notifies staff once a confirmation email has failed 5 tim
     $admin->assignRole('admin');
     $deposit = Deposit::factory()->paid()->create([
         'confirmation_sent_at' => null,
-        'confirmation_attempts' => 4,
+        'confirmation_attempts' => 9,
     ]);
     $gateway = new FakePaymentGateway;
     $this->app->instance(PaymentGateway::class, $gateway);
 
     (new ReconcileCheckouts)->handle($gateway, app(DepositPaymentProcessor::class));
 
-    expect($deposit->fresh()->confirmation_attempts)->toBe(5);
+    expect($deposit->fresh()->confirmation_attempts)->toBe(10);
     expect($deposit->fresh()->confirmation_sent_at)->toBeNull();
     expect($admin->fresh()->notifications()->where('type', DepositConfirmationUndeliveredNotification::class)->exists())->toBeTrue();
 });
@@ -254,13 +307,13 @@ it('does not pick up a deposit that already reached the max attempts on a previo
     Notification::fake();
     $deposit = Deposit::factory()->paid()->create([
         'confirmation_sent_at' => null,
-        'confirmation_attempts' => 5,
+        'confirmation_attempts' => 10,
     ]);
     $gateway = new FakePaymentGateway;
     $this->app->instance(PaymentGateway::class, $gateway);
 
     (new ReconcileCheckouts)->handle($gateway, app(DepositPaymentProcessor::class));
 
-    expect($deposit->fresh()->confirmation_attempts)->toBe(5);
+    expect($deposit->fresh()->confirmation_attempts)->toBe(10);
     Notification::assertNothingSent();
 });

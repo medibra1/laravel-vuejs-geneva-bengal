@@ -5,9 +5,9 @@ namespace App\Services\Payments;
 use App\Enums\CatStatus;
 use App\Enums\DepositStatus;
 use App\Models\Cat;
-use App\Models\CheckoutHold;
 use App\Models\Deposit;
 use App\Models\Owner;
+use App\Models\PaymentIntentTracking;
 use App\Notifications\Concerns\NotifiesStaff;
 use App\Notifications\DepositConfirmedNotification;
 use App\Notifications\DepositPaidNotification;
@@ -115,23 +115,23 @@ class DepositPaymentProcessor
      * rides along as PaymentIntent metadata instead (see CheckoutData /
      * StripeGateway::createPaymentIntent()).
      *
-     * Same lock-then-recheck shape as markPaid() above, but there is no
-     * existing Deposit row to lock for the cat this PaymentIntent is
-     * racing against — locks the Cat row itself instead (same target
-     * CheckoutHold::acquire() locks, see CLAUDE.md), which serializes two
-     * concurrent createFromPayment() calls for the same cat exactly the
-     * same way.
+     * This is now the *sole* arbitration point between two visitors who
+     * both confirm a payment for the same cat — nothing upstream blocks
+     * that from happening (see CLAUDE.md: a PaymentIntent is created freely
+     * for any visitor who clicks "Pay", no preliminary hold). Same
+     * lock-then-recheck shape as markPaid() above, but there is no existing
+     * Deposit row to lock for the cat this PaymentIntent is racing against
+     * — locks the Cat row itself instead, which serializes two concurrent
+     * createFromPayment() calls for the same cat.
      *
-     * Lost race (rare — CheckoutHold is supposed to prevent two visitors
-     * ever reaching payment for the same cat at once, but TWINT's
-     * auto-capture means a losing PaymentIntent can still end up
-     * genuinely charged by the time this runs): the exact same
-     * cancel/refund + DepositUnavailableNotification handling as
-     * markPaid()'s own loseRace() below, reused as-is — kept, not
-     * removed, because it's still the last line of defense. Deliberately
-     * builds a transient, never-saved Deposit to hand it rather than
-     * persisting one for the loser: update() on an unsaved model is a
-     * harmless no-op (Eloquent checks $this->exists first), so
+     * Lost race (more common than before this hold-free flow, though still
+     * expected to be rare in practice — two visitors would need to both
+     * complete payment for the same cat before either webhook lands):
+     * the exact same cancel/refund + DepositUnavailableNotification
+     * handling as markPaid()'s own loseRace() below, reused as-is.
+     * Deliberately builds a transient, never-saved Deposit to hand it
+     * rather than persisting one for the loser: update() on an unsaved
+     * model is a harmless no-op (Eloquent checks $this->exists first), so
      * loseRace()'s own ->update(['status' => Unavailable]) call simply
      * does nothing here, while its gateway calls and notifications still
      * fire correctly off the transient instance's attributes.
@@ -181,6 +181,18 @@ class DepositPaymentProcessor
                         'locale' => $metadata['locale'] ?? null,
                     ]));
 
+                    // Same reasoning as the winning branch below: nothing
+                    // left to track once this PaymentIntent is resolved,
+                    // one way or the other. Missing here previously meant
+                    // ReconcileCheckouts kept re-processing an already-lost
+                    // PaymentIntent on every run — refund()/cancelAuthorization()
+                    // called a second time on an already-refunded/cancelled
+                    // PaymentIntent throws on Stripe's side ("cannot refund
+                    // amount=0"), which went uncaught and aborted the whole
+                    // batch, silently starving every other stale row behind
+                    // it in the same run. See CLAUDE.md.
+                    PaymentIntentTracking::query()->where('payment_intent_id', $paymentIntentId)->delete();
+
                     return null;
                 }
             }
@@ -213,9 +225,10 @@ class DepositPaymentProcessor
                 $created->cat->setStatus(CatStatus::Pending->value);
             }
 
-            // The payment slot is no longer needed once a real
-            // reservation exists — see CheckoutHold's own docblock.
-            CheckoutHold::release($paymentIntentId);
+            // The tracking row is no longer needed once a real Deposit
+            // exists to represent this PaymentIntent — see
+            // PaymentIntentTracking's own docblock.
+            PaymentIntentTracking::query()->where('payment_intent_id', $paymentIntentId)->delete();
 
             return $created;
         });

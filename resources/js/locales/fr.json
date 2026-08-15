@@ -200,8 +200,7 @@
         "label_phone": "Téléphone (facultatif)",
         "continue_button": "Continuer vers le paiement",
         "cancel": "Annuler",
-        "cat_unavailable_error": "Ce chaton vient d'être réservé, veuillez rafraîchir la page.",
-        "cat_checkout_in_progress": "Une autre personne est en train de payer pour ce chaton. Veuillez réessayer dans quelques minutes."
+        "cat_unavailable_error": "Ce chaton vient d'être réservé, veuillez rafraîchir la page."
     },
     "depositPay": {
         "meta_title": "Paiement de votre acompte — Geneva Bengal",
@@ -214,8 +213,7 @@
         "pay_button": "Payer",
         "paying_button": "Paiement en cours…",
         "cancel_link": "Annuler et revenir en arrière",
-        "countdown_label": "Temps restant pour finaliser le paiement : {time}",
-        "session_expired": "Votre session de paiement a expiré. Merci de reprendre votre réservation.",
+        "cat_unavailable": "Ce chaton vient d'être réservé par quelqu'un d'autre. Aucun paiement n'a été effectué.",
         "back_to_cat_link": "Retour aux chatons disponibles"
     },
     "hero": {

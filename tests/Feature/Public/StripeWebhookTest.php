@@ -3,8 +3,8 @@
 use App\Enums\CatStatus;
 use App\Enums\DepositStatus;
 use App\Models\Cat;
-use App\Models\CheckoutHold;
 use App\Models\Deposit;
+use App\Models\PaymentIntentTracking;
 use App\Models\User;
 use App\Notifications\DepositConfirmedNotification;
 use App\Notifications\DepositPaidNotification;
@@ -123,18 +123,13 @@ beforeEach(function () {
     $this->app->instance(PaymentGateway::class, $this->gateway);
 });
 
-it('creates a paid deposit, captures the PaymentIntent, reserves the cat, sends the confirmation, and releases the checkout hold on a card event', function () {
+it('creates a paid deposit, captures the PaymentIntent, reserves the cat, sends the confirmation, and clears the tracking row on a card event', function () {
     Notification::fake();
     $admin = User::factory()->create(['is_active' => true]);
     $admin->assignRole('admin');
     $cat = Cat::factory()->create();
     $cat->setStatus(CatStatus::Available->value);
-    CheckoutHold::query()->create([
-        'cat_id' => $cat->id,
-        'payment_intent_id' => 'pi_test_123',
-        'expires_at' => now()->addMinutes(3),
-        'hard_expires_at' => now()->addMinutes(15),
-    ]);
+    PaymentIntentTracking::query()->create(['payment_intent_id' => 'pi_test_123']);
 
     $payload = cardAuthorizedPayload('pi_test_123', checkoutMetadata(catId: $cat->id));
     $response = postSignedWebhook($payload);
@@ -151,7 +146,7 @@ it('creates a paid deposit, captures the PaymentIntent, reserves the cat, sends 
     expect($deposit->paid_at)->not->toBeNull();
     expect($cat->fresh()->status)->toBe(CatStatus::Pending->value);
     expect($this->gateway->capturedDepositIds)->toBe([$deposit->id]);
-    expect(CheckoutHold::query()->where('cat_id', $cat->id)->exists())->toBeFalse();
+    expect(PaymentIntentTracking::query()->where('payment_intent_id', 'pi_test_123')->exists())->toBeFalse();
     expect($deposit->confirmation_sent_at)->not->toBeNull();
     expect($deposit->confirmation_attempts)->toBe(1);
     Notification::assertSentOnDemand(DepositConfirmedNotification::class);

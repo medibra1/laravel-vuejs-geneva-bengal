@@ -23,9 +23,19 @@ class SiteSetting extends Model implements HasMedia
         ];
     }
 
+    /**
+     * Reads through the full Eloquent model (::first(), not a bare
+     * ->value('value') query-builder column pull) so the 'value' => 'array'
+     * cast above actually applies — a bare ->value() bypasses casts
+     * entirely and returns the raw SQL column, which silently handed
+     * callers a JSON-encoded string (e.g. deposit_amount as the string
+     * "50000" instead of the int 50000) rather than the decoded value.
+     */
     public static function get(string $key, mixed $default = null): mixed
     {
-        return static::query()->where('key', $key)->value('value') ?? $default;
+        $setting = static::query()->where('key', $key)->first();
+
+        return $setting === null ? $default : ($setting->value ?? $default);
     }
 
     public static function set(string $key, mixed $value): void

@@ -106,6 +106,17 @@ class FakePaymentGateway implements PaymentGateway
      */
     public bool $isCapturedResult = false;
 
+    /**
+     * Set to simulate capture() blowing up (network error, Stripe API
+     * error, ...) — lets a test exercise ReconcileCheckouts' per-row
+     * resilience: one row throwing must never abort the rest of the batch.
+     * One-shot (cleared to null right after throwing once) rather than a
+     * persistent flag: this gateway instance is shared across every row in
+     * a batch, so a persistent exception would fail *every* row's
+     * capture(), not just the one a test means to simulate as broken.
+     */
+    public ?\Throwable $captureException = null;
+
     public function createPaymentIntent(CheckoutData $checkoutData): PaymentIntentResult
     {
         $this->createPaymentIntentCalls[] = $checkoutData;
@@ -133,6 +144,13 @@ class FakePaymentGateway implements PaymentGateway
 
     public function capture(Deposit $deposit): bool
     {
+        if ($this->captureException !== null) {
+            $exception = $this->captureException;
+            $this->captureException = null;
+
+            throw $exception;
+        }
+
         $this->capturedDepositIds[] = $deposit->id;
 
         return true;

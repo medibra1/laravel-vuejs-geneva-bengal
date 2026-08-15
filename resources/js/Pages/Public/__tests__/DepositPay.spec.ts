@@ -7,7 +7,7 @@ import { createI18n } from 'vue-i18n';
 // at that point) — vi.hoisted() is the mocked-var equivalent that
 // survives the hoist. Everything the two mocks below need is declared in
 // one block since `mockStripe`'s chain depends on `mockPaymentElement`.
-const { routerVisit, mockPaymentElement, elementsCreate, stripeElements, confirmPayment, loadStripe, getReadyCallback, resetReadyCallback } = vi.hoisted(() => {
+const { routerVisit, mockPaymentElement, elementsCreate, elementsSubmit, stripeElements, confirmPayment, loadStripe, getReadyCallback, resetReadyCallback } = vi.hoisted(() => {
     // Captured so the test can fire it itself, exactly like Stripe.js
     // would once the real iframe finishes loading — the Payer button
     // stays disabled until then (see DepositPay.vue's :disabled binding).
@@ -20,7 +20,13 @@ const { routerVisit, mockPaymentElement, elementsCreate, stripeElements, confirm
         }),
     };
     const elementsCreate = vi.fn(() => mockPaymentElement);
-    const stripeElements = vi.fn(() => ({ create: elementsCreate }));
+    // Required by Stripe's deferred-mode flow — see submitPayment()'s own
+    // call to elements.submit() before confirmPayment(). Defaults to no
+    // error; individual tests override via elementsSubmit.mockResolvedValue(...).
+    // Typed explicitly (not inferred from the default return value alone)
+    // so a later .mockResolvedValue({ error: { message: '...' } }) type-checks.
+    const elementsSubmit = vi.fn<() => Promise<{ error: { message: string } | undefined }>>(() => Promise.resolve({ error: undefined }));
+    const stripeElements = vi.fn(() => ({ create: elementsCreate, submit: elementsSubmit }));
     const confirmPayment = vi.fn();
     const mockStripe = { elements: stripeElements, confirmPayment };
 
@@ -28,6 +34,7 @@ const { routerVisit, mockPaymentElement, elementsCreate, stripeElements, confirm
         routerVisit: vi.fn(),
         mockPaymentElement,
         elementsCreate,
+        elementsSubmit,
         stripeElements,
         confirmPayment,
         loadStripe: vi.fn(() => Promise.resolve(mockStripe)),
@@ -70,8 +77,7 @@ const messages = {
             pay_button: 'Payer',
             paying_button: 'Paiement en cours…',
             cancel_link: 'Annuler et revenir en arrière',
-            countdown_label: 'Temps restant pour finaliser le paiement : {time}',
-            session_expired: 'Votre session de paiement a expiré. Merci de reprendre votre réservation.',
+            cat_unavailable: "Ce chaton vient d'être réservé par quelqu'un d'autre. Aucun paiement n'a été effectué.",
             back_to_cat_link: 'Retour aux chatons disponibles',
         },
     },
@@ -79,11 +85,11 @@ const messages = {
 
 const i18n = createI18n({ legacy: false, locale: 'fr', messages });
 
-function jsonResponse(body: unknown): Response {
-    return { ok: true, json: () => Promise.resolve(body) } as Response;
+function jsonResponse(body: unknown, ok = true): Response {
+    return { ok, json: () => Promise.resolve(body) } as Response;
 }
 
-function mountDepositPay(overrides: Partial<{ hardExpiresAt: string | null; catSlug: string | null }> = {}) {
+function mountDepositPay(overrides: Partial<{ catId: number | null; catSlug: string | null }> = {}) {
     return mount(DepositPay, {
         global: {
             plugins: [i18n],
@@ -94,19 +100,20 @@ function mountDepositPay(overrides: Partial<{ hardExpiresAt: string | null; catS
             },
         },
         props: {
-            paymentIntentId: 'pi_test_123',
-            clientSecret: 'pi_test_secret',
-            stripePublishableKey: 'pk_test_123',
+            catId: overrides.catId === undefined ? 42 : overrides.catId,
             catName: 'Simba',
-            catSlug: overrides.catSlug ?? 'simba',
+            catSlug: overrides.catSlug === undefined ? 'simba' : overrides.catSlug,
             amount: 50000,
             currency: 'CHF',
-            hardExpiresAt: overrides.hardExpiresAt === undefined ? new Date(Date.now() + 15 * 60_000).toISOString() : overrides.hardExpiresAt,
+            stripePublishableKey: 'pk_test_123',
+            name: 'Marie Dupont',
+            email: 'marie@example.com',
+            phone: '+41 79 000 00 00',
         },
     });
 }
 
-async function mountReady(overrides: Partial<{ hardExpiresAt: string | null; catSlug: string | null }> = {}) {
+async function mountReady(overrides: Partial<{ catId: number | null; catSlug: string | null }> = {}) {
     const wrapper = mountDepositPay(overrides);
     await flushPromises();
     getReadyCallback()?.();
@@ -117,7 +124,7 @@ async function mountReady(overrides: Partial<{ hardExpiresAt: string | null; cat
 
 beforeEach(() => {
     vi.clearAllMocks();
-    vi.useRealTimers();
+    elementsSubmit.mockResolvedValue({ error: undefined });
     resetReadyCallback();
     globalThis.route = vi.fn((name: string, params?: Record<string, unknown>) => {
         const query = params
@@ -130,32 +137,75 @@ beforeEach(() => {
         return `https://geneva-bengal.test/fr/${name}${query}`;
     }) as unknown as typeof route;
     document.head.innerHTML = '<meta name="csrf-token" content="test-token">';
-    globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
+    globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse({ paymentIntentId: 'pi_test_123', clientSecret: 'pi_test_secret' }));
 });
 
 describe('DepositPay', () => {
-    it('mounts a Stripe Payment Element using the received client secret', async () => {
+    it('mounts a deferred Stripe Payment Element (no clientSecret) on load — no PaymentIntent is created yet', async () => {
         mountDepositPay();
         await flushPromises();
 
         expect(loadStripe).toHaveBeenCalledWith('pk_test_123');
-        expect(stripeElements).toHaveBeenCalledWith(expect.objectContaining({ clientSecret: 'pi_test_secret' }));
+        expect(stripeElements).toHaveBeenCalledWith(
+            expect.objectContaining({ mode: 'payment', amount: 50000, currency: 'chf', paymentMethodTypes: ['card', 'twint'] }),
+        );
         expect(elementsCreate).toHaveBeenCalledWith('payment');
         expect(mockPaymentElement.mount).toHaveBeenCalled();
+        expect(fetch).not.toHaveBeenCalled();
     });
 
-    it('calls confirmPayment with redirect: if_required and a deposits.return url when Payer is clicked', async () => {
+    it('calls elements.submit() before confirm-intent and confirmPayment with the returned client secret when Payer is clicked', async () => {
         confirmPayment.mockResolvedValue({ paymentIntent: { id: 'pi_test', status: 'requires_capture' } });
         const wrapper = await mountReady();
 
         await wrapper.find('button[type="button"]').trigger('click');
         await flushPromises();
 
+        // Required by Stripe's deferred-mode integration — confirmPayment()
+        // throws synchronously if elements.submit() was never called first.
+        expect(elementsSubmit).toHaveBeenCalled();
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringContaining('deposits.confirm-intent'),
+            expect.objectContaining({
+                method: 'POST',
+                body: JSON.stringify({
+                    cat_id: 42,
+                    name: 'Marie Dupont',
+                    email: 'marie@example.com',
+                    phone: '+41 79 000 00 00',
+                }),
+            }),
+        );
         expect(confirmPayment).toHaveBeenCalledWith({
             elements: expect.anything(),
+            clientSecret: 'pi_test_secret',
             confirmParams: { return_url: expect.stringContaining('deposits.return') },
             redirect: 'if_required',
         });
+    });
+
+    it('shows an inline error and never calls confirm-intent or confirmPayment when elements.submit() itself fails', async () => {
+        elementsSubmit.mockResolvedValue({ error: { message: 'Champs de carte invalides.' } });
+        const wrapper = await mountReady();
+
+        await wrapper.find('button[type="button"]').trigger('click');
+        await flushPromises();
+
+        expect(wrapper.text()).toContain('Champs de carte invalides.');
+        expect(fetch).not.toHaveBeenCalled();
+        expect(confirmPayment).not.toHaveBeenCalled();
+    });
+
+    it('shows the cat-unavailable message and never calls Stripe when confirm-intent is rejected', async () => {
+        globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse({ message: 'Ce chaton a déjà été réservé.' }, false));
+        const wrapper = await mountReady();
+
+        await wrapper.find('button[type="button"]').trigger('click');
+        await flushPromises();
+
+        expect(wrapper.text()).toContain("Ce chaton vient d'être réservé par quelqu'un d'autre");
+        expect(confirmPayment).not.toHaveBeenCalled();
+        expect(routerVisit).not.toHaveBeenCalled();
     });
 
     it('shows the Stripe error message inline, without navigating away, when the payment is declined', async () => {
@@ -182,167 +232,31 @@ describe('DepositPay', () => {
         expect(routerVisit).toHaveBeenCalledWith(expect.stringContaining('deposits.return'));
     });
 
-    describe('hard-expiry countdown', () => {
-        it('shows a countdown counting down from hardExpiresAt, in mm:ss', async () => {
-            vi.useFakeTimers();
-            const wrapper = await mountReady({ hardExpiresAt: new Date(Date.now() + 125_000).toISOString() });
-
-            expect(wrapper.text()).toContain('2:05');
-
-            await vi.advanceTimersByTimeAsync(5_000);
-            expect(wrapper.text()).toContain('2:00');
-
-            vi.useRealTimers();
-        });
-
-        it('recomputes from the fixed hard_expires_at timestamp rather than decrementing in place, so it never drifts', async () => {
-            vi.useFakeTimers();
-            const wrapper = await mountReady({ hardExpiresAt: new Date(Date.now() + 60_000).toISOString() });
-
-            // Simulates a backgrounded tab: a single big jump instead of
-            // many 1s ticks. A naive decrement-by-one-per-tick
-            // implementation would still show ~59s here; recomputing from
-            // the fixed deadline shows the real remaining time.
-            await vi.advanceTimersByTimeAsync(45_000);
-            expect(wrapper.text()).toContain('0:15');
-
-            vi.useRealTimers();
-        });
-
-        it('turns visually pressing under 2 minutes remaining', async () => {
-            vi.useFakeTimers();
-            const wrapper = await mountReady({ hardExpiresAt: new Date(Date.now() + 121_000).toISOString() });
-
-            expect(wrapper.find('p.text-red-600').exists()).toBe(false);
-
-            await vi.advanceTimersByTimeAsync(2_000);
-            expect(wrapper.find('p.text-red-600').exists()).toBe(true);
-
-            vi.useRealTimers();
-        });
-
-        it('shows no countdown at all for a waiting-list checkout (hardExpiresAt null)', async () => {
-            vi.useFakeTimers();
-            const wrapper = await mountReady({ hardExpiresAt: null });
-
-            expect(wrapper.text()).not.toContain('Temps restant');
-
-            vi.useRealTimers();
-        });
-
-        it('expires the session locally once the countdown reaches zero, even without a failed ping', async () => {
-            vi.useFakeTimers();
-            const wrapper = await mountReady({ hardExpiresAt: new Date(Date.now() + 3_000).toISOString() });
-
-            await vi.advanceTimersByTimeAsync(3_000);
-
-            expect(wrapper.text()).toContain('Votre session de paiement a expiré');
-            expect(wrapper.find('button[type="button"]').exists()).toBe(false);
-            // No ping should have had time to fire yet (first one is
-            // scheduled 60s out) — the countdown alone caught this.
-            expect(fetch).not.toHaveBeenCalled();
-
-            vi.useRealTimers();
-        });
-    });
-
-    describe('checkout hold ping', () => {
-        it('pings deposits.hold.touch with the payment intent id every 60 seconds', async () => {
-            vi.useFakeTimers();
-            await mountReady();
-
-            expect(fetch).not.toHaveBeenCalled();
-
-            await vi.advanceTimersByTimeAsync(60_000);
-            expect(fetch).toHaveBeenCalledWith(
-                expect.stringContaining('deposits.hold.touch'),
-                expect.objectContaining({
-                    method: 'POST',
-                    body: JSON.stringify({ payment_intent_id: 'pi_test_123' }),
-                }),
-            );
-
-            await vi.advanceTimersByTimeAsync(60_000);
-            expect(fetch).toHaveBeenCalledTimes(2);
-
-            vi.useRealTimers();
-        });
-
-        it('expires the session when a ping reports the hold is gone (ok: false)', async () => {
-            vi.useFakeTimers();
-            globalThis.fetch = vi.fn().mockResolvedValue(jsonResponse({ ok: false }));
-            const wrapper = await mountReady();
-
-            await vi.advanceTimersByTimeAsync(60_000);
-            await flushPromises();
-
-            expect(wrapper.text()).toContain('Votre session de paiement a expiré');
-            expect(wrapper.find('button[type="button"]').exists()).toBe(false);
-
-            vi.useRealTimers();
-        });
-
-        it('does not treat a network failure on the ping itself as an expired session', async () => {
-            vi.useFakeTimers();
-            globalThis.fetch = vi.fn().mockRejectedValue(new Error('network down'));
-            const wrapper = await mountReady();
-
-            await vi.advanceTimersByTimeAsync(60_000);
-            await flushPromises();
-
-            expect(wrapper.text()).not.toContain('Votre session de paiement a expiré');
-
-            vi.useRealTimers();
-        });
-
-        it('stops pinging once the session has already expired locally via the countdown', async () => {
-            vi.useFakeTimers();
-            await mountReady({ hardExpiresAt: new Date(Date.now() + 3_000).toISOString() });
-
-            await vi.advanceTimersByTimeAsync(3_000);
-            expect(fetch).not.toHaveBeenCalled();
-
-            // Would have fired a ping at 60s had it not already stopped.
-            await vi.advanceTimersByTimeAsync(60_000);
-            expect(fetch).not.toHaveBeenCalled();
-
-            vi.useRealTimers();
-        });
-    });
-
-    describe('cancelling', () => {
-        it('releases the checkout hold and navigates to the cancelled return url when Cancel is clicked', async () => {
-            const wrapper = await mountReady();
-
-            const buttons = wrapper.findAll('button[type="button"]');
-            const cancelButton = buttons[buttons.length - 1];
-            await cancelButton.trigger('click');
-            await flushPromises();
-
-            expect(fetch).toHaveBeenCalledWith(
-                expect.stringContaining('deposits.hold.release'),
-                expect.objectContaining({
-                    method: 'POST',
-                    body: JSON.stringify({ payment_intent_id: 'pi_test_123' }),
-                }),
-            );
-            expect(routerVisit).toHaveBeenCalledWith(expect.stringContaining('status=cancelled'));
-        });
-    });
-
-    it('keeps the Payment Element mounted and reusable, without releasing the hold, when the payment is declined', async () => {
-        vi.useFakeTimers();
+    it('keeps the Payment Element mounted and reusable when the payment is declined', async () => {
         confirmPayment.mockResolvedValue({ error: { message: 'Votre carte a été refusée.' } });
         const wrapper = await mountReady();
         await wrapper.find('button[type="button"]').trigger('click');
         await flushPromises();
 
-        // The decline itself must never call the release endpoint — only
-        // the explicit Cancel button does (see CLAUDE.md: the same
-        // visitor is still trying to pay).
-        expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('deposits.hold.release'), expect.anything());
         expect(mockPaymentElement.destroy).not.toHaveBeenCalled();
+    });
 
-        vi.useRealTimers();
+    describe('cancelling', () => {
+        it('is a plain link back to the cat page — no server call involved', async () => {
+            const wrapper = await mountReady();
+
+            const link = wrapper.findAll('a').find((a) => a.text().includes('Annuler'));
+
+            expect(link?.attributes('href')).toContain('cats.show');
+            expect(fetch).not.toHaveBeenCalled();
+        });
+
+        it('links to the general cats list for a waiting-list checkout', async () => {
+            const wrapper = await mountReady({ catId: null, catSlug: null });
+
+            const link = wrapper.findAll('a').find((a) => a.text().includes('Annuler'));
+
+            expect(link?.attributes('href')).toContain('cats.index');
+        });
     });
 });

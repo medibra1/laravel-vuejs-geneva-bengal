@@ -70,6 +70,44 @@ export default defineConfig({
             "@": fileURLToPath(new URL("./resources/js", import.meta.url)),
         },
     },
+    server: {
+        // `npm run dev -- --host` (see docker-compose.yml's frontend
+        // service, which also passes --port 5273) binds Vite to 0.0.0.0 so
+        // the container's port mapping can reach it — but without `origin`
+        // set explicitly, Laravel's Vite plugin has to *guess* the
+        // browser-facing URL for @vite/client and every HMR-served module,
+        // and guesses the literal bind address ("http://[::]:5273")
+        // instead of "http://localhost:5273". The browser then loads those
+        // scripts from a different origin than the page itself, which is
+        // exactly what triggered the CORS failures reported alongside
+        // Stripe's "elements.submit() must be called..." error.
+        //
+        // Read from process.env.VITE_DEV_PORT (set in docker-compose.yml's
+        // frontend service, see there) rather than hardcoded to 5273 — so
+        // this also works running `npm run dev` directly on the host,
+        // outside Docker. That path never sets this variable and never
+        // passes --port, so Vite falls back to its own default (5173); a
+        // value hardcoded to the Docker port here previously pointed the
+        // browser at a port nothing was listening on when running on the
+        // host (`php artisan serve` + `npm run dev`, see CLAUDE.md — this
+        // broke that setup right after the Docker-only fix above). Vite's
+        // CLI doesn't expose whatever --port it was actually started with
+        // as an env var on its own, hence the separate docker-compose.yml
+        // variable rather than reading a Vite-provided one directly.
+        origin: `http://localhost:${process.env.VITE_DEV_PORT ?? 5173}`,
+        // The app itself is served by nginx on :8280 in Docker (see
+        // docker-compose.yml) — a different origin than Vite's own dev
+        // server port — by default Vite's CORS middleware only allows its
+        // own origin, so the browser blocks every @vite/client / HMR
+        // module fetch from a page loaded at :8280 even once `origin`
+        // above points requests there correctly. `cors: true` has Vite
+        // reflect whatever Origin the browser actually sent instead of
+        // hardcoding its own, which is what a same-origin *response*
+        // header actually needs to say to satisfy the browser's CORS
+        // check — harmless for the host setup too, where Vite and the app
+        // already share the same origin.
+        cors: true,
+    },
     test: {
         environment: "jsdom",
         globals: true,

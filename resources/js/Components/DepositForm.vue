@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import { useForm, usePage } from '@inertiajs/vue3';
 import type { PageProps } from '@/types';
 
@@ -21,22 +21,10 @@ const form = useForm({
     [honeypot.validFromFieldName]: honeypot.encryptedValidFrom,
 });
 
-// lang/{fr,en}.json's own translation of the sentence
-// CheckoutHold::acquire() failing sends back (see
-// Public\DepositController::store()) — __() translates it server-side
-// per the active locale (see lang/*.json), so both variants are matched
-// against here rather than just the English source string. Never
-// displayed directly, exactly like the "already reserved" error below.
-const isCheckoutInProgressError = computed(
-    () =>
-        form.errors.cat_id === 'Someone else is currently paying for this kitten. Please try again in a few minutes.'
-        || form.errors.cat_id === 'Une autre personne est en train de payer pour ce chaton. Veuillez réessayer dans quelques minutes.',
-);
-
 function submit(): void {
     // A normal Inertia visit — the response renders Public/DepositPay.vue
-    // directly, with the PaymentIntent's client_secret as a prop (see
-    // CLAUDE.md), no full-page redirect involved.
+    // directly (see CLAUDE.md), no PaymentIntent is created yet at this
+    // point, no full-page redirect involved.
     form.post(route('deposits.store'));
 }
 </script>
@@ -74,15 +62,16 @@ function submit(): void {
                 {{ $t('deposit.stripe_notice') }}
             </p>
 
-            <!-- cat_id now has two distinct possible validation errors (see
-                 CatIsAvailableForDeposit and CheckoutHold::acquire() in
-                 Public\DepositController::store()) — matched against the
+            <!-- The only validation error cat_id can carry at this stage is
+                 CatIsAvailableForDeposit's own "already reserved" — the
                  backend's own text (translated per locale via lang/*.json,
-                 never displayed directly — see CLAUDE.md on the three i18n
-                 layers) to pick the right friendly, vue-i18n message
-                 instead. -->
-            <p v-if="isCheckoutInProgressError" class="text-sm text-red-600">{{ $t('deposit.cat_checkout_in_progress') }}</p>
-            <p v-else-if="form.errors.cat_id" class="text-sm text-red-600">{{ $t('deposit.cat_unavailable_error') }}</p>
+                 see CLAUDE.md on the three i18n layers) is never displayed
+                 directly, this friendly vue-i18n message is shown instead.
+                 A "someone else is paying right now" collision can no
+                 longer happen here — no PaymentIntent exists yet at this
+                 point, only confirm-intent's own re-check (surfaced on
+                 Public/DepositPay.vue) can ever hit that race. -->
+            <p v-if="form.errors.cat_id" class="text-sm text-red-600">{{ $t('deposit.cat_unavailable_error') }}</p>
 
             <div>
                 <label for="deposit-name" class="block text-sm font-medium text-neutral-700">{{ $t('deposit.label_full_name') }}</label>
