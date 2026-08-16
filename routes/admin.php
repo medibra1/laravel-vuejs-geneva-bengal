@@ -19,6 +19,12 @@ use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
+// Bare /admin has no page of its own — send it to the dashboard. Left
+// outside the `auth` middleware group on purpose: the redirect target
+// (route('dashboard')) is itself auth-protected, so a guest bounces
+// straight through to /login without this route needing its own check.
+Route::get('admin', fn () => redirect()->route('dashboard'));
+
 // Kept outside the ->name('admin.') group below on purpose: Breeze's own
 // auth controllers (email verification, login redirects...) all target
 // route('dashboard') by that exact unprefixed name. Only the URL moves
