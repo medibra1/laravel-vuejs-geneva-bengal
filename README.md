@@ -8,15 +8,19 @@ Monorepo Laravel + Inertia — un seul déploiement, pas de SPA découplée.
 
 - **Backend** — Laravel 13 (PHP 8.3+), MySQL 8
 - **Frontend** — Vue 3 (Composition API, `<script setup lang="ts">`), TypeScript, Inertia.js, PrimeVue 4 (thème Aura) + Tailwind CSS 4
-- **i18n** — routing `/fr` `/en` ([mcamara/laravel-localization](https://github.com/mcamara/laravel-localization)), contenu traduisible ([spatie/laravel-translatable](https://github.com/spatie/laravel-translatable)), interface via [vue-i18n](https://vue-i18n.intlify.dev/)
+- **i18n** — routing `/fr` `/en` ([niels-numbers/laravel-localizer](https://github.com/niels-numbers/laravel-localizer)), contenu traduisible ([spatie/laravel-translatable](https://github.com/spatie/laravel-translatable)), interface via [vue-i18n](https://vue-i18n.intlify.dev/)
 - **Rôles** — `admin` / `super_admin` via [spatie/laravel-permission](https://github.com/spatie/laravel-permission), audit trail via [spatie/laravel-activitylog](https://github.com/spatie/laravel-activitylog)
 - **Médias** — [spatie/laravel-medialibrary](https://github.com/spatie/laravel-medialibrary)
 - **Anti-spam** — [spatie/laravel-honeypot](https://github.com/spatie/laravel-honeypot) sur les formulaires publics (contact, infolettre, acompte)
-- **Paiement** — Stripe Checkout (carte + TWINT) derrière une interface `PaymentGateway`, webhook + job de réconciliation quotidien
+- **Paiement** — PaymentIntents Stripe en capture manuelle (carte + TWINT) derrière une interface `PaymentGateway`, webhook + job de réconciliation périodique
 - **SEO** — [spatie/laravel-sitemap](https://github.com/spatie/laravel-sitemap), hreflang fr/en, rendu côté serveur (SSR) pour Inertia
 - **Tests** — [Pest](https://pestphp.com/) (backend), [Vitest](https://vitest.dev/) + Vue Test Utils (frontend)
 - **Qualité** — [Laravel Pint](https://laravel.com/docs/pint), [Larastan](https://github.com/larastan/larastan)
 - **CI** — GitHub Actions, deux workflows indépendants et path-filtrés (`backend.yml`, `frontend.yml`)
+
+## Documentation
+
+Voir [`docs/`](docs/) pour l'architecture détaillée : [architecture générale](docs/architecture.md), [schéma de base de données](docs/database-schema.md), [référence des routes](docs/routes.md), [modèle de domaine](docs/domain-model.md), [flux de paiement Stripe](docs/payments.md), [i18n (trois couches)](docs/i18n.md), [back-office](docs/admin.md), [SEO](docs/seo.md). Déploiement : [`DEPLOY.md`](DEPLOY.md).
 
 ## Démarrer avec Docker (recommandé)
 
@@ -89,9 +93,10 @@ Voir [`DEPLOY.md`](DEPLOY.md) pour la checklist complète (variables d'env, SSR,
 - [x] Gestion des comptes admin (`super_admin`) — création via lien de réinitialisation, désactivation, audit trail (`activitylog`)
 - [x] Page d'accueil publique
 - [x] Refonte admin — sidebar avec logo, navigation groupée
-- [x] Paiement d'acompte (Stripe Checkout, carte + TWINT — webhook, remboursement, réconciliation)
+- [x] Paiement d'acompte (PaymentIntents Stripe en capture manuelle, carte + TWINT — webhook, remboursement, réconciliation)
 - [x] Tableau de bord admin (KPIs, graphiques filtrés par période)
 - [x] SEO — sitemap, hreflang, rendu côté serveur (SSR)
+- [x] Journal d'activité admin (`spatie/laravel-activitylog`) — écran de consultation avec filtres, diff avant/après, purge automatique mensuelle
 
 Toutes les phases prévues sont livrées. ⚠️ Le paiement est développé et
 testé en mode test Stripe uniquement — un compte Stripe réel et vérifié
