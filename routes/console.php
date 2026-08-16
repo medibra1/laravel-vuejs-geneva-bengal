@@ -15,3 +15,11 @@ Artisan::command('inspire', function () {
 // minimum interval of Infomaniak's shared hosting task scheduler that
 // runs /cron/run in production — see DEPLOY.md §4.
 Schedule::job(new ReconcileCheckouts)->everyFifteenMinutes();
+
+// Prevents the activity_log table (see Admin\ActivityLogController) from
+// growing forever — config('activitylog.delete_records_older_than_days')
+// is 365 by default, this is just what actually enforces it. Monthly is
+// plenty: unlike ReconcileCheckouts, nothing downstream depends on this
+// running promptly. --force skips ConfirmableTrait's interactive prompt,
+// which would otherwise block every run in production.
+Schedule::command('activitylog:clean --force')->monthly();
