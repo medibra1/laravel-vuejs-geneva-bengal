@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\Cats\AdoptionCatController;
 use App\Http\Controllers\Admin\Cats\BreederCatController;
 use App\Http\Controllers\Admin\ContactRequestController;
@@ -100,6 +101,9 @@ Route::prefix('admin')
     ->group(function (): void {
         Route::get('settings', [SiteSettingController::class, 'edit'])->name('settings.edit');
         Route::put('settings', [SiteSettingController::class, 'update'])->name('settings.update');
+
+        // Read-only — no password.confirm, same tier as settings.edit/users.index.
+        Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
 
         // index/create/edit are just reading data/rendering a form — only
         // the actions that actually create/change/remove an admin account
