@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
  * @property Carbon|null $expected_date Larastan doesn't infer casts declared via the casts(): array method syntax.
@@ -17,7 +19,16 @@ use Illuminate\Support\Carbon;
 class Litter extends Model
 {
     /** @use HasFactory<LitterFactory> */
-    use HasFactory;
+    use HasFactory, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('litters')
+            ->logOnly(['sire_cat_id', 'dam_cat_id', 'expected_date', 'notes'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
     protected function casts(): array
     {

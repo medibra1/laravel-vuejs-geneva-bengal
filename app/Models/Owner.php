@@ -8,12 +8,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 #[Fillable(['first_name', 'last_name', 'email', 'phone', 'city', 'desired_cat_id', 'desired_color_id'])]
 class Owner extends Model
 {
     /** @use HasFactory<OwnerFactory> */
-    use HasFactory;
+    use HasFactory, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('owners')
+            ->logOnly(['first_name', 'last_name', 'email', 'phone', 'city', 'desired_cat_id', 'desired_color_id'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
     /**
      * @return BelongsTo<Cat, $this>

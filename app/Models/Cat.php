@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -34,12 +36,25 @@ use Spatie\Translatable\HasTranslations;
 class Cat extends Model implements HasMedia
 {
     /** @use HasFactory<CatFactory> */
-    use HasFactory, HasSlug, HasStatuses, HasTranslations, InteractsWithMedia;
+    use HasFactory, HasSlug, HasStatuses, HasTranslations, InteractsWithMedia, LogsActivity;
 
     /**
      * @var array<int, string>
      */
     public array $translatable = ['description'];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('cats')
+            ->logOnly([
+                'name', 'type', 'sex', 'color_id', 'second_color_id',
+                'price', 'birth_date', 'eye_color', 'available_at', 'diet',
+                'litter_trained', 'neutered', 'litter_id',
+            ])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
     /**
      * Get the attributes that should be cast.
