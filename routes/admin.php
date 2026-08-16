@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\Cats\AdoptionCatController;
 use App\Http\Controllers\Admin\Cats\BreederCatController;
 use App\Http\Controllers\Admin\ContactRequestController;
@@ -17,6 +18,12 @@ use App\Http\Controllers\Admin\SiteSettingController;
 use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
+
+// Bare /admin has no page of its own — send it to the dashboard. Left
+// outside the `auth` middleware group on purpose: the redirect target
+// (route('dashboard')) is itself auth-protected, so a guest bounces
+// straight through to /login without this route needing its own check.
+Route::get('admin', fn () => redirect()->route('dashboard'));
 
 // Kept outside the ->name('admin.') group below on purpose: Breeze's own
 // auth controllers (email verification, login redirects...) all target
@@ -100,6 +107,9 @@ Route::prefix('admin')
     ->group(function (): void {
         Route::get('settings', [SiteSettingController::class, 'edit'])->name('settings.edit');
         Route::put('settings', [SiteSettingController::class, 'update'])->name('settings.update');
+
+        // Read-only — no password.confirm, same tier as settings.edit/users.index.
+        Route::get('activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
 
         // index/create/edit are just reading data/rendering a form — only
         // the actions that actually create/change/remove an admin account

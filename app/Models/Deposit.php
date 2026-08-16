@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
  * @property DepositStatus $status Larastan doesn't infer enum casts declared via the casts(): array method syntax.
@@ -28,7 +30,19 @@ use Illuminate\Support\Carbon;
 class Deposit extends Model
 {
     /** @use HasFactory<DepositFactory> */
-    use HasFactory;
+    use HasFactory, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('deposits')
+            ->logOnly([
+                'cat_id', 'owner_id', 'name', 'email', 'phone', 'amount',
+                'currency', 'status', 'payment_method', 'paid_at', 'finalized_at',
+            ])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
     protected function casts(): array
     {

@@ -6,6 +6,8 @@ use Database\Factories\FaqItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 use Spatie\Translatable\HasTranslations;
@@ -14,7 +16,18 @@ use Spatie\Translatable\HasTranslations;
 class FaqItem extends Model
 {
     /** @use HasFactory<FaqItemFactory> */
-    use HasFactory, HasSlug, HasTranslations;
+    use HasFactory, HasSlug, HasTranslations, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('faq_items')
+            // question/answer excluded — translatable JSON, see Page's own
+            // exclusion of body/meta_* for the same reasoning.
+            ->logOnly(['order', 'slug'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
     /**
      * @var array<int, string>
