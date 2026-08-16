@@ -263,6 +263,29 @@ export interface AppNotifications {
     recent: AppNotification[];
 }
 
+export interface ActivityLogCauser {
+    id: number;
+    name: string;
+    email: string;
+}
+
+// Mirrors spatie/laravel-activitylog's Activity model columns — see
+// Admin\ActivityLogController.
+export interface ActivityLogEntry {
+    id: number;
+    log_name: string | null;
+    description: string;
+    subject_type: string | null;
+    subject_id: number | null;
+    causer: ActivityLogCauser | null;
+    event: string | null;
+    properties: {
+        attributes?: Record<string, unknown>;
+        old?: Record<string, unknown>;
+    } | null;
+    created_at: string;
+}
+
 export interface Paginated<T> {
     data: T[];
     current_page: number;

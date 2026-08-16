@@ -88,6 +88,7 @@ const paymentLinks: NavItem[] = [
 const adminLinks: NavItem[] = [
     { name: 'admin.users.index', label: 'Comptes admin', icon: 'pi-shield' },
     { name: 'admin.settings.edit', label: 'Réglages du site', icon: 'pi-cog' },
+    { name: 'admin.activity-log.index', label: "Journal d'activité", icon: 'pi-history' },
 ];
 
 function isActive(link: NavItem): boolean {
