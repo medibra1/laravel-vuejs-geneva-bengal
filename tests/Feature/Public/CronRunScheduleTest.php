@@ -3,6 +3,8 @@
 use App\Models\PaymentIntentTracking;
 use App\Services\Payments\PaymentGateway;
 use App\Services\Payments\PaymentWebhookResult;
+use Illuminate\Support\Facades\Cache;
+use Spatie\Activitylog\Models\Activity;
 use Tests\Doubles\FakePaymentGateway;
 
 it('rejects a request without a token', function () {
@@ -52,4 +54,28 @@ it('reconciles a stale PaymentIntentTracking row regardless of whether schedule:
     // proving the job actually ran rather than schedule:run silently
     // no-op'ing outside its own slot.
     expect(PaymentIntentTracking::query()->whereKey($tracking->id)->exists())->toBeFalse();
+});
+
+it('prunes old activity log entries the first time /cron/run fires, same schedule:run reliability gap as ReconcileCheckouts', function () {
+    config(['app.cron_secret' => 'the-real-secret']);
+    Activity::query()->create(['log_name' => 'cats', 'description' => 'old entry']);
+    Activity::query()->whereKey(1)->update(['created_at' => now()->subDays(400)]);
+
+    $this->get('/cron/run?token=the-real-secret')->assertOk();
+
+    expect(Activity::query()->count())->toBe(0);
+});
+
+it('does not re-run activitylog:clean on every /cron/run call within the same 30-day window', function () {
+    config(['app.cron_secret' => 'the-real-secret']);
+    Cache::put('activitylog-clean-last-run', now(), now()->addDays(30));
+    Activity::query()->create(['log_name' => 'cats', 'description' => 'old entry']);
+    Activity::query()->whereKey(1)->update(['created_at' => now()->subDays(400)]);
+
+    $this->get('/cron/run?token=the-real-secret')->assertOk();
+
+    // The claim was already held — the second call must not have deleted
+    // this row, proving Cache::add() actually gated the run rather than
+    // pruning unconditionally on every request.
+    expect(Activity::query()->count())->toBe(1);
 });

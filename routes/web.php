@@ -14,6 +14,7 @@ use App\Http\Controllers\Public\StripeWebhookController;
 use App\Jobs\ReconcileCheckouts;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 use Spatie\Honeypot\ProtectAgainstSpam;
 
@@ -120,6 +121,19 @@ Route::get('/cron/run', function (Request $request) {
     // that happen to align with the schedule's slots — safe to run this
     // often since the job is idempotent (see CLAUDE.md).
     dispatch_sync(new ReconcileCheckouts);
+
+    // Same problem as ReconcileCheckouts above — schedule:run's own
+    // ->monthly() slot (see routes/console.php) is not guaranteed to
+    // align with any particular call to this endpoint on shared hosting.
+    // Unlike ReconcileCheckouts, this one doesn't need to run on every
+    // request (it's a single DELETE over the whole table, and monthly is
+    // already generous) — Cache::add() atomically claims the run for the
+    // next 30 days so two /cron/run requests landing close together can't
+    // both trigger it, without needing a real cron/worker to track "did
+    // this already run this month".
+    if (Cache::add('activitylog-clean-last-run', now(), now()->addDays(30))) {
+        Artisan::call('activitylog:clean', ['--force' => true]);
+    }
 
     return response('OK', 200);
 })->middleware('throttle:10,1')->name('cron.run');
