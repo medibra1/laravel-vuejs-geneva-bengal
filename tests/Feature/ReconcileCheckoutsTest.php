@@ -33,8 +33,8 @@ function staleTracking(string $paymentIntentId): PaymentIntentTracking
 {
     $tracking = PaymentIntentTracking::query()->create(['payment_intent_id' => $paymentIntentId]);
     // created_at has no factory/mutator to backdate through — set directly,
-    // past ReconcileCheckouts::GRACE_PERIOD_MINUTES (5).
-    $tracking->forceFill(['created_at' => now()->subMinutes(6)])->save();
+    // past ReconcileCheckouts::GRACE_PERIOD_MINUTES (15).
+    $tracking->forceFill(['created_at' => now()->subMinutes(16)])->save();
 
     return $tracking;
 }
@@ -278,7 +278,7 @@ it('never retries a deposit that is not paid', function () {
     Notification::assertNothingSent();
 });
 
-it('stops retrying and notifies staff once a confirmation email has failed 10 times', function () {
+it('stops retrying and notifies staff once a confirmation email has failed 5 times', function () {
     // Not Notification::fake() here: FailingMailChannel must actually run
     // for real (this test's whole point is to make
     // sendClientConfirmation() genuinely fail) — a full fake would
@@ -291,14 +291,14 @@ it('stops retrying and notifies staff once a confirmation email has failed 10 ti
     $admin->assignRole('admin');
     $deposit = Deposit::factory()->paid()->create([
         'confirmation_sent_at' => null,
-        'confirmation_attempts' => 9,
+        'confirmation_attempts' => 4,
     ]);
     $gateway = new FakePaymentGateway;
     $this->app->instance(PaymentGateway::class, $gateway);
 
     (new ReconcileCheckouts)->handle($gateway, app(DepositPaymentProcessor::class));
 
-    expect($deposit->fresh()->confirmation_attempts)->toBe(10);
+    expect($deposit->fresh()->confirmation_attempts)->toBe(5);
     expect($deposit->fresh()->confirmation_sent_at)->toBeNull();
     expect($admin->fresh()->notifications()->where('type', DepositConfirmationUndeliveredNotification::class)->exists())->toBeTrue();
 });
@@ -307,13 +307,13 @@ it('does not pick up a deposit that already reached the max attempts on a previo
     Notification::fake();
     $deposit = Deposit::factory()->paid()->create([
         'confirmation_sent_at' => null,
-        'confirmation_attempts' => 10,
+        'confirmation_attempts' => 5,
     ]);
     $gateway = new FakePaymentGateway;
     $this->app->instance(PaymentGateway::class, $gateway);
 
     (new ReconcileCheckouts)->handle($gateway, app(DepositPaymentProcessor::class));
 
-    expect($deposit->fresh()->confirmation_attempts)->toBe(10);
+    expect($deposit->fresh()->confirmation_attempts)->toBe(5);
     Notification::assertNothingSent();
 });

@@ -50,14 +50,14 @@ class ReconcileCheckouts implements ShouldQueue
      * minutes (see routes/console.php) — this only controls which rows are
      * *eligible* once the job does run, not how often it runs.
      */
-    private const GRACE_PERIOD_MINUTES = 1;
+    private const GRACE_PERIOD_MINUTES = 15;
 
     /**
      * Above this many failed attempts, an address is treated as
      * persistently bad rather than retried forever every 15 minutes —
      * staff is notified once instead, to reach the client directly.
      */
-    private const CONFIRMATION_MAX_ATTEMPTS = 10;
+    private const CONFIRMATION_MAX_ATTEMPTS = 5;
 
     public function handle(PaymentGateway $gateway, DepositPaymentProcessor $processor): void
     {
