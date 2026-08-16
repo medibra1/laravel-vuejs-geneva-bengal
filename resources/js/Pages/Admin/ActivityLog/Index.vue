@@ -39,6 +39,36 @@ function subjectLabel(activity: ActivityLogEntry): string {
     return `${activity.subject_type.replace('App\\Models\\', '')} #${activity.subject_id}`;
 }
 
+interface FieldChange {
+    field: string;
+    before: unknown;
+    after: unknown;
+}
+
+// Formats a single before/after value for display — objects/arrays (e.g.
+// Deposit's translatable-adjacent columns) fall back to compact JSON so
+// nothing ever renders as the unhelpful literal "[object Object]".
+function formatValue(value: unknown): string {
+    if (value === null || value === undefined) return '—';
+    if (typeof value === 'boolean') return value ? 'Oui' : 'Non';
+    if (typeof value === 'object') return JSON.stringify(value);
+
+    return String(value);
+}
+
+// Merges properties.attributes ("after") and properties.old ("before")
+// into one row per changed field — a created/deleted entry only has one
+// side populated (LogOptions::logOnlyDirty() never submits an empty log,
+// see Cat::getActivitylogOptions() etc., so at least one side is always
+// present).
+function fieldChanges(activity: ActivityLogEntry): FieldChange[] {
+    const after = activity.properties?.attributes ?? {};
+    const before = activity.properties?.old ?? {};
+    const fields = new Set([...Object.keys(after), ...Object.keys(before)]);
+
+    return Array.from(fields).map((field) => ({ field, before: before[field], after: after[field] }));
+}
+
 const { filters, applyFilters, goToPage } = useTableQuery({
     routeName: 'admin.activity-log.index',
     filterDefaults: {
@@ -194,19 +224,27 @@ function onDateChange(key: 'from' | 'to', value: Date | null): void {
         </div>
 
         <Dialog v-model:visible="detailsDialogVisible" header="Détail de l'activité" modal class="w-full max-w-lg">
-            <div v-if="selectedActivity" class="space-y-4 text-sm">
-                <div v-if="selectedActivity.properties?.attributes">
-                    <p class="mb-1 font-medium text-neutral-700 dark:text-neutral-200">Nouvelles valeurs</p>
-                    <pre class="overflow-x-auto rounded bg-neutral-100 p-3 text-xs dark:bg-neutral-900">{{
-                        JSON.stringify(selectedActivity.properties.attributes, null, 2)
-                    }}</pre>
-                </div>
-                <div v-if="selectedActivity.properties?.old">
-                    <p class="mb-1 font-medium text-neutral-700 dark:text-neutral-200">Anciennes valeurs</p>
-                    <pre class="overflow-x-auto rounded bg-neutral-100 p-3 text-xs dark:bg-neutral-900">{{
-                        JSON.stringify(selectedActivity.properties.old, null, 2)
-                    }}</pre>
-                </div>
+            <div v-if="selectedActivity" class="text-sm">
+                <table class="w-full border-collapse text-left">
+                    <thead>
+                        <tr class="border-b border-neutral-200 text-xs text-neutral-500 dark:border-neutral-700">
+                            <th class="py-1.5 pr-2 font-medium">Champ</th>
+                            <th class="py-1.5 px-2 font-medium">Avant</th>
+                            <th class="py-1.5 pl-2 font-medium">Après</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="change in fieldChanges(selectedActivity)"
+                            :key="change.field"
+                            class="border-b border-neutral-100 last:border-0 dark:border-neutral-800"
+                        >
+                            <td class="py-1.5 pr-2 font-mono text-xs text-neutral-500">{{ change.field }}</td>
+                            <td class="py-1.5 px-2">{{ formatValue(change.before) }}</td>
+                            <td class="py-1.5 pl-2 font-medium">{{ formatValue(change.after) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </Dialog>
     </AdminLayout>
