@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useImageSlider } from '@/Composables/useImageSlider';
 import type { Gallery } from '@/types/models';
 
@@ -23,11 +22,26 @@ const props = withDefaults(
     },
 );
 
-// No srcset possible on a CSS background-image — see HeroSlider.vue for
-// the same reasoning.
-const backgroundUrls = computed(() => props.slides.map((slide) => slide.image_lg_url ?? slide.image_url ?? ''));
-
 const { currentSlide } = useImageSlider(() => props.slides.length);
+
+// Real <img> with srcset — see HeroSlider.vue for the same reasoning.
+// This banner is never the page's LCP element (it's a secondary strip,
+// the page heading/body text above the fold usually wins that), so no
+// fetchpriority override — plain eager/lazy per slide is enough.
+function srcsetFor(slide: Gallery): string | undefined {
+    const widths: Array<[string | null | undefined, number]> = [
+        [slide.image_sm_url, 480],
+        [slide.image_md_url, 800],
+        [slide.image_lg_url, 1400],
+    ];
+
+    const set = widths
+        .filter((entry): entry is [string, number] => Boolean(entry[0]))
+        .map(([url, width]) => `${url} ${width}w`)
+        .join(', ');
+
+    return set || undefined;
+}
 </script>
 
 <template>
@@ -36,10 +50,14 @@ const { currentSlide } = useImageSlider(() => props.slides.length);
         class="relative flex h-64 items-center justify-center overflow-hidden bg-neutral-900 text-white sm:h-80"
     >
         <Transition name="fade">
-            <div
+            <img
                 :key="currentSlide"
-                class="absolute inset-0 bg-cover bg-center"
-                :style="{ backgroundImage: `url(${backgroundUrls[currentSlide]})` }"
+                :src="slides[currentSlide].image_lg_url ?? slides[currentSlide].image_url ?? ''"
+                :srcset="srcsetFor(slides[currentSlide])"
+                sizes="100vw"
+                :loading="currentSlide === 0 ? 'eager' : 'lazy'"
+                alt=""
+                class="absolute inset-0 h-full w-full object-cover object-center"
             />
         </Transition>
         <div class="absolute inset-0 bg-neutral-900/50" />

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import catHead from '../../images/home/cat-head.png';
 import { useImageSlider } from '@/Composables/useImageSlider';
 import type { Gallery } from '@/types/models';
@@ -10,11 +9,20 @@ const props = defineProps<{
 
 const { currentSlide, next, previous, goTo, restart } = useImageSlider(() => props.slides.length);
 
-// No srcset possible on a CSS background-image — the hero is always
-// full-bleed, so the largest conversion is the correct choice regardless
-// of viewport (unlike an <img>, there's no smaller-viewport case where a
-// smaller file would still look right here).
-const backgroundUrls = computed(() => props.slides.map((slide) => slide.image_lg_url ?? slide.image_url ?? ''));
+function srcsetFor(slide: Gallery): string | undefined {
+    const widths: Array<[string | null | undefined, number]> = [
+        [slide.image_sm_url, 480],
+        [slide.image_md_url, 800],
+        [slide.image_lg_url, 1400],
+    ];
+
+    const set = widths
+        .filter((entry): entry is [string, number] => Boolean(entry[0]))
+        .map(([url, width]) => `${url} ${width}w`)
+        .join(', ');
+
+    return set || undefined;
+}
 </script>
 
 <template>
@@ -22,8 +30,24 @@ const backgroundUrls = computed(() => props.slides.map((slide) => slide.image_lg
         v-if="slides.length"
         class="relative flex h-[70vh] min-h-[520px] items-center overflow-hidden bg-neutral-900 text-white sm:h-[85vh]"
     >
+        <!-- Real <img> (not a CSS background-image) so the browser can
+             discover and prioritize the LCP candidate straight from the
+             initial HTML — no JS/hydration round-trip needed to find it,
+             and srcset lets it pick a smaller file on mobile instead of
+             always downloading the 1400px conversion. Only the first slide
+             is eager/high-priority; later ones (reached only after
+             interaction/auto-advance) stay lazy. -->
         <Transition name="fade">
-            <div :key="currentSlide" class="kenburns absolute inset-0 bg-cover bg-top" :style="{ backgroundImage: `url(${backgroundUrls[currentSlide]})` }" />
+            <img
+                :key="currentSlide"
+                :src="slides[currentSlide].image_lg_url ?? slides[currentSlide].image_url ?? ''"
+                :srcset="srcsetFor(slides[currentSlide])"
+                sizes="100vw"
+                :fetchpriority="currentSlide === 0 ? 'high' : undefined"
+                :loading="currentSlide === 0 ? 'eager' : 'lazy'"
+                alt=""
+                class="kenburns absolute inset-0 h-full w-full object-cover object-top"
+            />
         </Transition>
         <!-- Matches bengal-client's .slider-image:before exactly: a dark
              vignette behind the text card, fading bottom-to-top on mobile
