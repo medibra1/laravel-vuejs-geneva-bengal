@@ -49,6 +49,7 @@ const openIndex = ref<number | null>(null);
                         :alt="item.caption ?? ''"
                         sizes="(min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw"
                         class="h-full w-full object-cover transition group-hover:scale-105"
+                        :eager="index < 4"
                     />
                 </button>
             </div>
