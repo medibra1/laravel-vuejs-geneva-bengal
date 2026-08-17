@@ -1,19 +1,27 @@
 import "../css/app.css";
+import "primeicons/primeicons.css";
 
 import { createInertiaApp } from "@inertiajs/vue3";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { createApp, DefineComponent, h } from "vue";
-import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
 import ToastService from "primevue/toastservice";
 import Aura from "@primeuix/themes/aura";
 import { createI18n } from "vue-i18n";
 import { ZiggyVue } from 'ziggy-js';
-import fr from "./locales/fr.json";
-import en from "./locales/en.json";
-import "primeicons/primeicons.css";
 
 const appName = import.meta.env.VITE_APP_NAME || "Laravel";
+
+// Only one of fr.json/en.json is ever needed for a given page load —
+// Inertia re-resolves this from the server on every navigation anyway
+// (see the locale-switch links in PublicLayout.vue, which do a full
+// browser navigation), so there's no case where the other locale's
+// strings are needed without a fresh app.ts boot to go with it.
+type LocaleMessages = Record<string, unknown>;
+const localeLoaders: Record<string, () => Promise<{ default: LocaleMessages }>> = {
+    fr: () => import("./locales/fr.json"),
+    en: () => import("./locales/en.json"),
+};
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
@@ -22,17 +30,19 @@ createInertiaApp({
             `./Pages/${name}.vue`,
             import.meta.glob<DefineComponent>("./Pages/**/*.vue"),
         ),
-    setup({ el, App, props, plugin }) {
+    async setup({ el, App, props, plugin }) {
+        const locale = props.initialPage.props.locale as string;
+        const { default: messages } = await (localeLoaders[locale] ?? localeLoaders.fr)();
+
         const i18n = createI18n({
             legacy: false,
-            locale: props.initialPage.props.locale as string,
-            fallbackLocale: "en",
-            messages: { fr, en },
+            locale,
+            fallbackLocale: locale,
+            messages: { [locale]: messages },
         });
 
         createApp({ render: () => h(App, props) })
             .use(plugin)
-            .use(createPinia())
             .use(PrimeVue, { theme: { preset: Aura, options: { darkModeSelector: ".dark" } } })
             .use(ToastService)
             .use(ZiggyVue)

@@ -3,16 +3,20 @@ import createServer from "@inertiajs/vue3/server";
 import { renderToString } from "@vue/server-renderer";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { createSSRApp, DefineComponent, h } from "vue";
-import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
 import ToastService from "primevue/toastservice";
 import Aura from "@primeuix/themes/aura";
 import { createI18n } from "vue-i18n";
 import { ZiggyVue } from "ziggy-js";
-import fr from "./locales/fr.json";
-import en from "./locales/en.json";
 
 const appName = import.meta.env.VITE_APP_NAME || "Laravel";
+
+// See app.ts for why only the active locale is loaded.
+type LocaleMessages = Record<string, unknown>;
+const localeLoaders: Record<string, () => Promise<{ default: LocaleMessages }>> = {
+    fr: () => import("./locales/fr.json"),
+    en: () => import("./locales/en.json"),
+};
 
 createServer((page) =>
     createInertiaApp({
@@ -24,12 +28,15 @@ createServer((page) =>
                 `./Pages/${name}.vue`,
                 import.meta.glob<DefineComponent>("./Pages/**/*.vue"),
             ),
-        setup({ App, props, plugin }) {
+        async setup({ App, props, plugin }) {
+            const locale = props.initialPage.props.locale as string;
+            const { default: messages } = await (localeLoaders[locale] ?? localeLoaders.fr)();
+
             const i18n = createI18n({
                 legacy: false,
-                locale: props.initialPage.props.locale as string,
-                fallbackLocale: "en",
-                messages: { fr, en },
+                locale,
+                fallbackLocale: locale,
+                messages: { [locale]: messages },
             });
 
             // The client reads routes off `window.Ziggy` (injected by the
@@ -38,7 +45,6 @@ createServer((page) =>
             // the matching `ziggy` shared prop in HandleInertiaRequests.
             return createSSRApp({ render: () => h(App, props) })
                 .use(plugin)
-                .use(createPinia())
                 .use(PrimeVue, { theme: { preset: Aura, options: { darkModeSelector: ".dark" } } })
                 .use(ToastService)
                 .use(ZiggyVue, props.initialPage.props.ziggy as Parameters<typeof ZiggyVue.install>[1])

@@ -41,7 +41,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Vite::prefetch(concurrency: 3);
+        // Vite::prefetch() and the default modulepreload tags both walk the
+        // whole manifest dependency graph — including import.meta.glob's
+        // dynamic imports of every Pages/**/*.vue chunk — so every page
+        // (public included) was preloading/prefetching Admin/* chunks,
+        // PrimeVue's heavier components (DataTable, Dialog...), etc. Turning
+        // both off leaves dynamic imports working exactly as before (Inertia
+        // still fetches each page's own chunk on navigation); it just stops
+        // aggressively front-loading chunks the current page never uses.
+        Vite::usePreloadTagAttributes(false);
 
         // laravel-localizer's default locale falls back to
         // config('app.fallback_locale') (= 'en', the Laravel-native
