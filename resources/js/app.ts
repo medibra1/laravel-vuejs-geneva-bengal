@@ -17,7 +17,10 @@ const appName = import.meta.env.VITE_APP_NAME || "Laravel";
 // (see the locale-switch links in PublicLayout.vue, which do a full
 // browser navigation), so there's no case where the other locale's
 // strings are needed without a fresh app.ts boot to go with it.
-type LocaleMessages = Record<string, unknown>;
+// `Record<string, any>` (not `unknown`) matches what a static
+// `import fr from "./locales/fr.json"` used to infer — vue-i18n's
+// `messages` option needs assignable values, `unknown` isn't one.
+type LocaleMessages = Record<string, any>;
 const localeLoaders: Record<string, () => Promise<{ default: LocaleMessages }>> = {
     fr: () => import("./locales/fr.json"),
     en: () => import("./locales/en.json"),
