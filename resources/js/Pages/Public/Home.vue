@@ -12,7 +12,7 @@ import kittensMontage from '../../../images/home/kittens-montage.png';
 import newsletterKitten from '../../../images/home/newsletter-kitten.png';
 import internationalKitten from '../../../images/home/international-kitten.png';
 
-const props = defineProps<{
+defineProps<{
     seo: { title: string; description: string };
     heroSlides: Gallery[];
     socialTiles: Gallery[];
@@ -23,20 +23,12 @@ const socialLinks = usePage<PageProps>().props.socialLinks;
 // No dedicated page/route yet for international shipping info — placeholder.
 // The social feed tiles/CTA below use the real socialLinks.facebook URL.
 const placeholderHref = '#';
-
-// LCP fix: HeroSlider paints its first slide as a CSS background-image, which
-// the browser can't discover until HeroSlider's own <style> binding runs —
-// well after the initial HTML parse. Preloading it here (in the SSR-rendered
-// <Head>) makes the browser fetch it immediately, in parallel with the JS
-// bundle, instead of waiting for hydration.
-const firstHeroImageUrl = props.heroSlides[0]?.image_lg_url ?? props.heroSlides[0]?.image_url ?? null;
 </script>
 
 <template>
 
     <Head :title="seo.title">
         <meta head-key="description" name="description" :content="seo.description" />
-        <link v-if="firstHeroImageUrl" rel="preload" as="image" :href="firstHeroImageUrl" fetchpriority="high" />
     </Head>
 
     <PublicLayout>
