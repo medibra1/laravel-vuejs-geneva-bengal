@@ -95,13 +95,22 @@ resources/js/
 
 ## Rendering: client + SSR
 
-Both `app.ts` and `ssr.ts` install the same plugin stack (Pinia, PrimeVue +
+Both `app.ts` and `ssr.ts` install the same plugin stack (PrimeVue +
 `ToastService`, Ziggy, vue-i18n) — `ToastService` in particular must be on
 both, or `useToast()` inside `FlashToast.vue` (mounted unconditionally in
 both layouts) throws during SSR. `ssr.ts` resolves `route()` from the
 `ziggy` prop shared by `HandleInertiaRequests` rather than
 `window.Ziggy` (that global only exists client-side, injected by the
-`@routes` Blade directive at first load).
+`@routes` Blade directive at first load). Pinia was installed from the
+start of the project but never actually used (no `defineStore` anywhere
+in the repo) — dropped entirely rather than left as dead weight.
+
+Both entrypoints load only the active locale's JSON (`fr.json` or
+`en.json`, not both) via a dynamic `import()`, resolved from
+`page.props.locale`/`props.initialPage.props.locale` before mounting —
+see the comments in `app.ts`/`ssr.ts` for why `ssr.ts`'s `setup()` has
+to stay synchronous (Inertia's SSR return type is a strict `App`, not a
+`Promise<App>`) while `app.ts`'s can be `async`.
 
 SSR exists specifically to fix a production issue on the original site:
 every page shared the same `<title>`/meta description, hurting indexation
