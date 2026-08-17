@@ -30,3 +30,32 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# Vite build output (build/assets/*) is content-hashed — a new deploy
+# always produces new filenames instead of overwriting these in place, so
+# caching them for a year is safe. Everything else static (medialibrary
+# uploads, favicons, fonts) gets a shorter lifetime since it can change
+# without a filename change. This is the real production path (Infomaniak
+# shared hosting is Apache, not the docker/nginx/default.conf used in dev
+# — see DEPLOY.md).
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    <FilesMatch "^build/.*\.(?:js|css|woff2?)$">
+        ExpiresDefault "access plus 1 year"
+    </FilesMatch>
+
+    <FilesMatch "\.(?:jpg|jpeg|png|webp|gif|svg|ico)$">
+        ExpiresDefault "access plus 1 week"
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "^build/.*\.(?:js|css|woff2?)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+
+    <FilesMatch "\.(?:jpg|jpeg|png|webp|gif|svg|ico)$">
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+</IfModule>
