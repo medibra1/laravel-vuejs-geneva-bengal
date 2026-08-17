@@ -45,7 +45,7 @@ const activeColor = computed(() => page.props.colors.find((color) => color.slug 
 
             <div v-if="cats.length" class="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
                 <Link
-                    v-for="cat in cats"
+                    v-for="(cat, index) in cats"
                     :key="cat.id"
                     :href="route('cats.show', cat.slug)"
                     class="group block overflow-hidden rounded-2xl border border-gray-200 bg-white text-center shadow-sm transition hover:shadow-lg"
@@ -59,6 +59,7 @@ const activeColor = computed(() => page.props.colors.find((color) => color.slug 
                             :alt="cat.name"
                             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
                             class="h-full w-full object-cover transition group-hover:scale-105"
+                            :eager="index < 4"
                         />
                         <div v-else class="flex h-full items-center justify-center text-gray-400">
                             {{ $t('common.no_photo') }}

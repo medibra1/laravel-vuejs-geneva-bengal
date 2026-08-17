@@ -27,13 +27,22 @@
         </script>
 
         <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+        {{-- Loaded non-blocking (media="print" trick): the browser fetches
+             these at normal priority without delaying first paint, then the
+             onload swap applies them once ready. The <noscript> tags are the
+             fallback for the rare case JS is disabled, where onload never
+             fires. --}}
+        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
         {{-- Public-site brand fonts, matching the original Angular app
              (bengal-client): Sacramento for the script section titles,
              Montserrat for the bold uppercase subtitles/buttons. Harmless
              on admin pages, which never reference font-script/font-heading. --}}
-        <link href="https://fonts.bunny.net/css?family=sacramento:400|montserrat:400,500,600,700|varela-round:400&display=swap" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=sacramento:400|montserrat:400,500,600,700|varela-round:400&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+        <noscript>
+            <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet">
+            <link href="https://fonts.bunny.net/css?family=sacramento:400|montserrat:400,500,600,700|varela-round:400&display=swap" rel="stylesheet">
+        </noscript>
 
         <!-- Scripts -->
         @routes
