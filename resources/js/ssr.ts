@@ -11,15 +11,25 @@ import { ZiggyVue } from "ziggy-js";
 
 const appName = import.meta.env.VITE_APP_NAME || "Laravel";
 
-// See app.ts for why only the active locale is loaded.
-type LocaleMessages = Record<string, unknown>;
+// See app.ts for why only the active locale is loaded, and why `any`
+// (not `unknown`) — vue-i18n's `messages` option needs assignable values.
+type LocaleMessages = Record<string, any>;
 const localeLoaders: Record<string, () => Promise<{ default: LocaleMessages }>> = {
     fr: () => import("./locales/fr.json"),
     en: () => import("./locales/en.json"),
 };
 
-createServer((page) =>
-    createInertiaApp({
+createServer(async (page) => {
+    // Inertia's SSR `setup()` must return an App synchronously (its return
+    // type is `App`, not `Promise<App>`), so the locale file has to be
+    // awaited out here — before createInertiaApp is even called — rather
+    // than inside setup() itself. `page.props.locale` is already available
+    // on the raw page payload at this point, same value setup() would've
+    // read off `props.initialPage.props.locale`.
+    const locale = (page.props.locale as string) ?? "fr";
+    const { default: messages } = await (localeLoaders[locale] ?? localeLoaders.fr)();
+
+    return createInertiaApp({
         page,
         title: (title) => `${title} - ${appName}`,
         render: renderToString,
@@ -28,10 +38,7 @@ createServer((page) =>
                 `./Pages/${name}.vue`,
                 import.meta.glob<DefineComponent>("./Pages/**/*.vue"),
             ),
-        async setup({ App, props, plugin }) {
-            const locale = props.initialPage.props.locale as string;
-            const { default: messages } = await (localeLoaders[locale] ?? localeLoaders.fr)();
-
+        setup({ App, props, plugin }) {
             const i18n = createI18n({
                 legacy: false,
                 locale,
@@ -50,5 +57,5 @@ createServer((page) =>
                 .use(ZiggyVue, props.initialPage.props.ziggy as Parameters<typeof ZiggyVue.install>[1])
                 .use(i18n);
         },
-    }),
-);
+    });
+});
