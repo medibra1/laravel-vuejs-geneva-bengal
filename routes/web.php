@@ -6,6 +6,7 @@ use App\Http\Controllers\Public\ContactController;
 use App\Http\Controllers\Public\DepositController;
 use App\Http\Controllers\Public\GalleryController;
 use App\Http\Controllers\Public\HomeController;
+use App\Http\Controllers\Public\LegacyRedirectController;
 use App\Http\Controllers\Public\LitterController;
 use App\Http\Controllers\Public\NewsletterController;
 use App\Http\Controllers\Public\PageController;
@@ -137,6 +138,21 @@ Route::get('/cron/run', function (Request $request) {
 
     return response('OK', 200);
 })->middleware('throttle:10,1')->name('cron.run');
+
+// Previous Angular site's URLs (genevabengals.ch before this rebuild),
+// permanently redirected to their /fr equivalents — see
+// LegacyRedirectController for where the list comes from. Registered
+// outside Route::localize() on purpose: RedirectLocale ignores routes
+// without a locale_type, so these 301 straight to the final URL instead of
+// first bouncing through a /fr/<old-path> 302 that would then 404.
+Route::controller(LegacyRedirectController::class)->group(function (): void {
+    Route::get('/chaton-bengal-a-vendre', 'catsIndex');
+    Route::get('/chaton-bengal-a-vendre/{colorSlug}', 'catsByColor');
+    Route::get('/chaton/{slug}/{name?}', 'catShow');
+    Route::get('/galleries', 'galleries');
+    Route::get('/paiement', 'catsIndex');
+    Route::get('/newsletter/{action}', 'newsletter');
+});
 
 // One canonical sitemap listing every locale variant of every page (via
 // hreflang alternates) rather than a separate /fr/sitemap.xml, /en/sitemap.xml.
