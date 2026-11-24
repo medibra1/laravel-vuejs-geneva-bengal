@@ -12,6 +12,14 @@
     # present or future.
     RewriteRule ^\.well-known/acme-challenge/ - [L]
 
+    # www.<domain> → <domain> (301). The old site was indexed under both,
+    # this keeps a single canonical host instead of duplicate content.
+    # Host-agnostic on purpose: no-op on dev.genevabengals.ch or any other
+    # host without a www. prefix. Old Angular page URLs themselves are
+    # redirected in Laravel (routes/web.php, LegacyRedirectController).
+    RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+    RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
