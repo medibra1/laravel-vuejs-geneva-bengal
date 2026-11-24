@@ -210,6 +210,31 @@ des changements de `.env`, aucun changement de code :
 - `SANCTUM_STATEFUL_DOMAINS` : **non applicable**, voir §1 — Sanctum n'est
   pas câblé dans cette app, rien à définir ici tant que ça reste vrai.
 
+### Anciennes URLs du site Angular (redirections 301)
+
+Le site précédent (SPA Angular) avait d'autres URLs. Elles sont redirigées
+en 301 vers leur équivalent `/fr/...` par
+`App\Http\Controllers\Public\LegacyRedirectController` (routes dans
+`routes/web.php`, tests dans `tests/Feature/Public/LegacyRedirectsTest.php`).
+Liste relevée dans la table de routes du bundle Angular de production :
+
+| Ancienne URL | Nouvelle URL |
+|---|---|
+| `/chaton-bengal-a-vendre` | `/fr/chatons-disponibles` |
+| `/chaton-bengal-a-vendre/chaton-bengal-{couleur}` | `/fr/chatons-disponibles/couleur/{couleur}` (liste complète si couleur inconnue) |
+| `/chaton/{ancien-slug}/{nom}` | `/fr/chatons-disponibles/{slug}`, trouvé par l'ancien slug puis par le nom (liste si le chat n'existe plus) |
+| `/galleries` | `/fr/galerie` |
+| `/paiement` | `/fr/chatons-disponibles` |
+| `/newsletter/(dés)abonnement-newsletter` | `/fr` |
+
+`www.` → domaine nu est géré dans `public/.htaccess`. Côté Manager
+Infomaniak : ajouter `www.genevabengals.ch` comme alias du site (avec
+certificat SSL), et activer la redirection HTTP → HTTPS.
+
+Après la bascule, dans Google Search Console : soumettre
+`https://genevabengals.ch/sitemap.xml` et surveiller les erreurs 404
+pendant quelques semaines.
+
 Après changement, invalider les caches de config sur le serveur
 (`php artisan config:clear` puis `config:cache`, voir §6) — `APP_URL`/
 `SESSION_DOMAIN` sont lus depuis un cache compilé une fois
